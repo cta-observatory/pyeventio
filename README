@@ -1,0 +1,23 @@
+coming soon
+
+    import matplotlib.pyplot as plt
+    from mpl_toolkits.mplot3d import Axes3D
+
+    fig = plt.figure()
+    ax = fig.add_subplot(111, projection='3d')
+
+    import eventio
+    f = eventio.EventIoFile('data/telescope.dat')
+    b = f.next().bunches
+
+    cz = 1 - (b['cx']**2 + b['cy']**2)
+
+    x = b['x'] + (b['zem'] / cz)*b['cx']
+    y = b['y'] + (b['zem'] / cz)*b['cy']
+
+    ax.plot(x/100., y/100., b['zem']/1e5, 'o')
+    ax.set_xlabel('Xaxis [m]')
+    ax.set_ylabel('Yaxis [m]')
+    ax.set_zlabel('Zaxis [km]')
+    plt.show()
+
