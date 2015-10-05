@@ -35,4 +35,4 @@ If you like to plot the origin of the Cherenkov photons of the first shower in f
 
 It might look similar to this picture.
 
-https://bitbucket.org/repo/ddng5E/images/4235100275-a_shower.png
+![an example shower](https://bitbucket.org/repo/ddng5E/images/4235100275-a_shower.png)
