@@ -546,14 +546,19 @@ class EventIoFile(object):
         return self
 
     def next(self):
-        self.__read_event_header()
-        if not self.is_first_event_already_read:
-            self.__read_tel_offset()
-            self.is_first_event_already_read = True
-        self.__read_photon_bunches()
-        self.__read_event_end()
+        try: 
+            self.__read_event_header()
+            if not self.is_first_event_already_read:
+                self.__read_tel_offset()
+                self.is_first_event_already_read = True
+            self.__read_photon_bunches()
+            self.__read_event_end()
+            return self.photon_bunches
 
-        return self.photon_bunches
+        except ValueError:
+            raise StopIteration
+
+        
 
 
 def read_everything(f):
