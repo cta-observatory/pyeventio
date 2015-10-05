@@ -4,7 +4,7 @@ This is a simple reader, for the special event_io data format invented by Konrad
 
 # install with #
     
-    pip install git+https://bitbucket.org/dneise/fact_shift_helper#egg=fact_shift_helper
+    pip install https://bitbucket.org/dneise/py_corsika_event_io
 
 # 1st Example #
 
