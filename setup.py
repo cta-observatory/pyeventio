@@ -16,5 +16,4 @@ setup(
     ],
     #scripts=['scripts/shift_helper.py'],
     #package_data={'fact_shift_helper.tools': ['config.gpg']},
-    #zip_safe=False
 )

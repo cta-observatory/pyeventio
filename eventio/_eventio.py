@@ -418,7 +418,7 @@ def read_compact_bunches(f, head, subhead):
     bunches['time'] *= 0.1 # in nanoseconds since first interaction.
     bunches['zem'] = np.power(10., bunches['zem']*0.001)
     bunches['photons'] *= 0.01
-    bunches['lambda'] *= 0.01  # wavelength is in nanometer negative if scattered ?!
+    #bunches['lambda']  # nothing needs to be done with lambda
 
     return_value = PhotonBunches(
         array=array, 
