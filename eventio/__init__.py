@@ -1,1 +1,1 @@
-from _eventio import EventIoFile
+from _eventio import EventIoFile, EventIoFileStream

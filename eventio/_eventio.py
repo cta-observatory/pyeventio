@@ -1,19 +1,17 @@
 """
 eventio
 """
-import struct 
+from __future__ import absolute_import
+import struct
+import mmap
 from collections import namedtuple, OrderedDict
 
 import numpy as np
+from .tools import unpack_from, read_ints, WrongTypeException
 
-TypeInfo = namedtuple("TypeInfo", "type version user extended")
-LengthInfo = namedtuple("LengthInfo", "only_sub_objects length")
-TopLevelHeader = namedtuple("TopLevelHeader",
-    "is_sync type version user extended only_sub_objects length id")
-SubLevelHeader = namedtuple("SubLevelHeader",
-    "type version user extended only_sub_objects length id")
-PhotonBunches = namedtuple("PhotonBunches",
-    "array tel n_photons n_bunches bunches")
+from .header import Header
+from . import photonbunches as pb
+from . import tools
 
 def parse_MmcsEventHeader(event_header):
     """ parse the event header of a corsika file into a dict
@@ -163,85 +161,7 @@ def parse_MmcsRunHeader(run_header):
     d['NFLCHE + 100 x NFRAGM'] = h[272]
     return d
 
-def read_ints(n ,f):
-    return struct.unpack(str(n)+'i', f.read(n*4))
-
-def read_floats(n ,f):
-    return struct.unpack(str(n)+'f', f.read(n*4))
-
-def unpack_type(_type):
-    t = _type & 0xffff
-    version = (_type & 0xfff00000) >> 20
-    user_bit = bool(_type & (1<<16))
-    extended = bool(_type & (1<<17))
-    return TypeInfo(t, version, user_bit, extended)
-
-def unpack_length(length):
-    only_sub_objects = bool(length & 1<<30)
-    # bit 31 of length is reserved
-    length &= 0x3fffffff
-    return only_sub_objects, length
-
-def extend_length(extended, length):
-    extension &= 0xfff
-    length = length & extended<<12
-    return length
-
-def is_sync(i):
-    sync = -736130505
-    return i == sync
-
-def read_top_level_header(f):
-    first_four = read_ints(4, f)
-    #print first_four
-    sync, _type, _id, length = first_four
-    _type = unpack_type(_type)
-    only_sub_objects, length = unpack_length(length)
-
-    if _type.extended:
-        extended, = read_ints(1, f)
-        length = extend_length(extended, length)
-
-    head = TopLevelHeader(
-        is_sync=is_sync(sync),
-        type=_type.type,
-        version=_type.version,
-        user=_type.user,
-        extended=_type.extended,
-        only_sub_objects=only_sub_objects,
-        length=length,
-        id=_id)
-
-    if not head.is_sync:
-        raise ValueError("TopLevelHeader sync value 0xD41F8A37 not found")
-
-    return head
-
-def read_sub_level_header(f):
-    first_three = read_ints(3, f)
-    #print first_three
-    _type, _id, length = first_three
-    _type = unpack_type(_type)
-    only_sub_objects, length = unpack_length(length)
-    
-    if _type.extended:
-        extended, = read_ints(1, f)
-        length = extend_length(extended, length)
-    
-    i = SubLevelHeader(
-        type=_type.type,
-        version=_type.version,
-        user=_type.user,
-        extended=_type.extended,
-        only_sub_objects=only_sub_objects,
-        length=length,
-        id=_id)
-
-    return i
-
 def read_type_1200(f, head=None):
-    #print "   read_type_1200: reading the run header... ok" 
-    #print
     n, = read_ints(1, f)
     if n != 273:
         raise Exception("read_type_1200: first n was not 273 but "+str(n))
@@ -261,25 +181,35 @@ def read_type_1201(f, head=None):
     float32 z[ntel]
     float32 r[ntel]
     """
-    #print "   read_type_1201: reading tel_pos ... what ever that is." 
-    #print 
-    ntel, = struct.unpack('i', f.read(4))
+    ntel, = unpack_from('i', f)
     number_of_following_arrays = int((head.length - 4) / ntel /4)
     if number_of_following_arrays != 4:
         # DN: I think this cannot happen, but who knows.
         raise Exception("in read_type_1201: number_of_following_arrays is:"
             + str(number_of_following_arrays))
+
+    tel_pos = np.zeros(ntel, dtype=[
+        ('x', 'f4'), 
+        ('y', 'f4'), 
+        ('z', 'f4'), 
+        ('r', 'f4'), 
+        ])
+
     arrays = np.frombuffer(
             f.read(ntel*4*4), 
             dtype=np.float32, 
             count=ntel*4)
-    arrays.reshape(ntel, 4)
-    x,y,z,r = np.hsplit(arrays, 4)
-    return ntel, x, y, z, r
+    arrays = arrays.reshape(4, ntel)
+    x,y,z,r = np.vsplit(arrays, 4)
+
+    tel_pos['x'] = x
+    tel_pos['y'] = y
+    tel_pos['z'] = z
+    tel_pos['r'] = r
+
+    return tel_pos
     
 def read_type_1202(f, head=None):
-    #print "   read_type_1202: reading event header ... ok."
-    #print  
     n, = read_ints(1, f)
     if n != 273:
         raise Exception("read_type_1200: first n was not 273 but "+str(n))
@@ -302,58 +232,41 @@ def read_type_1203(f, head=None):
         float32 weight[narray]
     
     """
-    #print "   read_type_1203: reading tel offset what ever that is..."
-    #print  
     length_first_two = 4 + 4 
-    narray, toff = struct.unpack('if', f.read(length_first_two))
+    narray, toff = unpack_from('if', f)
     number_of_following_arrays = int((head.length - length_first_two) / narray /4)
-    if number_of_following_arrays == 2:
-        xoff = np.frombuffer(
-            f.read(narray*4), 
-            dtype=np.float32, 
-            count=narray)
-        yoff = np.frombuffer(
-            f.read(narray*4), 
-            dtype=np.float32, 
-            count=narray)
-        return narray, toff, xoff, yoff, None
-    elif number_of_following_arrays == 3:
-        xoff = np.frombuffer(
-            f.read(narray*4), 
-            dtype=np.float32, 
-            count=narray)
-        yoff = np.frombuffer(
-            f.read(narray*4), 
-            dtype=np.float32, 
-            count=narray)
-        weight = np.frombuffer(
-            f.read(narray*4), 
-            dtype=np.float32, 
-            count=narray)
-        return narray, toff, xoff, yoff, weight
-    else:
+    if number_of_following_arrays not in [2, 3]:
         # DN: I think this cannot happen, but who knows.
         raise Exception("in read_type_1203: number_of_following_arrays is:"
             + str(number_of_following_arrays))
-    
-def read_type_1204(f, head=None):
-    #print "   read_type_1204: Reading the photon data"
 
+    xoff = np.frombuffer(
+        f.read(narray*4), 
+        dtype=np.float32, 
+        count=narray)
+    yoff = np.frombuffer(
+        f.read(narray*4), 
+        dtype=np.float32, 
+        count=narray)
+
+    weight = np.ones(
+            narray, 
+            dtype=np.float32)
+
+    if number_of_following_arrays == 3:
+        weight = np.frombuffer(
+            f.read(narray*4), 
+            dtype=np.float32, 
+            count=narray)        
+
+    return narray, toff, xoff, yoff, weight
+
+def read_type_1204(f, head=None, headers_only=True):
     if not head.only_sub_objects:
-        raise Exception("Type 1204 ususally has only sub objects, this one has not!!")    
-
-    subhead = read_sub_level_header(f)
-    
-    if subhead.version/1000 == 1:
-        return read_compact_bunches(f, head, subhead), subhead
-    else:
-        return read_long_bunches(f, head, subhead), subhead
+        raise Exception("Type 1204 ususally has only sub objects, this one has not!!")
+    return  list(pb.photon_bunches(f, headers_only=headers_only))
 
 def read_type_1209(f, head=None):
-    #print f.tell()
-    #print "   read_type_1209: reading event footer ... ok."
-    #print  
-
     n, = read_ints(1, f)
     if n != 273:
         raise Exception("read_type_1209: first n was not 273 but "+str(n))
@@ -366,8 +279,6 @@ def read_type_1209(f, head=None):
     return block
 
 def read_type_1210(f, head=None):
-    #print "   read_type_1210: reading Run end ... okay"
-    #print
     n, = read_ints(1, f)
     block = np.frombuffer(
         f.read(n*4), 
@@ -376,93 +287,9 @@ def read_type_1210(f, head=None):
     return block
 
 def read_type_1212(f, head=None):
-    #print "   read_type_1212: reading verbosy copy of input card ... ok."
-    #print  
     return f.read(head.length)
 
-def read_compact_bunches(f, head, subhead):
-
-    array, tel, photons, n_bunches = struct.unpack("hhfi", f.read(12))
-
-    bunches = np.zeros(n_bunches, dtype=[
-        ('x', 'f4'), 
-        ('y', 'f4'), 
-        ('cx', 'f4'), 
-        ('cy', 'f4'), 
-        ('time', 'f4'), 
-        ('zem', 'f4'), 
-        ('photons', 'f4'), 
-        ('lambda', 'f4'), 
-        ])
-
-    block = np.frombuffer(
-        f.read(n_bunches*8*2), 
-        dtype=np.int16, 
-        count=n_bunches*8)
-    block = block.reshape(n_bunches, 8)
-    
-    for i,n in enumerate(bunches.dtype.names):
-        bunches[n] = block[:,i]
-
-    
-    bunches['x'] *= 0.1 # now in cm
-    bunches['y'] *= 0.1 # now in cm
-
-    bunches['cx'] /= 30000 # don't know the units
-    bunches['cy'] /= 30000 
-    #   bernloehr clips in his implementation of the reader.
-    #   I am not sure I really want that.
-    #bunches['cx'] = bunches['cx'].clip(a_min=-1., a_max=1.)
-    #bunches['cy'] = bunches['cy'].clip(a_min=-1., a_max=1.)
-
-    bunches['time'] *= 0.1 # in nanoseconds since first interaction.
-    bunches['zem'] = np.power(10., bunches['zem']*0.001)
-    bunches['photons'] *= 0.01
-    #bunches['lambda']  # nothing needs to be done with lambda
-
-    return_value = PhotonBunches(
-        array=array, 
-        tel=tel, 
-        n_photons=photons, 
-        n_bunches=n_bunches,
-        bunches=bunches)
-    return return_value
-
-def read_long_bunches(f, head, subhead):
-
-    array, tel, photons, n_bunches = struct.unpack("hhfi", f.read(12))
-
-    bunches = np.zeros(n_bunches, dtype=[
-        ('x', 'f4'), 
-        ('y', 'f4'), 
-        ('cx', 'f4'), 
-        ('cy', 'f4'), 
-        ('time', 'f4'), 
-        ('zem', 'f4'), 
-        ('photons', 'f4'), 
-        ('lambda', 'f4'), 
-        ])
-
-    block = np.frombuffer(
-        f.read(n_bunches*8*4), 
-        dtype=np.float32, 
-        count=n_bunches*8)
-    block = block.reshape(n_bunches, 8)
-    
-    for i,n in enumerate(bunches.dtype.names):
-        bunches[n] = block[:,i]
-
-    return_value = PhotonBunches(
-        array=array, 
-        tel=tel, 
-        n_photons=photons, 
-        n_bunches=n_bunches, 
-        bunches=bunches)
-    return return_value
-
 def read_any_type(f, head=None):
-    #print "     !!! read any type ... YEAH !!!!"
-    #print head
     f.read(head.length)
     return None
 
@@ -477,12 +304,12 @@ known_types = {
     1204 : read_type_1204,
 }
 
-class EventIoFile(object):
+class EventIoFile_Stupid(object):
 
     def __init__(self, path):
         self._f = open(path)
         self.__read_meta = []
-        self.is_first_event_already_read = False
+        self.__is_first_event_already_read = False
         # these functions *must* be called in this order, 
         # since this is the order, the data is in the file.
         self.__read_run_header()
@@ -492,53 +319,53 @@ class EventIoFile(object):
         self.__read_event_header()
         self.__read_tel_offset()
         self._f.seek(before_first_header)
-        
+
     def __read_run_header(self):
-        head = read_top_level_header(self._f)
+        head = read_header(self._f)
         if not head.type == 1200:
-            raise ValueError("Expected TopLevelHeader with type=1200, but found "+str(head.type))
+            raise ValueError("Expected Header with type=1200, but found "+str(head.type))
         self.run_header = read_type_1200(self._f, head)
         self.__read_meta.append(head)
 
     def __read_input_card(self):
-        head = read_top_level_header(self._f)
+        head = read_header(self._f)
         if not head.type == 1212:
-            raise ValueError("Expected TopLevelHeader with type=1212, but found "+str(head.type))
+            raise ValueError("Expected Header with type=1212, but found "+str(head.type))
         self.input_card = read_type_1212(self._f, head)
         self.__read_meta.append(head)
 
     def __read_tel_pos(self):
-        head = read_top_level_header(self._f)
+        head = read_header(self._f)
         if not head.type == 1201:
-            raise ValueError("Expected TopLevelHeader with type=1201, but found "+str(head.type))
+            raise ValueError("Expected Header with type=1201, but found "+str(head.type))
         self.tel_pos = read_type_1201(self._f, head)
         self.__read_meta.append(head)
 
     def __read_event_header(self):
-        head = read_top_level_header(self._f)
+        head = read_header(self._f)
         if not head.type == 1202:
-            raise ValueError("Expected TopLevelHeader with type=1202, but found "+str(head.type))
+            raise ValueError("Expected Header with type=1202, but found "+str(head.type))
         self.event_header = read_type_1202(self._f, head)
         self.__read_meta.append(head)
 
     def __read_tel_offset(self):
-        head = read_top_level_header(self._f)
+        head = read_header(self._f)
         if not head.type == 1203:
-            raise ValueError("Expected TopLevelHeader with type=1203, but found "+str(head.type))
+            raise ValueError("Expected Header with type=1203, but found "+str(head.type))
         self.tel_offset = read_type_1203(self._f, head)
         self.__read_meta.append(head)
     
     def __read_photon_bunches(self):
-        head = read_top_level_header(self._f)
+        head = read_header(self._f)
         if not head.type == 1204:
-            raise ValueError("Expected TopLevelHeader with type=1204, but found "+str(head.type))
+            raise ValueError("Expected Header with type=1204, but found "+str(head.type))
         self.photon_bunches, self.subhead = read_type_1204(self._f, head)
         self.__read_meta.append(head)
         
     def __read_event_end(self):
-        head = read_top_level_header(self._f)
+        head = read_header(self._f)
         if not head.type == 1209:
-            raise ValueError("Expected TopLevelHeader with type=1209, but found "+str(head.type))
+            raise ValueError("Expected Header with type=1209, but found "+str(head.type))
         self.event_end = read_type_1209(self._f, head)
         self.__read_meta.append(head)
         
@@ -546,43 +373,182 @@ class EventIoFile(object):
         return self
 
     def next(self):
-        try: 
+        #try: 
             self.__read_event_header()
-            if not self.is_first_event_already_read:
+            if not self.__is_first_event_already_read:
                 self.__read_tel_offset()
-                self.is_first_event_already_read = True
+                self.__is_first_event_already_read = True
             self.__read_photon_bunches()
             self.__read_event_end()
             return self.photon_bunches
 
-        except ValueError:
-            raise StopIteration
-
-        
+        #except ValueError:
+            #raise StopIteration
 
 
-def read_everything(f):
-    the_file = OrderedDict()
-    while True:
-        try:
-            head = read_top_level_header(f)
-        except struct.error:
-            break
-    
-        if head.type in known_types:
-            body = known_types[head.type](f, head)
+class EventIoFile(object):
 
-        else:
-            body = read_any_type(f, head)
-        the_file[head] = body
-    return the_file
+    def __init__(self, path, debug=False):
+        self.__file = open(path, 'rb')
+        self.__mm = mmap.mmap(self.__file.fileno(), 0, prot=mmap.PROT_READ)
+        self.__header_list = []
 
-if __name__ == '__main__':
-    #_path = 'data/10phot_100GeV.dat'
-    #_path = 'data/10phot_1TeV.dat'
-    _path = 'data/telescope.dat'
-    f = read_everything(open(_path))
+        self.run_header = self.__read_run_header()
+        self._make_complete_header_list()
+        self._make_reuse_header_list()
+        self.__mm.seek(0)
+        self.__read_run_header()
 
-
+    @property
+    def header_list(self):
+        return self.__header_list
     
 
+    def _make_complete_header_list(self):
+        while True:
+            try:
+                header = self.__get_and_save_header()
+            except struct.error:
+                break
+            self.__mm.seek(header.length, 1)
+
+    def _make_reuse_header_list(self):
+        for i, h in enumerate(self.__header_list[:]):
+            if h.type == 1204:
+                self.__mm.seek(h.tell)
+                photon_bunch_headers = read_type_1204(self.__mm, h, headers_only=True)
+                self.__header_list[i] = (h, photon_bunch_headers)
+
+    def __get_and_save_header(self, expect_type=None):
+        header = Header(self.__mm)
+        if not expect_type is None:
+            if header.type != expect_type:
+                header_length = 4 if not header.extended else 5
+                self.__mm.seek(header_length * -4, 1)
+                raise WrongTypeException(
+                    "expected ", expect_type, 
+                    ", got:", header.type)
+
+
+        #self.__header_list.append(header)
+        return header
+
+    def __get_type(self, type):
+        header = self.__get_and_save_header(expect_type=type)
+        return known_types[type](self.__mm, header)
+
+
+    def __read_run_header(self):
+        rh = self.__get_type(1200)
+        rh['input_card'] = self.__get_type(1212)
+        rh['tel_pos'] = self.__get_type(1201)
+
+        return rh
+
+    def __read_event_header(self):
+        self.current_event_header = self.__get_type(1202)        
+        self.current_event_header['telescope_offsets'] = self.__get_type(1203)
+
+    def __iter__(self):
+        return self
+
+    def __next__(self):
+        return self.next()
+
+    def next(self):
+        while True:
+            try:
+                return pb.PhotonBundle(self.__mm)
+            except WrongTypeException:
+                pass
+            
+            try:
+                _ = self.__get_and_save_header(expect_type=1204)
+                # simply get rid of the 1204-inter-reuse-stuff.
+                #_ = self.__get_type(1204)
+            except (WrongTypeException, ValueError):
+                pass
+
+            try:
+                self.__read_event_header()
+            except (WrongTypeException, ValueError):
+                pass
+
+            try:
+                self.last_event_end = self.__get_type(1209)
+            except (WrongTypeException, ValueError):
+                pass            
+
+            try:
+                self.run_end = self.__get_type(1210)
+                raise StopIteration
+            except (WrongTypeException, ValueError):
+                pass
+                
+class EventIoFileStream(object):
+
+    def __init__(self, path, debug=False):
+        self.__file = open(path, 'rb')
+        self.__mm = mmap.mmap(self.__file.fileno(), 0, prot=mmap.PROT_READ)
+
+        self.run_header = self.__read_run_header()
+
+    def __read_run_header(self):
+        rh = self._retrieve_payload_of_type(1200)
+        rh['input_card'] = self._retrieve_payload_of_type(1212)
+        rh['tel_pos'] = self._retrieve_payload_of_type(1201)
+        return rh
+
+    def _retrieve_payload_of_type(self, type):
+        header = self.__get_header(expect_type=type)
+        return known_types[type](self.__mm, header)
+
+    def __get_header(self, expect_type):
+        header = Header(self.__mm)
+        if header.type != expect_type:
+            header_length = 4 if not header.extended else 5
+            self.__mm.seek(header_length * -4, 1)
+            raise WrongTypeException(
+                "expected ", expect_type, 
+                ", got:", header.type)
+        return header
+
+
+    def __iter__(self):
+        return self
+
+    def __next__(self):
+        return self.next()
+
+    def next(self):
+        while True:
+            try:
+                return pb.PhotonBundle(self.__mm)
+            except WrongTypeException:
+                pass
+            
+            try:
+                _ = self.__get_header(expect_type=1204)
+                # simply get rid of the 1204-inter-reuse-stuff.
+            except (WrongTypeException, ValueError):
+                pass
+
+            try:
+                self.__read_event_header()
+            except (WrongTypeException, ValueError):
+                pass
+
+            try:
+                self.last_event_end = self._retrieve_payload_of_type(1209)
+            except (WrongTypeException, ValueError):
+                pass            
+
+            try:
+                self.run_end = self._retrieve_payload_of_type(1210)
+                raise StopIteration
+            except (WrongTypeException, ValueError):
+                pass
+                
+    def __read_event_header(self):
+        self.current_event_header = self._retrieve_payload_of_type(1202)        
+        self.current_event_header['telescope_offsets'] = self._retrieve_payload_of_type(1203)
