@@ -45,8 +45,8 @@ If you like to plot the origin of the Cherenkov photons of the first shower in f
 
     cz = 1 - (b['cx']**2 + b['cy']**2)
 
-    x = b['x'] + (b['zem'] / cz)*b['cx']
-    y = b['y'] + (b['zem'] / cz)*b['cy']
+    x = b['x'] + ((b['zem']-f.current_event_header['observation levels']) / cz)*b['cx']
+    y = b['y'] + ((b['zem']-f.current_event_header['observation levels']) / cz)*b['cy']
 
     ax.plot(x/100., y/100., b['zem']/1e5, 'o')
     ax.set_xlabel('Xaxis [m]')
