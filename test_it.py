@@ -20,8 +20,6 @@ filename = sys.argv[1] if len(sys.argv)>1 else 'data/telescope.dat'
 
 f = eventio.EventIoFileStream(filename, debug=False)
 p = f.next()
-p = f.next()
-#p = f.next()
 
 b = p.bunches
 
@@ -54,8 +52,8 @@ support /= 100.
 px = production[0]
 py = production[1]
 pz = production[2]
-#ax.scatter(px, py, pz, c='b', marker=',')
-ax.scatter(px[pz<5000], py[pz<5000], pz[pz<5000], c='r', marker=',')
+ax.scatter(px, py, pz, c='b', marker=',')
+
 
 ax.set_xlim(-15000, 15000)
 ax.set_ylim(-15000, 15000)
