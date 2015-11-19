@@ -13,6 +13,7 @@ from .header import Header
 from . import photonbunches as pb
 from . import tools
 
+
 def parse_MmcsEventHeader(event_header):
     """ parse the event header of a corsika file into a dict
     
@@ -28,8 +29,8 @@ def parse_MmcsEventHeader(event_header):
     """
     h = event_header
     d = dict()
-    d['event number'] = long(round(h[1]))
-    d['particle id (particle code or A x 100 + Z for nuclei)'] = long(round(h[2]))
+    d['event number'] = int(round(h[1]))
+    d['particle id (particle code or A x 100 + Z for nuclei)'] = int(round(h[2]))
     d['total energy in GeV'] = h[3]
     d['starting altitude in g/cm2'] = h[4]
     d['number of first target if fixed'] = h[5]
