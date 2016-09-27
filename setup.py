@@ -13,7 +13,7 @@ setup(
         ],
     package_data={'eventio': [
                     'resources/input_card.txt',
-                    'resources/one_shower.txt',
+                    'resources/one_shower.dat',
                     ]
                  },
     install_requires=[
