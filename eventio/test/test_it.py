@@ -1,3 +1,4 @@
+"""
 import sys
 import eventio
 import glob
@@ -57,3 +58,4 @@ for p in f:
 	print "total energy in GeV", f.current_event_header['total energy in GeV']
 
 	raw_input("?")
+"""
