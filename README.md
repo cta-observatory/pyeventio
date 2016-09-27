@@ -1,5 +1,4 @@
-# py_corsika_event_io #
-
+# py_corsika_event_io [![Build Status](https://travis-ci.org/fact-project/py_corsika_eventio.svg?branch=master)](https://travis-ci.org/fact-project/py_corsika_eventio)
 This is a simple reader, for the special event_io data format invented by Konrad Bernloehr for the [Corsika](https://www.ikp.kit.edu/corsika/) IACT routines. 
 
 # install with #
