@@ -4,6 +4,7 @@ A Python (read-only) implementation of the EventIO data format invented by Konra
 by the IACT extension for CORSIKA: https://www.ikp.kit.edu/corsika
 
 The following EventIO object types are currently supported:
+
 | Code | Description |
 | ---- | ----------- | 
 | 1200 | CORSIKA Run Header |
