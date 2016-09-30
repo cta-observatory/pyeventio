@@ -1,13 +1,31 @@
-# py_corsika_event_io [![Build Status](https://travis-ci.org/fact-project/py_corsika_eventio.svg?branch=master)](https://travis-ci.org/fact-project/py_corsika_eventio)
-This is a simple reader, for the special event_io data format invented by Konrad Bernloehr for the [Corsika](https://www.ikp.kit.edu/corsika/) IACT routines. 
+# pyeventio [![Build Status](https://travis-ci.org/fact-project/py_corsika_eventio.svg?branch=master)](https://travis-ci.org/fact-project/py_corsika_eventio)
 
-# install with #
+A Python (read-only) implementation of the EventIO data format invented by Konrad Bernloehr as used for example
+by the IACT extension for CORSIKA: https://www.ikp.kit.edu/corsika
+
+The following EventIO object types are currently supported:
+| Code | Description |
+| ---- | ----------- | 
+| 1200 | CORSIKA Run Header |
+| 1201 ||
+| 1202 ||
+| 1203 ||
+| 1204 ||
+| 1209 ||
+| 1210 ||
+| 1212 | CORSIKA Input Card |
+
+
+# install with
     
-    pip install git+https://bitbucket.org/dneise/py_corsika_event_io
+    pip install git+https://github.com/fact-project/pyeventio
 
-# 1st Example #
+# Open a file produced by the IACT CORSIKA extension
 
-One may iterate over an instance of `EventIoFile` class in order to retrieve events. events have a small number of fields. the most important one is the `bunches` field, which is a simple structured np.array, containing the typical parameters Cherekov photons bunches in Corsika have, like:
+## First Example
+One may iterate over an instance of `EventIoFile` class in order to retrieve events. 
+Events have a small number of fields. 
+The most important one is the `bunches` field, which is a simple structured np.array, containing the typical parameters Cherekov photons bunches in Corsika have, like:
 
  * `x, y` coordinate in the observation plane (in cm)
  * direction cosine `cx, cy` in x and y direction of the incident angle of the photon
@@ -18,41 +36,38 @@ One may iterate over an instance of `EventIoFile` class in order to retrieve eve
 
 In addition an event knows the total number of bunches and photons in itself `n_bunches` and `n_photons`. Of course the numbers should match with the ones, we can retrieve from the array.
 
-    import eventio
-    f = eventio.EventIoFile('data/telescope.dat')
-    for event in f:
-        print event.n_photons, "should be (approximately) equal to", event.bunches['photons'].sum(), 
-        print event.n_bunches, "should be (exactly) equal to", event.bunches.shape
-
-
-
-
-# 2nd Example #
+```{python}
+import eventio
+f = eventio.EventIoFile('data/telescope.dat')
+for event in f:
+    print(event.n_photons, "should be (approximately) equal to", event.bunches['photons'].sum()) 
+    print(event.n_bunches, "should be (exactly) equal to", event.bunches.shape)
+```
+## Second Example
 
 If you like to plot the origin of the Cherenkov photons of the first shower in file `data/telescope.dat` you can do:
+```{python}
+import matplotlib.pyplot as plt
+from mpl_toolkits.mplot3d import Axes3D
 
+fig = plt.figure()
+ax = fig.add_subplot(111, projection='3d')
 
-    import matplotlib.pyplot as plt
-    from mpl_toolkits.mplot3d import Axes3D
+import eventio
+f = eventio.EventIoFile('data/telescope.dat')
+b = f.next().bunches
 
-    fig = plt.figure()
-    ax = fig.add_subplot(111, projection='3d')
+cz = 1 - (b['cx']**2 + b['cy']**2)
 
-    import eventio
-    f = eventio.EventIoFile('data/telescope.dat')
-    b = f.next().bunches
+x = b['x'] + ((b['zem']-f.current_event_header['observation levels']) / cz)*b['cx']
+y = b['y'] + ((b['zem']-f.current_event_header['observation levels']) / cz)*b['cy']
 
-    cz = 1 - (b['cx']**2 + b['cy']**2)
-
-    x = b['x'] + ((b['zem']-f.current_event_header['observation levels']) / cz)*b['cx']
-    y = b['y'] + ((b['zem']-f.current_event_header['observation levels']) / cz)*b['cy']
-
-    ax.plot(x/100., y/100., b['zem']/1e5, 'o')
-    ax.set_xlabel('Xaxis [m]')
-    ax.set_ylabel('Yaxis [m]')
-    ax.set_zlabel('Zaxis [km]')
-    plt.show()
-
+ax.plot(x/100., y/100., b['zem']/1e5, 'o')
+ax.set_xlabel('Xaxis [m]')
+ax.set_ylabel('Yaxis [m]')
+ax.set_zlabel('Zaxis [km]')
+plt.show()
+```
 
 It might look similar to this picture.
 
