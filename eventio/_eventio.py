@@ -61,7 +61,7 @@ def parse_MmcsEventHeader(event_header):
     d['NFLPIF'] = h[67]
     d['NFLCHE'] = h[68]
     d['NFRAGM'] = h[69]
-    d['Earth's magnetic field in uT: (x,z)'] = h[70:72]
+    d['Earth\'s magnetic field in uT: (x,z)'] = h[70:72]
     d['flag for activating EGS4'] = h[72]
     d['flag for activating NKG'] = h[73]
     d['low-energy hadr. model flag (1.=GHEISHA, 2.=UrQMD, 3.=FLUKA)'] = h[74]
