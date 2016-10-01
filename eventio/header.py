@@ -74,7 +74,7 @@ HeaderBase = namedtuple(
 )
 
 
-class Header(HeaderBase):
+class ObjectHeader(HeaderBase):
     def __new__(cls, f, top_level=True):
         self = super().__new__(cls, *read_header(f, top_level))
         return self

@@ -1,18 +1,26 @@
 import struct
 
 
-class WrongTypeException(Exception):
-    pass
-
-
-def unpack_from(fmt, _buffer):
+def read_from(fmt, f):
+    '''
+    read the struct fmt specification from file f
+    Moves the current position.
+    '''
     result = struct.unpack_from(
         fmt,
-        _buffer[_buffer.tell():_buffer.tell() + struct.calcsize(fmt)]
+        f.read(struct.calcsize(fmt))
     )
-    _buffer.seek(struct.calcsize(fmt), 1)
     return result
 
 
 def read_ints(n, f):
-    return unpack_from('{:d}i'.format(n), f)
+    ''' read n ints from file f '''
+    return read_from('{:d}i'.format(n), f)
+
+
+def read_from_without_position_change(fmt, f):
+    ''' Read struct format and return to old cursor position '''
+    position = f.tell()
+    result = read_from(fmt, f)
+    f.seek(position)
+    return result

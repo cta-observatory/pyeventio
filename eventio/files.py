@@ -1,14 +1,12 @@
 import struct
 import mmap
 
-from .tools import WrongTypeException
-from .header import Header
-from . import photonbunches as pb
+from .exceptions import WrongTypeException
+from .objects import UnknownObject
+from .header import ObjectHeader
 
-from .iact import iact_types
 
-known_types = {}
-known_types.update(iact_types)
+known_objects = {}
 
 
 class EventIOFile:
@@ -16,13 +14,9 @@ class EventIOFile:
     def __init__(self, path, debug=False):
         self.__file = open(path, 'rb')
         self.__mm = mmap.mmap(self.__file.fileno(), 0, prot=mmap.PROT_READ)
-        self.__header_list = []
 
-        self.run_header = self.__read_run_header()
-        self._make_complete_header_list()
-        self._make_reuse_header_list()
-        self.__mm.seek(0)
-        self.__read_run_header()
+        self.__objects = []
+        self._read_all_headers()
 
     def __enter__(self):
         return self
@@ -31,86 +25,34 @@ class EventIOFile:
         self.__mm.close()
         self.__file.close()
 
-    @property
-    def header_list(self):
-        return self.__header_list
-
-    def _make_complete_header_list(self):
+    def _read_all_headers(self):
+        self.__mm.seek(0)
         while True:
+            position = self.__mm.tell()
             try:
-                header = self.__get_and_save_header()
+                header = self.__read_header()
+                eventio_object = known_objects.get(header.type, UnknownObject)(
+                    eventio_file=self,
+                    header=header,
+                    first_byte=position,
+                )
+                self.__objects.append(eventio_object)
+                self.__mm.seek(header.length, 1)
             except struct.error:
                 break
-            self.__mm.seek(header.length, 1)
 
-    def _make_reuse_header_list(self):
-        for i, h in enumerate(self.__header_list[:]):
-            if h.type == 1204:
-                self.__mm.seek(h.tell)
-                photon_bunch_headers = known_types[h.type](
-                    self.__mm, h, headers_only=True
-                )
-                self.__header_list[i] = (h, photon_bunch_headers)
-
-    def __get_and_save_header(self, expect_type=None):
-        header = Header(self.__mm)
-        if expect_type is not None:
-            if header.type != expect_type:
-                header_length = 4 if not header.extended else 5
-                self.__mm.seek(header_length * -4, 1)
-                raise WrongTypeException(
-                    'expected ', expect_type,
-                    ', got:', header.type
-                )
-
-        return header
-
-    def __get_type(self, type):
-        header = self.__get_and_save_header(expect_type=type)
-        return known_types[type](self.__mm, header)
-
-    def __read_run_header(self):
-        rh = self.__get_type(1200)
-        rh['input_card'] = self.__get_type(1212)
-        rh['tel_pos'] = self.__get_type(1201)
-
-        return rh
-
-    def __read_event_header(self):
-        self.current_event_header = self.__get_type(1202)
-        self.current_event_header['telescope_offsets'] = self.__get_type(1203)
+    def __getitem__(self, idx):
+        return self.__objects[idx]
 
     def __iter__(self):
-        return self
+        return iter(self.__objects)
 
-    def __next__(self):
-        return self.next()
+    def __read_header(self, expected_type=None):
+        header = ObjectHeader(self.__mm)
+        if expected_type is not None:
+            if header.type != expected_type:
+                header_length = 4 if not header.extended else 5
+                self.__mm.seek(-header_length * 4, 1)
+                raise WrongTypeException(expected_type, header.type)
 
-    def next(self):
-        while True:
-            try:
-                return pb.PhotonBundle(self.__mm)
-            except WrongTypeException:
-                pass
-
-            try:
-                # simply get rid of the 1204-inter-reuse-stuff.
-                self.__get_and_save_header(expect_type=1204)
-            except (WrongTypeException, ValueError):
-                pass
-
-            try:
-                self.__read_event_header()
-            except (WrongTypeException, ValueError):
-                pass
-
-            try:
-                self.last_event_end = self.__get_type(1209)
-            except (WrongTypeException, ValueError):
-                pass
-
-            try:
-                self.run_end = self.__get_type(1210)
-                raise StopIteration
-            except (WrongTypeException, ValueError):
-                pass
+        return header
