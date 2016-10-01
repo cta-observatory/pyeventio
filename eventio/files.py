@@ -1,9 +1,12 @@
 import struct
 import mmap
+import logging
 
 from .exceptions import WrongTypeException
 from .objects import UnknownObject
 from .header import ObjectHeader
+
+log = logging.getLogger(__name__)
 
 
 known_objects = {}
@@ -13,6 +16,8 @@ class EventIOFile:
 
     def __init__(self, path, debug=False):
         self.__file = open(path, 'rb')
+        log.info('Opening new file {}'.format(path))
+        self.path = path
         self.__mm = mmap.mmap(self.__file.fileno(), 0, prot=mmap.PROT_READ)
 
         self.__objects = []
@@ -31,6 +36,9 @@ class EventIOFile:
             position = self.__mm.tell()
             try:
                 header = self.__read_header()
+                log.debug(
+                    'Found header of type {} at byte {}'.format(header.type, position)
+                )
                 eventio_object = known_objects.get(header.type, UnknownObject)(
                     eventio_file=self,
                     header=header,
