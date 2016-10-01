@@ -1,24 +1,17 @@
-try:
-    from setuptools import setup
-except ImportError:
-    from distutils.core import setup
+from setuptools import setup
 
 setup(
     name='eventio',
-    version='0.1',
-    description='reader for Corsika(IACT) event_io format files.',
-    url='https://github.com/fact-project/py_corsika_eventio',
+    version='0.1.0',
+    description='Python read-only implementation of the EventIO file format',
+    url='https://github.com/fact-project/pyeventio',
     author='Dominik Neise',
     author_email='neised@phys.ethz.ch',
     license='MIT',
-    packages=[ 
+    packages=[
         'eventio',
         ],
-    package_data={'eventio': [
-                    'resources/input_card.txt',
-                    'resources/one_shower.dat',
-                    ]
-                 },
+    package_data={'eventio': ['resources/*']},
     install_requires=[
         'numpy'
     ],
