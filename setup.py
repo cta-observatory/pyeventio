@@ -10,6 +10,7 @@ setup(
     license='MIT',
     packages=[
         'eventio',
+        'eventio.iact',
         ],
     package_data={'eventio': ['resources/*']},
     install_requires=[

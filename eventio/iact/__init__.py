@@ -1,35 +1,43 @@
 ''' Methods to read in and parse the IACT EventIO object types '''
 import numpy as np
 
-from .tools import unpack_from, read_ints
+from ..tools import read_from, read_ints
+from ..objects import EventIOObject
+
 
 __all__ = [
     'iact_types',
-    'read_type_1200',
-    'read_type_1201',
-    'read_type_1202',
-    'read_type_1203',
-    'read_type_1212',
-    'read_type_1209',
-    'read_type_1210',
-    'read_type_1204',
-    'parse_corsika_run_header',
-    'parse_corsika_event_header',
 ]
 
 
-def read_type_1200(f, head=None):
-    n, = read_ints(1, f)
-    if n != 273:
-        raise ValueError('Wrong size: was not 273 but {}'.format(n))
+class CorsikaRunHeader(EventIOObject):
+    eventio_type = 1200
 
-    block = np.frombuffer(
-        f.read(n * 4),
-        dtype=np.float32,
-        count=n
-    )
+    def __init__(self, eventio_file, header, first_byte):
+        super().__init__(eventio_file, header, first_byte)
+        self.run_header = self.read()
 
-    return parse_corsika_run_header(block)
+    def __getitem__(self, key):
+        return self.run_header[key]
+
+    def read(self):
+        f = self.eventio_file
+        position = f.tell()
+
+        f.seek(self.header.tell)
+        n, = read_ints(1, f)
+        if n != 273:
+            raise ValueError('Wrong size: was not 273 but {}'.format(n))
+
+        block = np.frombuffer(
+            f.read(n * 4),
+            dtype=np.float32,
+            count=n
+        )
+
+        f.seek(position)
+
+        return parse_corsika_run_header(block)
 
 
 def read_type_1201(f, head=None):
@@ -40,7 +48,7 @@ def read_type_1201(f, head=None):
     float32 z[ntel]
     float32 r[ntel]
     '''
-    ntel, = unpack_from('i', f)
+    ntel, = read_from('i', f)
     number_of_following_arrays = int((head.length - 4) / ntel / 4)
     if number_of_following_arrays != 4:
         # DN: I think this cannot happen, but who knows.
@@ -93,7 +101,7 @@ def read_type_1203(f, head=None):
 
     '''
     length_first_two = 4 + 4
-    narray, toff = unpack_from('if', f)
+    narray, toff = read_from('if', f)
     number_of_following_arrays = int((head.length - length_first_two) / narray / 4)
     if number_of_following_arrays not in [2, 3]:
         # dneise: I think this cannot happen, but who knows.
@@ -270,7 +278,7 @@ def parse_corsika_run_header(run_header):
     if (n_obs_levels < 1) or (n_obs_levels > 10):
         ValueException('number of observation levels n must be 0 < n < 11, but is: '+str(h[4]))
     d['observation levels']=h[5:5+n_obs_levels]
-    d['slope of energy spektrum']=h[15]
+    d['slope of energy spectrum']=h[15]
     d['energy range']=h[16:18]
     d['flag for EGS4 treatment of em. component'] = h[18]
     d['flag for NKG treatment of em. component'] = h[19]
@@ -301,13 +309,7 @@ def parse_corsika_run_header(run_header):
     return d
 
 
-iact_types = {
-    1200: read_type_1200,
-    1201: read_type_1201,
-    1202: read_type_1202,
-    1203: read_type_1203,
-    1212: read_type_1212,
-    1209: read_type_1209,
-    1210: read_type_1210,
-    1204: read_type_1204,
+iact_objects = {
+    o.eventio_type: o
+    for o in [CorsikaRunHeader]
 }
