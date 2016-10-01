@@ -7,11 +7,13 @@ import warnings
 from .exceptions import WrongTypeException
 from .objects import UnknownObject
 from .header import ObjectHeader
+from .iact import iact_objects
 
 log = logging.getLogger(__name__)
 
 
 known_objects = {}
+known_objects.update(iact_objects)
 
 
 class EventIOFile:
@@ -28,6 +30,15 @@ class EventIOFile:
         self.__objects = []
         self._read_all_headers()
 
+    def seek(self, position, whence=0):
+        self.__mm.seek(position, whence)
+
+    def tell(self):
+        return self.__mm.tell()
+
+    def read(self, num_bytes):
+        return self.__mm.read(num_bytes)
+
     def __enter__(self):
         return self
 
@@ -36,9 +47,9 @@ class EventIOFile:
         self.__file.close()
 
     def _read_all_headers(self):
-        self.__mm.seek(0)
+        self.seek(0)
         while True:
-            position = self.__mm.tell()
+            position = self.tell()
             try:
                 header = self.__read_header()
                 log.debug(
@@ -51,7 +62,7 @@ class EventIOFile:
                 )
                 self.__objects.append(eventio_object)
                 try:
-                    self.__mm.seek(header.length, 1)
+                    self.seek(header.length, 1)
                 except ValueError:
                     warnings.warn('File seems to be truncated')
                     break
@@ -69,7 +80,7 @@ class EventIOFile:
         if expected_type is not None:
             if header.type != expected_type:
                 header_length = 4 if not header.extended else 5
-                self.__mm.seek(-header_length * 4, 1)
+                self.seek(-header_length * 4, 1)
                 raise WrongTypeException(expected_type, header.type)
 
         return header
