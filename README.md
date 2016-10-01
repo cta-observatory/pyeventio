@@ -39,7 +39,7 @@ In addition an event knows the total number of bunches and photons in itself `n_
 
 ```{python}
 import eventio
-f = eventio.EventIoFile('data/telescope.dat')
+f = eventio.EventIOFile('data/telescope.dat')
 for event in f:
     print(event.n_photons, "should be (approximately) equal to", event.bunches['photons'].sum()) 
     print(event.n_bunches, "should be (exactly) equal to", event.bunches.shape)
@@ -55,7 +55,7 @@ fig = plt.figure()
 ax = fig.add_subplot(111, projection='3d')
 
 import eventio
-f = eventio.EventIoFile('data/telescope.dat')
+f = eventio.EventIOFile('data/telescope.dat')
 b = f.next().bunches
 
 cz = 1 - (b['cx']**2 + b['cy']**2)
@@ -72,4 +72,4 @@ plt.show()
 
 It might look similar to this picture.
 
-![an example shower](https://bitbucket.org/repo/ddng5E/images/4235100275-a_shower.png)
+![an example shower](https://raw.githubusercontent.com/fact-project/pyeventio/master/a_shower.png)
