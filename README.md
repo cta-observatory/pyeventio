@@ -1,4 +1,4 @@
-# pyeventio [![Build Status](https://travis-ci.org/fact-project/py_corsika_eventio.svg?branch=master)](https://travis-ci.org/fact-project/py_corsika_eventio)
+# pyeventio [![Build Status](https://travis-ci.org/fact-project/pyeventio.svg?branch=master)](https://travis-ci.org/fact-project/pyeventio)
 
 A Python (read-only) implementation of the EventIO data format invented by Konrad Bernloehr as used for example
 by the IACT extension for CORSIKA: https://www.ikp.kit.edu/corsika
