@@ -24,6 +24,13 @@ class EventIOFile:
         self.__mm.seek(0)
         self.__read_run_header()
 
+    def __enter__(self):
+        return self
+
+    def __exit__(self, exc_type, exc_value, traceback):
+        self.__mm.close()
+        self.__file.close()
+
     @property
     def header_list(self):
         return self.__header_list
@@ -116,6 +123,13 @@ class EventIOFileStream:
         self.__mm = mmap.mmap(self.__file.fileno(), 0, prot=mmap.PROT_READ)
 
         self.run_header = self.__read_run_header()
+
+    def __enter__(self):
+        return self
+
+    def __exit__(self, exc_type, exc_value, traceback):
+        self.__mm.close()
+        self.__file.close()
 
     def __read_run_header(self):
         rh = self._retrieve_payload_of_type(1200)
