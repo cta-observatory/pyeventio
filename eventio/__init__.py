@@ -1,1 +1,1 @@
-from .files import EventIOFile, EventIOFileStream
+from .files import EventIOFile
