@@ -2,6 +2,7 @@ import struct
 import mmap
 import logging
 import gzip
+import warnings
 
 from .exceptions import WrongTypeException
 from .objects import UnknownObject
@@ -49,7 +50,11 @@ class EventIOFile:
                     first_byte=position,
                 )
                 self.__objects.append(eventio_object)
-                self.__mm.seek(header.length, 1)
+                try:
+                    self.__mm.seek(header.length, 1)
+                except ValueError:
+                    warnings.warn('File seems to be truncated')
+                    break
             except struct.error:
                 break
 
