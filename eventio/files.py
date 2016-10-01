@@ -40,7 +40,9 @@ class EventIOFile:
         for i, h in enumerate(self.__header_list[:]):
             if h.type == 1204:
                 self.__mm.seek(h.tell)
-                photon_bunch_headers = known_types[type](self.__mm, h, headers_only=True)
+                photon_bunch_headers = known_types[h.type](
+                    self.__mm, h, headers_only=True
+                )
                 self.__header_list[i] = (h, photon_bunch_headers)
 
     def __get_and_save_header(self, expect_type=None):
