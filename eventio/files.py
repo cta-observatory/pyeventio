@@ -30,6 +30,21 @@ class EventIOFile:
         self.__objects = []
         self._read_all_headers()
 
+    def __repr__(self):
+        r = '{}(path={}, objects=[\n'.format(self.__class__.__name__, self.path)
+
+        if len(self.__objects) <= 8:
+            for o in self.__objects:
+                r += '  {}\n'.format(o)
+        else:
+            for o in self.__objects[:4]:
+                r += '  {}\n'.format(o)
+            r += '\t...\n'
+            for o in self.__objects[-4:]:
+                r += '  {}\n'.format(o)
+        r += '])'
+        return r
+
     def seek(self, position, whence=0):
         self.__mm.seek(position, whence)
 
