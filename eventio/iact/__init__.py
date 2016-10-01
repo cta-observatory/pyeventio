@@ -40,40 +40,59 @@ class CorsikaRunHeader(EventIOObject):
         return parse_corsika_run_header(block)
 
 
-def read_type_1201(f, head=None):
-    ''' ---> write_tel_pos
-    int32 ntel
-    float32 x[ntel]
-    float32 y[ntel]
-    float32 z[ntel]
-    float32 r[ntel]
-    '''
-    ntel, = read_from('i', f)
-    number_of_following_arrays = int((head.length - 4) / ntel / 4)
-    if number_of_following_arrays != 4:
-        # DN: I think this cannot happen, but who knows.
-        msg = 'Number_of_following_arrays is: {}'
-        raise Exception(msg.format(number_of_following_arrays))
+class CorsikaTelescopeDefinition(EventIOObject):
+    eventio_type = 1201
 
-    tel_pos = np.empty(
-        ntel,
-        dtype=[('x', 'f4'), ('y', 'f4'), ('z', 'f4'), ('r', 'f4')],
-    )
+    def __init__(self, eventio_file, header, first_byte):
+        super().__init__(eventio_file, header, first_byte)
+        self.num_telescopes, self.telescope_positions = self.read()
 
-    arrays = np.frombuffer(
-        f.read(ntel * 4 * 4),
-        dtype=np.float32,
-        count=ntel * 4
-    )
-    arrays = arrays.reshape(4, ntel)
-    x, y, z, r = np.vsplit(arrays, 4)
+    def __getitem__(self, idx):
+        return self.telescope_positions[idx]
 
-    tel_pos['x'] = x
-    tel_pos['y'] = y
-    tel_pos['z'] = z
-    tel_pos['r'] = r
+    def __len__(self):
+        return self.num_telescopes
 
-    return tel_pos
+    def read(self):
+        ''' ---> write_tel_pos
+        int32 ntel
+        float32 x[ntel]
+        float32 y[ntel]
+        float32 z[ntel]
+        float32 r[ntel]
+        '''
+        f = self.eventio_file
+        position = f.tell()
+        f.seek(self.header.tell)
+
+        n_tel, = read_from('i', f)
+        number_of_following_arrays = int((self.header.length - 4) / n_tel / 4)
+        if number_of_following_arrays != 4:
+            # DN: I think this cannot happen, but who knows.
+            msg = 'Number_of_following_arrays is: {}'
+            raise Exception(msg.format(number_of_following_arrays))
+
+        tel_pos = np.empty(
+            n_tel,
+            dtype=[('x', 'f4'), ('y', 'f4'), ('z', 'f4'), ('r', 'f4')],
+        )
+
+        arrays = np.frombuffer(
+            f.read(n_tel * 4 * 4),
+            dtype=np.float32,
+            count=n_tel * 4
+        )
+        arrays = arrays.reshape(4, n_tel)
+        x, y, z, r = np.vsplit(arrays, 4)
+
+        tel_pos['x'] = x
+        tel_pos['y'] = y
+        tel_pos['z'] = z
+        tel_pos['r'] = r
+
+        f.seek(position)
+
+        return n_tel, tel_pos
 
 
 def read_type_1202(f, head=None):
@@ -311,5 +330,8 @@ def parse_corsika_run_header(run_header):
 
 iact_objects = {
     o.eventio_type: o
-    for o in [CorsikaRunHeader]
+    for o in [
+        CorsikaRunHeader,
+        CorsikaTelescopeDefinition,
+    ]
 }

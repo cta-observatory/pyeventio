@@ -8,7 +8,7 @@ The following EventIO object types are currently supported:
 | Code | Description |
 | ---- | ----------- | 
 | 1200 | CORSIKA Run Header |
-| 1201 ||
+| 1201 | Telescope Postions |
 | 1202 ||
 | 1203 ||
 | 1204 ||
