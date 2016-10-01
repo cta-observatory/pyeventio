@@ -45,6 +45,9 @@ class EventIOFile:
         r += '])'
         return r
 
+    def __len__(self):
+        return len(self.__objects)
+
     def seek(self, position, whence=0):
         self.__mm.seek(position, whence)
 
