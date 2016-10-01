@@ -1,6 +1,7 @@
 import struct
 import mmap
 import logging
+import gzip
 
 from .exceptions import WrongTypeException
 from .objects import UnknownObject
@@ -15,9 +16,12 @@ known_objects = {}
 class EventIOFile:
 
     def __init__(self, path, debug=False):
-        self.__file = open(path, 'rb')
         log.info('Opening new file {}'.format(path))
         self.path = path
+        if path.endswith('.gz'):
+            self.__file = gzip.open(path, 'rb')
+        else:
+            self.__file = open(path, 'rb')
         self.__mm = mmap.mmap(self.__file.fileno(), 0, prot=mmap.PROT_READ)
 
         self.__objects = []
