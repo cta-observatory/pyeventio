@@ -11,7 +11,7 @@ known_types = {}
 known_types.update(iact_types)
 
 
-class EventIOFile(object):
+class EventIOFile:
 
     def __init__(self, path, debug=False):
         self.__file = open(path, 'rb')
@@ -28,7 +28,6 @@ class EventIOFile(object):
     def header_list(self):
         return self.__header_list
 
-
     def _make_complete_header_list(self):
         while True:
             try:
@@ -41,7 +40,7 @@ class EventIOFile(object):
         for i, h in enumerate(self.__header_list[:]):
             if h.type == 1204:
                 self.__mm.seek(h.tell)
-                photon_bunch_headers = read_type_1204(self.__mm, h, headers_only=True)
+                photon_bunch_headers = known_types[type](self.__mm, h, headers_only=True)
                 self.__header_list[i] = (h, photon_bunch_headers)
 
     def __get_and_save_header(self, expect_type=None):
@@ -86,8 +85,8 @@ class EventIOFile(object):
                 pass
 
             try:
-                _ = self.__get_and_save_header(expect_type=1204)
                 # simply get rid of the 1204-inter-reuse-stuff.
+                self.__get_and_save_header(expect_type=1204)
             except (WrongTypeException, ValueError):
                 pass
 
@@ -108,7 +107,7 @@ class EventIOFile(object):
                 pass
 
 
-class EventIOFileStream(object):
+class EventIOFileStream:
 
     def __init__(self, path, debug=False):
         self.__file = open(path, 'rb')
@@ -151,8 +150,8 @@ class EventIOFileStream(object):
                 pass
 
             try:
-                _ = self.__get_header(expect_type=1204)
                 # simply get rid of the 1204-inter-reuse-stuff.
+                self.__get_header(expect_type=1204)
             except (WrongTypeException, ValueError):
                 pass
 

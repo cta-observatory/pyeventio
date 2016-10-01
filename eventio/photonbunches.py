@@ -1,4 +1,3 @@
-from __future__ import absolute_import
 from collections import namedtuple
 
 import numpy as np
@@ -59,11 +58,11 @@ def read_photon_bunch_header(f):
 
 class PhotonBunchHeader(PhotonBunchHeaderBase):
     def __new__(cls, f):
-        self = super(PhotonBunchHeader, cls).__new__(cls, *read_photon_bunch_header(f))
+        self = super().__new__(cls, *read_photon_bunch_header(f))
         return self
 
 
-class PhotonBundle(object):
+class PhotonBundle:
     def __init__(self, f):
         self.header = PhotonBunchHeader(f)
         self.bunches = read_bunches(f, self.header.n_bunches, self.header.is_compact)

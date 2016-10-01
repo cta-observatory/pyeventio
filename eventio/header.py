@@ -1,8 +1,11 @@
-from __future__ import absolute_import
-from .tools import read_ints
 from collections import namedtuple
 
-TypeInfo = namedtuple("TypeInfo", "type version user extended")
+from .tools import read_ints
+
+TypeInfo = namedtuple('TypeInfo', 'type version user extended')
+
+
+SYNC_MARKER = -736130505
 
 
 def unpack_type(_type):
@@ -27,8 +30,7 @@ def extend_length(extended, length):
 
 
 def is_sync(i):
-    sync = -736130505
-    return i == sync
+    return i == SYNC_MARKER
 
 
 def read_header(f, top_level):
@@ -48,7 +50,8 @@ def read_header(f, top_level):
 
     if top_level and not is_sync(sync):
         f.seek(_start_point)
-        raise ValueError("Header sync value 0xD41F8A37 not found")
+        raise ValueError('Header sync value 0xD41F8A37 not found')
+
     _tell = f.tell()
     return_value = (
         is_sync(sync) if top_level else True,
@@ -59,18 +62,19 @@ def read_header(f, top_level):
         only_sub_objects,
         length,
         _id,
-        _tell)
+        _tell,
+    )
 
     return return_value
 
 
 HeaderBase = namedtuple(
-    "HeaderBase",
-    "is_sync type version user extended only_sub_objects length id tell"
+    'HeaderBase',
+    'is_sync type version user extended only_sub_objects length id tell'
 )
 
 
 class Header(HeaderBase):
     def __new__(cls, f, top_level=True):
-        self = super(Header, cls).__new__(cls, *read_header(f, top_level))
+        self = super().__new__(cls, *read_header(f, top_level))
         return self

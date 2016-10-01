@@ -21,12 +21,13 @@ __all__ = [
 def read_type_1200(f, head=None):
     n, = read_ints(1, f)
     if n != 273:
-        raise Exception('read_type_1200: first n was not 273 but '+str(n))
+        raise ValueError('Wrong size: was not 273 but {}'.format(n))
 
     block = np.frombuffer(
-        f.read(n*4),
+        f.read(n * 4),
         dtype=np.float32,
-        count=n)
+        count=n
+    )
 
     return parse_corsika_run_header(block)
 
@@ -43,20 +44,19 @@ def read_type_1201(f, head=None):
     number_of_following_arrays = int((head.length - 4) / ntel / 4)
     if number_of_following_arrays != 4:
         # DN: I think this cannot happen, but who knows.
-        msg = 'in read_type_1201: number_of_following_arrays is: {}'
+        msg = 'Number_of_following_arrays is: {}'
         raise Exception(msg.format(number_of_following_arrays))
 
-    tel_pos = np.zeros(ntel, dtype=[
-        ('x', 'f4'),
-        ('y', 'f4'),
-        ('z', 'f4'),
-        ('r', 'f4'),
-        ])
+    tel_pos = np.empty(
+        ntel,
+        dtype=[('x', 'f4'), ('y', 'f4'), ('z', 'f4'), ('r', 'f4')],
+    )
 
     arrays = np.frombuffer(
-            f.read(ntel*4*4),
-            dtype=np.float32,
-            count=ntel*4)
+        f.read(ntel * 4 * 4),
+        dtype=np.float32,
+        count=ntel * 4
+    )
     arrays = arrays.reshape(4, ntel)
     x, y, z, r = np.vsplit(arrays, 4)
 
