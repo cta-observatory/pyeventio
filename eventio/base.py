@@ -103,6 +103,13 @@ class EventIOObject:
     def __getitem__(self, idx):
         return self.__objects[idx]
 
+    def parse_data_field(self):
+        ''' Read the data in this field
+
+        should return nice python objects, e.g. structured numpy arrays
+        '''
+        raise NotImplemented
+
     def __repr__(self):
         if len(self.__objects) > 0:
             subitems = ', subitems=[\n    {}\n  ]'.format(

@@ -19,13 +19,6 @@ __all__ = [
 class CorsikaRunHeader(EventIOObject):
     eventio_type = 1200
 
-    def __init__(self, eventio_file, header, first_byte):
-        super().__init__(eventio_file, header, first_byte)
-        self.run_header = self.parse_data_field()
-
-    def __getitem__(self, key):
-        return self.run_header[key]
-
     def parse_data_field(self):
         self.seek(0)
         data = self.read()
@@ -47,44 +40,38 @@ class CorsikaTelescopeDefinition(EventIOObject):
 
     def __init__(self, eventio_file, header, first_byte):
         super().__init__(eventio_file, header, first_byte)
-        self.num_telescopes, self.telescope_positions = self.parse_data_field()
-
-    def __getitem__(self, idx):
-        return self.telescope_positions[idx]
+        self.num_telescopes, = read_ints(1, self)
 
     def __len__(self):
         return self.num_telescopes
 
     def parse_data_field(self):
-        ''' ---> write_tel_pos
-        int32 ntel
-        float32 x[ntel]
-        float32 y[ntel]
-        float32 z[ntel]
-        float32 r[ntel]
         '''
-        self.seek(0)
+        Read the data in this EventIOItem
+
+        Returns a structured numpy array with columns (x, y, z, r)
+        with a row for each telescope
+        '''
+        self.seek(4)
         data = self.read()
 
-        n_tel, = struct.unpack('i', data[:4])
-        number_of_following_arrays = int((self.header.length - 4) / n_tel / 4)
+        number_of_following_arrays = len(data) // (self.num_telescopes * 4)
         if number_of_following_arrays != 4:
             # DN: I think this cannot happen, but who knows.
             msg = 'Number_of_following_arrays is: {}'
             raise Exception(msg.format(number_of_following_arrays))
 
         tel_pos = np.empty(
-            n_tel,
+            self.num_telescopes,
             dtype=[('x', 'f4'), ('y', 'f4'), ('z', 'f4'), ('r', 'f4')],
         )
 
         arrays = np.frombuffer(
             data,
             dtype=np.float32,
-            count=n_tel * 4,
-            offset=4,
+            count=self.num_telescopes * 4,
         )
-        arrays = arrays.reshape(4, n_tel)
+        arrays = arrays.reshape(4, self.num_telescopes)
         x, y, z, r = np.vsplit(arrays, 4)
 
         tel_pos['x'] = x
@@ -92,18 +79,11 @@ class CorsikaTelescopeDefinition(EventIOObject):
         tel_pos['z'] = z
         tel_pos['r'] = r
 
-        return n_tel, tel_pos
+        return tel_pos
 
 
 class CorsikaEventHeader(EventIOObject):
     eventio_type = 1202
-
-    def __init__(self, eventio_file, header, first_byte):
-        super().__init__(eventio_file, header, first_byte)
-        self.event_header = self.parse_data_field()
-
-    def __getitem__(self, key):
-        return self.event_header[key]
 
     def parse_data_field(self):
         self.seek(0)
@@ -122,55 +102,54 @@ class CorsikaEventHeader(EventIOObject):
         return parse_corsika_event_header(block)
 
 
-class CorsikaTelescopeOffsets(EventIOObject):
+class CorsikaArrayOffsets(EventIOObject):
     eventio_type = 1203
 
     def __init__(self, eventio_file, header, first_byte):
         super().__init__(eventio_file, header, first_byte)
-        self.n_offsets, self.telescope_offsets = self.parse_data_field()
+        self.num_arrays, = read_ints(1, self)
 
     def __getitem__(self, idx):
         return self.telescope_offsets[idx]
 
     def parse_data_field(self):
-        ''' ---> write_tel_offset
+        '''
+        Read the data in this EventIOItem
 
-        int32 narray,
-        float32 toff,
+        Returns a structured numpy array with columns (t, x, y, weight)
+        with a row for each array.
+
+        ---> write_tel_offset
+        float32 toff[narray]
         float32 xoff[narray]
         float32 yoff[narray]
         maybe:
             float32 weight[narray]
-
         '''
-        self.seek(0)
+        self.seek(4)
         data = self.read()
-        length_first_two = 4 + 4
-        n_offsets, toff = struct.unpack('if', data[:length_first_two])
-        number_arrays = (len(data) - length_first_two) // (n_offsets * 4)
-        if number_arrays not in (2, 3):
+
+        num_columns = len(data) // (self.num_arrays * 4)
+        if num_columns not in (3, 4):
             # dneise: I think this cannot happen, but who knows.
-            msg = 'Number of offset arrays should be in 3 or 4, found {}'
-            raise Exception(msg.format(number_arrays))
+            msg = 'Number of offset columns should be in 3 or 4, found {}'
+            raise Exception(msg.format(num_columns))
 
         positions = np.frombuffer(
             data,
             dtype=np.float32,
-            count=n_offsets * number_arrays,
-            offset=length_first_two,
-        ).reshape(number_arrays, -1)
+            count=self.num_arrays * num_columns,
+        ).reshape(num_columns, -1)
 
-        if number_arrays == 3:
-            weights = positions[2]
+        if num_columns == 4:
+            weights = positions[3, :]
         else:
-            weights = np.ones(n_offsets, dtype=np.float32)
+            weights = np.ones(self.num_arrays, dtype=np.float32)
 
-        offsets = np.core.records.fromarrays(
-            [positions[0], positions[1], weights],
-            names=['x', 'y', 'weight'],
+        return np.core.records.fromarrays(
+            [positions[0, :], positions[1, :], positions[2, :], weights],
+            names=['t', 'x', 'y', 'weight'],
         )
-
-        return n_offsets, offsets
 
 
 class CorsikaTelescopeData(EventIOObject):
@@ -185,10 +164,6 @@ class IACTPhotons(EventIOObject):
         self.compact = bool(self.header.version // 1000 == 1)
 
         self.array, self.telescope, self.photons, self.n_bunches = read_from('hhfi', self)
-        self.bunches = self.parse_data_field()
-
-    def __getitem__(self, idx):
-        return self.bunches[idx]
 
     def __repr__(self):
         return '{}(first={}, length={}, n_bunches={})'.format(
@@ -255,13 +230,6 @@ class IACTPhotoElectrons(EventIOObject):
 class CorsikaEventEndBlock(EventIOObject):
     eventio_type = 1209
 
-    def __init__(self, eventio_file, header, first_byte):
-        super().__init__(eventio_file, header, first_byte)
-        self.event_end_data = self.parse_data_field()
-
-    def __getitem__(self, idx):
-        return self.event_end_data[idx]
-
     def parse_data_field(self):
         self.seek(0)
         n, = read_ints(1, self)
@@ -280,13 +248,6 @@ class CorsikaEventEndBlock(EventIOObject):
 
 class CorsikaRunEndBlock(EventIOObject):
     eventio_type = 1210
-
-    def __init__(self, eventio_file, header, first_byte):
-        super().__init__(eventio_file, header, first_byte)
-        self.run_end_data = self.parse_data_field()
-
-    def __getitem__(self, idx):
-        return self.run_end_data[idx]
 
     def parse_data_field(self):
         self.seek(0)
@@ -344,7 +305,7 @@ known_objects.update({
         CorsikaRunHeader,
         CorsikaTelescopeDefinition,
         CorsikaEventHeader,
-        CorsikaTelescopeOffsets,
+        CorsikaArrayOffsets,
         CorsikaTelescopeData,
         IACTPhotons,
         IACTLayout,

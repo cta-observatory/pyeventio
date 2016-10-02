@@ -19,7 +19,7 @@ def test_read_run_header():
         'eventio', path.join('resources', 'one_shower.dat')
     )
     f = eventio.EventIOFile(testfile)
-    run_header = f[0]
+    run_header = f[0].parse_data_field()
 
     assert run_header['energy range'][0] == approx(5.0)
     assert run_header['energy range'][1] == approx(100.0)
@@ -35,10 +35,12 @@ def test_telescope_definition():
     telescope_definition = f[2]
     assert isinstance(telescope_definition, CorsikaTelescopeDefinition)
     assert telescope_definition.num_telescopes == 1
-    assert telescope_definition['x'][0] == approx(0.0)
-    assert telescope_definition['y'][0] == approx(0.0)
-    assert telescope_definition['z'][0] == approx(2500.0)
-    assert telescope_definition['r'][0] == approx(2500.0)
+
+    telescope_definition_data = telescope_definition.parse_data_field()
+    assert telescope_definition_data['x'][0] == approx(0.0)
+    assert telescope_definition_data['y'][0] == approx(0.0)
+    assert telescope_definition_data['z'][0] == approx(2500.0)
+    assert telescope_definition_data['r'][0] == approx(2500.0)
 
 
 def test_corsica_event_header():
@@ -47,25 +49,28 @@ def test_corsica_event_header():
         'eventio', path.join('resources', 'one_shower.dat')
     )
     f = eventio.EventIOFile(testfile)
-    event_header = f[3]
+    event_header_object = f[3]
 
-    assert isinstance(event_header, CorsikaEventHeader)
+    assert isinstance(event_header_object, CorsikaEventHeader)
+    event_header = event_header_object.parse_data_field()
     assert event_header['event number'] == 1
     assert event_header['angle in radian: (zenith, azimuth)'][0] == approx(0.0)
     assert event_header['angle in radian: (zenith, azimuth)'][1] == approx(0.0)
     assert event_header['total energy in GeV'] == approx(9.3249321)
 
 
-def test_corsica_telescope_offsets():
-    from eventio.iact import CorsikaTelescopeOffsets
+def test_corsica_array_offsets():
+    from eventio.iact import CorsikaArrayOffsets
     testfile = pkg_resources.resource_filename(
         'eventio', path.join('resources', 'one_shower.dat')
     )
     f = eventio.EventIOFile(testfile)
-    offsets = f[4]
+    offsets_object = f[4]
 
-    assert isinstance(offsets, CorsikaTelescopeOffsets)
-    assert offsets.n_offsets == 1
+    assert isinstance(offsets_object, CorsikaArrayOffsets)
+    assert offsets_object.num_arrays == 1
+
+    offsets = offsets_object.parse_data_field()
     assert offsets['x'][0] == approx(-506.9717102050781)
     assert offsets['y'][0] == approx(-3876.447265625)
 
