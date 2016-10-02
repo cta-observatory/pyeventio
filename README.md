@@ -11,9 +11,8 @@ The following EventIO object types are currently supported:
 | 1201 | CORSIKA Telescope Positions |
 | 1202 | CORSIKA Event Header        |
 | 1203 | CORSIKA Telescope Offsets   |
-| 1204 ||
-| 1209 ||
-| 1210 ||
+| 1209 | CORSIKA Event End Block     |
+| 1210 | CORSIKA Run End Block       |
 | 1212 | CORSIKA Input Card          |
 
 

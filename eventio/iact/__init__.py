@@ -173,38 +173,110 @@ class CorsikaTelescopeOffsets(EventIOObject):
         return n_offsets, offsets
 
 
-def read_type_1204(f, head=None, headers_only=True):
-    if not head.only_sub_objects:
-        raise Exception('Type 1204 ususally has only sub objects, this one has not!!')
-    return list(pb.photon_bunches(f, headers_only=headers_only))
+class CorsikaTelescopeData(EventIOObject):
+    eventio_type = 1204
 
 
-def read_type_1209(f, head=None):
-    n, = read_ints(1, f)
-    if n != 273:
-        raise Exception('read_type_1209: first n was not 273 but '+str(n))
-
-    block = np.frombuffer(
-        f.read(n*4),
-        dtype=np.float32,
-        count=n)
-
-    return block
+class IACTPhotons(EventIOObject):
+    eventio_type = 1205
 
 
-def read_type_1210(f, head=None):
-    n, = read_ints(1, f)
-    block = np.frombuffer(
-        f.read(n*4),
-        dtype=np.float32,
-        count=n)
-    return block
+class IACTLayout(EventIOObject):
+    eventio_type = 1206
 
 
-def read_type_1212(f, head=None):
-    return f.read(head.length)
+class IACTTriggerTime(EventIOObject):
+    eventio_type = 1207
 
 
+class IACTPhotoElectrons(EventIOObject):
+    eventio_type = 1208
+
+
+class CorsikaEventEndBlock(EventIOObject):
+    eventio_type = 1209
+
+    def __init__(self, eventio_file, header, first_byte):
+        super().__init__(eventio_file, header, first_byte)
+        self.event_end_data = self.parse_data_field()
+
+    def __getitem__(self, idx):
+        return self.event_end_data[idx]
+
+    def parse_data_field(self):
+        self.seek(0)
+        n, = read_ints(1, self)
+        if n != 273:
+            raise WrongSizeException('Expected 273 bytes, but found {}'.format(n))
+
+        dtype = np.dtype('float32')
+        block = np.frombuffer(
+            self.read(n * dtype.itemsize),
+            dtype=dtype,
+            count=n,
+        )
+
+        return block
+
+
+class CorsikaRunEndBlock(EventIOObject):
+    eventio_type = 1210
+
+    def __init__(self, eventio_file, header, first_byte):
+        super().__init__(eventio_file, header, first_byte)
+        self.run_end_data = self.parse_data_field()
+
+    def __getitem__(self, idx):
+        return self.run_end_data[idx]
+
+    def parse_data_field(self):
+        self.seek(0)
+        n, = read_ints(1, self)
+
+        dtype = np.dtype('float32')
+        block = np.frombuffer(
+            self.read(n * dtype.itemsize),
+            dtype=dtype,
+            count=n,
+        )
+
+        return block
+
+
+class CorsikaLongitudinal(EventIOObject):
+    eventio_type = 1211
+
+    def __init__(self, eventio_file, header, first_byte):
+        super().__init__(eventio_file, header, first_byte)
+        self.longitudinal_data = self.parse_data_field()
+
+    def __getitem__(self, idx):
+        return self.longitudinal_data[idx]
+
+    def parse_data_field(self):
+        self.seek(0)
+        n, = read_ints(1, self)
+
+        dtype = np.dtype('float32')
+        block = np.frombuffer(
+            self.read(n * dtype.itemsize),
+            dtype=dtype,
+            count=n,
+        )
+
+        return block
+
+
+class CorsikaInputCard(EventIOObject):
+    eventio_type = 1212
+
+    def __init__(self, eventio_file, header, first_byte):
+        super().__init__(eventio_file, header, first_byte)
+        self.input_card = self.parse_data_field()
+
+    def parse_data_field(self):
+        self.seek(0)
+        return self.read().decode()
 
 
 known_objects.update({
@@ -214,5 +286,14 @@ known_objects.update({
         CorsikaTelescopeDefinition,
         CorsikaEventHeader,
         CorsikaTelescopeOffsets,
+        CorsikaTelescopeData,
+        IACTPhotons,
+        IACTLayout,
+        IACTTriggerTime,
+        IACTPhotoElectrons,
+        CorsikaEventEndBlock,
+        CorsikaRunEndBlock,
+        CorsikaLongitudinal,
+        CorsikaInputCard,
     ]
 })
