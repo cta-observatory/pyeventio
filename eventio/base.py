@@ -288,11 +288,10 @@ def read_all_headers(eventio_file_or_object, toplevel=True):
                 first_byte=position,
             )
             objects.append(eventio_object)
-            try:
-                eventio_file_or_object.seek(header.length, 1)
-            except ValueError:
-                warnings.warn('File seems to be truncated')
-                break
+            eventio_file_or_object.seek(header.length, 1)
+        except ValueError:
+            warnings.warn('File seems to be truncated')
+            break
         except struct.error:
             break
 
