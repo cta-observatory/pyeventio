@@ -39,7 +39,7 @@ class EventIOFile:
         return len(self.__objects)
 
     def seek(self, position, whence=0):
-        self.__filehandle.seek(position, whence)
+        return self.__filehandle.seek(position, whence)
 
     def tell(self):
         return self.__filehandle.tell()
@@ -49,8 +49,9 @@ class EventIOFile:
 
     def read_from_position(self, first_byte, size):
         pos = self.__filehandle.tell()
-        data = self.__filehandle.read(size)
-        self.__filehandle.seek(pos)
+        self.seek(first_byte)
+        data = self.read(size)
+        self.seek(pos)
         return data
 
     def __enter__(self):
@@ -124,6 +125,13 @@ class EventIOObject:
 
         self.position += size
 
+        return data
+
+    def read_from_position(self, first_byte, size):
+        pos = self.tell()
+        self.seek(first_byte)
+        data = self.read(size)
+        self.seek(pos)
         return data
 
     def seek(self, offset, whence=0):
