@@ -24,9 +24,13 @@ class EventIOObject:
         if size == -1 or size > self.header.length - self.position:
             size = self.header.length - self.position
 
-        return self.eventio_file.read_from_position(
+        data = self.eventio_file.read_from_position(
             first_byte=self.header.tell + self.position, size=size,
         )
+
+        self.position += size
+
+        return data
 
     def seek(self, offset, whence=0):
         if whence == 0:
@@ -35,9 +39,10 @@ class EventIOObject:
         elif whence == 1:
             self.position += offset
         elif whence == 2:
-            self.position = self.header.length + offset - 1
+            self.position = self.header.length + offset
         else:
             raise ValueError('invalid whence ({}, should be 0, 1 or 2)'.format(whence))
+        return self.position
 
     def tell(self):
         return self.position
