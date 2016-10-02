@@ -100,6 +100,9 @@ class EventIOObject:
         if self.header.only_sub_objects:
             self.__objects = read_all_headers(self, toplevel=False)
 
+    def __getitem__(self, idx):
+        return self.__objects[idx]
+
     def __repr__(self):
         if len(self.__objects) > 0:
             subitems = ', subitems=[\n    {}\n  ]'.format(
