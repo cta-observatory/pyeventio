@@ -183,14 +183,23 @@ class IACTPhotons(EventIOObject):
     def __init__(self, eventio_file, header, first_byte):
         super().__init__(eventio_file, header, first_byte)
         self.compact = bool(self.header.version // 1000 == 1)
+
+        self.array, self.telescope, self.photons, self.n_bunches = read_from('hhfi', self)
         self.bunches = self.parse_data_field()
 
     def __getitem__(self, idx):
         return self.bunches[idx]
 
+    def __repr__(self):
+        return '{}(first={}, length={}, n_bunches={})'.format(
+            self.__class__.__name__,
+            self.first_byte,
+            self.header.length,
+            self.n_bunches,
+        )
+
     def parse_data_field(self):
-        self.seek(0)
-        array, telescope, photons, n_bunches = read_from('hhfi', self)
+        self.seek(12)
 
         columns = ('x', 'y', 'cx', 'cy', 'time', 'zem', 'photons', 'lambda')
 
@@ -200,11 +209,11 @@ class IACTPhotons(EventIOObject):
             dtype = np.dtype('float32')
 
         block = np.frombuffer(
-            self.read(n_bunches * len(columns) * dtype.itemsize),
+            self.read(self.n_bunches * len(columns) * dtype.itemsize),
             dtype=dtype,
-            count=n_bunches * len(columns)
+            count=self.n_bunches * len(columns)
         )
-        block = block.reshape(n_bunches, len(columns))
+        block = block.reshape(self.n_bunches, len(columns))
 
         bunches = np.core.records.fromrecords(
             block,
