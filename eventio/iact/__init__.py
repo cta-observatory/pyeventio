@@ -23,6 +23,7 @@ class CorsikaRunHeader(EventIOObject):
         return self.run_header[key]
 
     def parse_data_field(self):
+        self.seek(0)
         data = self.read()
         n, = struct.unpack('i', data[:4])
         if n != 273:
@@ -34,7 +35,6 @@ class CorsikaRunHeader(EventIOObject):
             count=n,
             offset=4,
         )
-
         return parse_corsika_run_header(block)
 
 
@@ -59,6 +59,7 @@ class CorsikaTelescopeDefinition(EventIOObject):
         float32 z[ntel]
         float32 r[ntel]
         '''
+        self.seek(0)
         data = self.read()
 
         n_tel, = struct.unpack('i', data[:4])
@@ -101,6 +102,7 @@ class CorsikaEventHeader(EventIOObject):
         return self.event_header[key]
 
     def parse_data_field(self):
+        self.seek(0)
         data = self.read()
         n, = struct.unpack('i', data[:4])
         if n != 273:
@@ -137,6 +139,7 @@ class CorsikaTelescopeOffsets(EventIOObject):
             float32 weight[narray]
 
         '''
+        self.seek(0)
         data = self.read()
         length_first_two = 4 + 4
         n_offsets, toff = struct.unpack('if', data[:length_first_two])
