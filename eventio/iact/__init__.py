@@ -17,13 +17,13 @@ class CorsikaRunHeader(EventIOObject):
 
     def __init__(self, eventio_file, header, first_byte):
         super().__init__(eventio_file, header, first_byte)
-        self.run_header = self.read()
+        self.run_header = self.parse_data_field()
 
     def __getitem__(self, key):
         return self.run_header[key]
 
-    def read(self):
-        data = self.read_data_field()
+    def parse_data_field(self):
+        data = self.read()
         n, = struct.unpack('i', data[:4])
         if n != 273:
             raise WrongSizeException('Expected 273 bytes, but found {}'.format(n))
@@ -43,7 +43,7 @@ class CorsikaTelescopeDefinition(EventIOObject):
 
     def __init__(self, eventio_file, header, first_byte):
         super().__init__(eventio_file, header, first_byte)
-        self.num_telescopes, self.telescope_positions = self.read()
+        self.num_telescopes, self.telescope_positions = self.parse_data_field()
 
     def __getitem__(self, idx):
         return self.telescope_positions[idx]
@@ -51,7 +51,7 @@ class CorsikaTelescopeDefinition(EventIOObject):
     def __len__(self):
         return self.num_telescopes
 
-    def read(self):
+    def parse_data_field(self):
         ''' ---> write_tel_pos
         int32 ntel
         float32 x[ntel]
@@ -59,7 +59,7 @@ class CorsikaTelescopeDefinition(EventIOObject):
         float32 z[ntel]
         float32 r[ntel]
         '''
-        data = self.read_data_field()
+        data = self.read()
 
         n_tel, = struct.unpack('i', data[:4])
         number_of_following_arrays = int((self.header.length - 4) / n_tel / 4)
@@ -95,13 +95,13 @@ class CorsikaEventHeader(EventIOObject):
 
     def __init__(self, eventio_file, header, first_byte):
         super().__init__(eventio_file, header, first_byte)
-        self.event_header = self.read()
+        self.event_header = self.parse_data_field()
 
     def __getitem__(self, key):
         return self.event_header[key]
 
-    def read(self):
-        data = self.read_data_field()
+    def parse_data_field(self):
+        data = self.read()
         n, = struct.unpack('i', data[:4])
         if n != 273:
             raise WrongSizeException('Expected 273 bytes, but found {}'.format(n))
@@ -121,12 +121,12 @@ class CorsikaTelescopeOffsets(EventIOObject):
 
     def __init__(self, eventio_file, header, first_byte):
         super().__init__(eventio_file, header, first_byte)
-        self.n_offsets, self.telescope_offsets = self.read()
+        self.n_offsets, self.telescope_offsets = self.parse_data_field()
 
     def __getitem__(self, idx):
         return self.telescope_offsets[idx]
 
-    def read(self):
+    def parse_data_field(self):
         ''' ---> write_tel_offset
 
         int32 narray,
@@ -137,7 +137,7 @@ class CorsikaTelescopeOffsets(EventIOObject):
             float32 weight[narray]
 
         '''
-        data = self.read_data_field()
+        data = self.read()
         length_first_two = 4 + 4
         n_offsets, toff = struct.unpack('if', data[:length_first_two])
         number_arrays = (len(data) - length_first_two) // (n_offsets * 4)
