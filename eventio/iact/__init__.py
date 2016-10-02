@@ -1,8 +1,9 @@
 ''' Methods to read in and parse the IACT EventIO object types '''
 import numpy as np
 import struct
+from IPython import embed
 
-from ..tools import read_ints
+from ..tools import read_ints, read_from
 from ..base import EventIOObject, known_objects
 from ..exceptions import WrongSizeException
 from .parse_corsika_data import (
@@ -179,6 +180,37 @@ class CorsikaTelescopeData(EventIOObject):
 
 class IACTPhotons(EventIOObject):
     eventio_type = 1205
+
+    def __init__(self, eventio_file, header, first_byte):
+        super().__init__(eventio_file, header, first_byte)
+        self.compact = bool(self.header.version // 1000 == 1)
+        self.bunches = self.parse_data_field()
+
+    def __getitem__(self, idx):
+        return self.bunches[idx]
+
+    def parse_data_field(self):
+        self.seek(0)
+        array, telescope, photons, n_bunches = read_from('hhfi', self)
+
+        if self.compact:
+            dtype = np.dtype('float16')
+        else:
+            dtype = np.dtype('float32')
+
+        block = np.frombuffer(
+            self.read(n_bunches * 8 * dtype.itemsize),
+            dtype=dtype,
+            count=n_bunches * 8
+        )
+        block = block.reshape(8, n_bunches)
+
+        bunches = np.core.records.fromarrays(
+            block,
+            names=('x', 'y', 'cx', 'cy', 'time', 'zem', 'photons', 'lambda'),
+        )
+
+        return bunches
 
 
 class IACTLayout(EventIOObject):
