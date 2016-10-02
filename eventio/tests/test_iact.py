@@ -52,6 +52,21 @@ def test_telescope_definition():
     assert telescope_definition['r'][0] == approx(2500.0)
 
 
+def test_corsica_event_header():
+    from eventio.iact import CorsikaEventHeader
+    testfile = pkg_resources.resource_filename(
+        'eventio', path.join('resources', 'one_shower.dat')
+    )
+    f = eventio.EventIOFile(testfile)
+    event_header = f[3]
+
+    assert isinstance(event_header, CorsikaEventHeader)
+    assert event_header['event number'] == 1
+    assert event_header['angle in radian: (zenith, azimuth)'][0] == approx(0.0)
+    assert event_header['angle in radian: (zenith, azimuth)'][1] == approx(0.0)
+    assert event_header['total energy in GeV'] == approx(9.3249321)
+
+
 def test_file_has_at_least_one_event():
     testfile = pkg_resources.resource_filename(
         'eventio', path.join('resources', 'one_shower.dat')

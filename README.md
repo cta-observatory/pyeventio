@@ -7,14 +7,14 @@ The following EventIO object types are currently supported:
 
 | Code | Description |
 | ---- | ----------- | 
-| 1200 | CORSIKA Run Header |
-| 1201 | Telescope Postions |
-| 1202 ||
+| 1200 | CORSIKA Run Header   |
+| 1201 | Telescope Postions   |
+| 1202 | CORSIKA Event Header |
 | 1203 ||
 | 1204 ||
 | 1209 ||
 | 1210 ||
-| 1212 | CORSIKA Input Card |
+| 1212 | CORSIKA Input Card   |
 
 
 # install with

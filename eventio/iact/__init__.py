@@ -90,17 +90,30 @@ class CorsikaTelescopeDefinition(EventIOObject):
         return n_tel, tel_pos
 
 
-def read_type_1202(f, head=None):
-    n, = read_ints(1, f)
-    if n != 273:
-        raise Exception('read_type_1200: first n was not 273 but '+str(n))
+class CorsikaEventHeader(EventIOObject):
+    eventio_type = 1202
 
-    block = np.frombuffer(
-        f.read(n*4),
-        dtype=np.float32,
-        count=n)
+    def __init__(self, eventio_file, header, first_byte):
+        super().__init__(eventio_file, header, first_byte)
+        self.event_header = self.read()
 
-    return parse_corsika_event_header(block)
+    def __getitem__(self, key):
+        return self.event_header[key]
+
+    def read(self):
+        data = self.read_data_field()
+        n, = struct.unpack('i', data[:4])
+        if n != 273:
+            raise WrongSizeException('Expected 273 bytes, but found {}'.format(n))
+
+        block = np.frombuffer(
+            data,
+            dtype=np.float32,
+            count=n,
+            offset=4,
+        )
+
+        return parse_corsika_event_header(block)
 
 
 def read_type_1203(f, head=None):
@@ -197,15 +210,15 @@ def parse_corsika_event_header(event_header):
     d['angle in radian: (zenith, azimuth)'] = h[10:12]
     n_random_number_sequences = int(round(h[12]))
     if (n_random_number_sequences < 1) or (n_random_number_sequences > 10):
-        ValueException('number of random number sequences n must be 0 < n < 11, but is: '+str(h[12]))
+        raise ValueError('number of random number sequences n must be 0 < n < 11, but is: '+str(h[12]))
     seed_info = h[13:13 + 3*n_random_number_sequences].reshape(n_random_number_sequences,-1)
     d['random number sequences: (seed, #calls, #billion calls)']=seed_info
-    d['run number'] = h[43]
+    d['run number'] = int(round(h[43]))
     d['date of begin run (yymmdd)'] = int(round(h[44]))
     d['version of program'] = h[45]
     n_obs_levels = int(round(h[46]))
     if (n_obs_levels < 1) or (n_obs_levels > 10):
-        ValueException('number of observation levels n must be 0 < n < 11, but is: '+str(h[46]))
+        raise ValueError('number of observation levels n must be 0 < n < 11, but is: '+str(h[46]))
     d['observation levels']=h[47:47+n_obs_levels].reshape(n_obs_levels,-1)
     d['slope of energy spektrum']=h[57]
     d['energy range']=h[58:60]
@@ -290,7 +303,7 @@ def parse_corsika_run_header(run_header):
     d['version of program'] = h[3]
     n_obs_levels = int(round(h[4]))
     if (n_obs_levels < 1) or (n_obs_levels > 10):
-        ValueException('number of observation levels n must be 0 < n < 11, but is: '+str(h[4]))
+        raise ValueError('number of observation levels n must be 0 < n < 11, but is: '+str(h[4]))
     d['observation levels']=h[5:5+n_obs_levels]
     d['slope of energy spectrum']=h[15]
     d['energy range']=h[16:18]
@@ -328,5 +341,6 @@ iact_objects = {
     for o in [
         CorsikaRunHeader,
         CorsikaTelescopeDefinition,
+        CorsikaEventHeader,
     ]
 }
