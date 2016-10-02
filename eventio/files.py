@@ -54,8 +54,8 @@ class EventIOFile:
     def tell(self):
         return self.__mm.tell()
 
-    def read(self, num_bytes):
-        return self.__mm.read(num_bytes)
+    def read(self, size=-1):
+        return self.__mm.read(size)
 
     def __enter__(self):
         return self
