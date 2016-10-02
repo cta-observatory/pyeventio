@@ -19,6 +19,16 @@ class EventIOObject:
             self.header.length,
         )
 
+    def read_data_field(self):
+        return self.eventio_file.read_from_position(
+            first_byte=self.header.tell, size=self.header.length
+        )
+
+    def read_from_data_field(self, first_byte, size):
+        return self.eventio_file.read_from_position(
+            first_byte=self.header.tell + first_byte, size=size,
+        )
+
 
 class UnknownObject(EventIOObject):
     def __init__(self, eventio_file, header, first_byte):
