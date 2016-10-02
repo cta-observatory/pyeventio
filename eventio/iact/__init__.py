@@ -1,7 +1,6 @@
 ''' Methods to read in and parse the IACT EventIO object types '''
 import numpy as np
 import struct
-from IPython import embed
 
 from ..tools import read_ints, read_from
 from ..base import EventIOObject, known_objects
@@ -193,22 +192,41 @@ class IACTPhotons(EventIOObject):
         self.seek(0)
         array, telescope, photons, n_bunches = read_from('hhfi', self)
 
+        columns = ('x', 'y', 'cx', 'cy', 'time', 'zem', 'photons', 'lambda')
+
         if self.compact:
-            dtype = np.dtype('float16')
+            dtype = np.dtype('int16')
         else:
             dtype = np.dtype('float32')
 
         block = np.frombuffer(
-            self.read(n_bunches * 8 * dtype.itemsize),
+            self.read(n_bunches * len(columns) * dtype.itemsize),
             dtype=dtype,
-            count=n_bunches * 8
+            count=n_bunches * len(columns)
         )
-        block = block.reshape(8, n_bunches)
+        block = block.reshape(n_bunches, len(columns))
 
-        bunches = np.core.records.fromarrays(
+        bunches = np.core.records.fromrecords(
             block,
-            names=('x', 'y', 'cx', 'cy', 'time', 'zem', 'photons', 'lambda'),
+            names=columns,
         )
+
+        if self.compact:
+            bunches = bunches.astype([(c, 'float32') for c in columns])
+            bunches['x'] *= 0.1  # now in cm
+            bunches['y'] *= 0.1  # now in cm
+
+            # if compact, cosines are scaled by a factor of 30000
+            bunches['cx'] /= 30000
+            bunches['cy'] /= 30000
+            #   bernloehr clips in his implementation of the reader.
+            #   I am not sure I really want that.
+            # bunches['cx'] = bunches['cx'].clip(a_min=-1., a_max=1.)
+            # bunches['cy'] = bunches['cy'].clip(a_min=-1., a_max=1.)
+
+            bunches['time'] *= 0.1  # in nanoseconds since first interaction.
+            bunches['zem'] = np.power(10., bunches['zem']*0.001)
+            bunches['photons'] *= 0.01
 
         return bunches
 
