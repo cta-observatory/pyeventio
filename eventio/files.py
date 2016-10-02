@@ -57,6 +57,9 @@ class EventIOFile:
     def read(self, size=-1):
         return self.__mm.read(size)
 
+    def read_from_position(self, first_byte, size):
+        return self.__mm[first_byte:first_byte + size]
+
     def __enter__(self):
         return self
 
