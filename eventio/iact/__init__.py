@@ -3,7 +3,7 @@ import numpy as np
 import struct
 
 from ..tools import read_ints
-from ..objects import EventIOObject
+from ..base import EventIOObject, known_objects
 from ..exceptions import WrongSizeException
 from .parse_corsika_data import (
     parse_corsika_event_header,
@@ -207,7 +207,7 @@ def read_type_1212(f, head=None):
 
 
 
-iact_objects = {
+known_objects.update({
     o.eventio_type: o
     for o in [
         CorsikaRunHeader,
@@ -215,4 +215,4 @@ iact_objects = {
         CorsikaEventHeader,
         CorsikaTelescopeOffsets,
     ]
-}
+})
