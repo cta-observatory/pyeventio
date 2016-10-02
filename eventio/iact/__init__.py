@@ -1,8 +1,10 @@
 ''' Methods to read in and parse the IACT EventIO object types '''
 import numpy as np
+import struct
 
 from ..tools import read_from, read_ints
 from ..objects import EventIOObject
+from ..exceptions import WrongSizeException
 
 
 __all__ = [
@@ -21,21 +23,17 @@ class CorsikaRunHeader(EventIOObject):
         return self.run_header[key]
 
     def read(self):
-        f = self.eventio_file
-        position = f.tell()
-
-        f.seek(self.header.tell)
-        n, = read_ints(1, f)
+        data = self.read_data_field()
+        n, = struct.unpack('i', data[:4])
         if n != 273:
-            raise ValueError('Wrong size: was not 273 but {}'.format(n))
+            raise WrongSizeException('Expected 273 bytes, but found {}'.format(n))
 
         block = np.frombuffer(
-            f.read(n * 4),
+            data,
             dtype=np.float32,
-            count=n
+            count=n,
+            offset=4,
         )
-
-        f.seek(position)
 
         return parse_corsika_run_header(block)
 
@@ -61,11 +59,9 @@ class CorsikaTelescopeDefinition(EventIOObject):
         float32 z[ntel]
         float32 r[ntel]
         '''
-        f = self.eventio_file
-        position = f.tell()
-        f.seek(self.header.tell)
+        data = self.read_data_field()
 
-        n_tel, = read_from('i', f)
+        n_tel, = struct.unpack('i', data[:4])
         number_of_following_arrays = int((self.header.length - 4) / n_tel / 4)
         if number_of_following_arrays != 4:
             # DN: I think this cannot happen, but who knows.
@@ -78,9 +74,10 @@ class CorsikaTelescopeDefinition(EventIOObject):
         )
 
         arrays = np.frombuffer(
-            f.read(n_tel * 4 * 4),
+            data,
             dtype=np.float32,
-            count=n_tel * 4
+            count=n_tel * 4,
+            offset=4,
         )
         arrays = arrays.reshape(4, n_tel)
         x, y, z, r = np.vsplit(arrays, 4)
@@ -89,8 +86,6 @@ class CorsikaTelescopeDefinition(EventIOObject):
         tel_pos['y'] = y
         tel_pos['z'] = z
         tel_pos['r'] = r
-
-        f.seek(position)
 
         return n_tel, tel_pos
 
