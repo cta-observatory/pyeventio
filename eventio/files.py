@@ -21,11 +21,16 @@ class EventIOFile:
     def __init__(self, path, debug=False):
         log.info('Opening new file {}'.format(path))
         self.path = path
-        if path.endswith('.gz'):
-            self.__file = gzip.open(path, 'rb')
-        else:
-            self.__file = open(path, 'rb')
+        self.__file = open(path, 'rb')
         self.__mm = mmap.mmap(self.__file.fileno(), 0, prot=mmap.PROT_READ)
+
+        if path.endswith('.gz'):
+            log.info('Found gzipped file')
+            self.__compfile = gzip.GzipFile(mode='r', fileobj=self.__mm)
+            self.__filehandle = self.__compfile
+        else:
+            log.info('Found uncompressed file')
+            self.__filehandle = self.__mm
 
         self.__objects = []
         self._read_all_headers()
@@ -49,16 +54,19 @@ class EventIOFile:
         return len(self.__objects)
 
     def seek(self, position, whence=0):
-        self.__mm.seek(position, whence)
+        self.__filehandle.seek(position, whence)
 
     def tell(self):
-        return self.__mm.tell()
+        return self.__filehandle.tell()
 
     def read(self, size=-1):
-        return self.__mm.read(size)
+        return self.__filehandle.read(size)
 
     def read_from_position(self, first_byte, size):
-        return self.__mm[first_byte:first_byte + size]
+        pos = self.__filehandle.tell()
+        data = self.__filehandle.read(size)
+        self.__filehandle.seek(pos)
+        return data
 
     def __enter__(self):
         return self
@@ -97,7 +105,7 @@ class EventIOFile:
         return iter(self.__objects)
 
     def __read_header(self, expected_type=None):
-        header = ObjectHeader(self.__mm)
+        header = ObjectHeader(self)
         if expected_type is not None:
             if header.type != expected_type:
                 header_length = 4 if not header.extended else 5
