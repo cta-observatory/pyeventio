@@ -70,19 +70,12 @@ def test_corsica_telescope_offsets():
     assert offsets['y'][0] == approx(-3876.447265625)
 
 
-def test_file_has_at_least_one_event():
-    testfile = pkg_resources.resource_filename(
-        'eventio', path.join('resources', 'one_shower.dat')
-    )
-    f = eventio.EventIOFile(testfile)
-    event = next(f)
-    assert isinstance(event, eventio.photonbunches.PhotonBundle)
-
-
 def test_event_has_382_bunches():
+    from eventio.iact import IACTPhotons
     testfile = pkg_resources.resource_filename(
         'eventio', path.join('resources', 'one_shower.dat')
     )
     f = eventio.EventIOFile(testfile)
-    event = next(f)
-    assert event.header.n_bunches == 382
+    photons = f[5][0]
+    assert isinstance(photons, IACTPhotons)
+    assert photons.n_bunches == 382
