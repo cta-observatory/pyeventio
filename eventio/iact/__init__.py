@@ -290,10 +290,6 @@ class CorsikaLongitudinal(EventIOObject):
 class CorsikaInputCard(EventIOObject):
     eventio_type = 1212
 
-    def __init__(self, eventio_file, header, first_byte):
-        super().__init__(eventio_file, header, first_byte)
-        self.input_card = self.parse_data_field()
-
     def parse_data_field(self):
         self.seek(0)
         return self.read().decode()
