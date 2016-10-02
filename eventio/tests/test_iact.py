@@ -67,6 +67,20 @@ def test_corsica_event_header():
     assert event_header['total energy in GeV'] == approx(9.3249321)
 
 
+def test_corsica_telescope_offsets():
+    from eventio.iact import CorsikaTelescopeOffsets
+    testfile = pkg_resources.resource_filename(
+        'eventio', path.join('resources', 'one_shower.dat')
+    )
+    f = eventio.EventIOFile(testfile)
+    offsets = f[4]
+
+    assert isinstance(offsets, CorsikaTelescopeOffsets)
+    assert offsets.n_offsets == 1
+    assert offsets['x'][0] == approx(-506.9717102050781)
+    assert offsets['y'][0] == approx(-3876.447265625)
+
+
 def test_file_has_at_least_one_event():
     testfile = pkg_resources.resource_filename(
         'eventio', path.join('resources', 'one_shower.dat')

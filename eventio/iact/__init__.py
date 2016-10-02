@@ -2,7 +2,7 @@
 import numpy as np
 import struct
 
-from ..tools import read_from, read_ints
+from ..tools import read_ints
 from ..objects import EventIOObject
 from ..exceptions import WrongSizeException
 
@@ -116,41 +116,54 @@ class CorsikaEventHeader(EventIOObject):
         return parse_corsika_event_header(block)
 
 
-def read_type_1203(f, head=None):
-    ''' ---> write_tel_offset
+class CorsikaTelescopeOffsets(EventIOObject):
+    eventio_type = 1203
 
-    int32 narray,
-    float32 toff,
-    float32 xoff[narray]
-    float32 yoff[narray]
-    maybe:
-        float32 weight[narray]
+    def __init__(self, eventio_file, header, first_byte):
+        super().__init__(eventio_file, header, first_byte)
+        self.n_offsets, self.telescope_offsets = self.read()
 
-    '''
-    length_first_two = 4 + 4
-    narray, toff = read_from('if', f)
-    number_of_following_arrays = int((head.length - length_first_two) / narray / 4)
-    if number_of_following_arrays not in [2, 3]:
-        # dneise: I think this cannot happen, but who knows.
-        msg = 'in read_type_1201: number_of_following_arrays is: {}'
-        raise Exception(msg.format(number_of_following_arrays))
+    def __getitem__(self, idx):
+        return self.telescope_offsets[idx]
 
-    xoff = np.frombuffer(
-        f.read(narray * 4),
-        dtype=np.float32,
-        count=narray,
-    )
-    yoff = np.frombuffer(
-        f.read(narray * 4),
-        dtype=np.float32,
-        count=narray,
-    )
-    weight = np.ones(narray, dtype=np.float32)
+    def read(self):
+        ''' ---> write_tel_offset
 
-    if number_of_following_arrays == 3:
-        weight = np.frombuffer(f.read(narray * 4), dtype=np.float32, count=narray)
+        int32 narray,
+        float32 toff,
+        float32 xoff[narray]
+        float32 yoff[narray]
+        maybe:
+            float32 weight[narray]
 
-    return narray, toff, xoff, yoff, weight
+        '''
+        data = self.read_data_field()
+        length_first_two = 4 + 4
+        n_offsets, toff = struct.unpack('if', data[:length_first_two])
+        number_arrays = (len(data) - length_first_two) // (n_offsets * 4)
+        if number_arrays not in (2, 3):
+            # dneise: I think this cannot happen, but who knows.
+            msg = 'Number of offset arrays should be in 3 or 4, found {}'
+            raise Exception(msg.format(number_arrays))
+
+        positions = np.frombuffer(
+            data,
+            dtype=np.float32,
+            count=n_offsets * number_arrays,
+            offset=length_first_two,
+        ).reshape(number_arrays, -1)
+
+        if number_arrays == 3:
+            weights = positions[2]
+        else:
+            weights = np.ones(n_offsets, dtype=np.float32)
+
+        offsets = np.core.records.fromarrays(
+            [positions[0], positions[1], weights],
+            names=['x', 'y', 'weight'],
+        )
+
+        return n_offsets, offsets
 
 
 def read_type_1204(f, head=None, headers_only=True):
@@ -342,5 +355,6 @@ iact_objects = {
         CorsikaRunHeader,
         CorsikaTelescopeDefinition,
         CorsikaEventHeader,
+        CorsikaTelescopeOffsets,
     ]
 }
