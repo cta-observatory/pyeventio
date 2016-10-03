@@ -20,7 +20,7 @@ known_objects = {}
 
 class EventIOFile:
 
-    def __init__(self, path, debug=False):
+    def __init__(self, path):
         log.info('Opening new file {}'.format(path))
         self.path = path
         self.__file = open(path, 'rb')
@@ -35,6 +35,7 @@ class EventIOFile:
             self.__filehandle = self.__mm
 
         self._objects = read_all_headers(self, toplevel=True)
+        log.info('File contains {} top level objects'.format(len(self._objects)))
 
     def __len__(self):
         return len(self._objects)
