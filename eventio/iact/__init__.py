@@ -76,12 +76,17 @@ class IACTFile(EventIOFile):
         super().__init__(path)
 
         if not isinstance(self._objects[0], CorsikaRunHeader):
-            raise WrongTypeException('Object 0 is not a CORSIKA Run Header')
+            raise WrongTypeException('Object 0 is not a CORSIKA run header')
         self.header = self._objects[0].parse_data_field()
 
         if not isinstance(self._objects[1], CorsikaInputCard):
-            raise WrongTypeException('Object 1 is not a CORSIKA Input Card')
+            raise WrongTypeException('Object 1 is not a CORSIKA input card')
         self.input_card = self._objects[1].parse_data_field()
+
+        if not isinstance(self._objects[2], CorsikaTelescopeDefinition):
+            raise WrongTypeException('Object 2 is not a CORSIKA telescope definition')
+        self.num_telescopes = self._objects[2].num_telescopes
+        self.telescope_positions = self._objects[2].parse_data_field()
 
         if not isinstance(self._objects[-1], CorsikaRunEndBlock):
             warnings.warn(

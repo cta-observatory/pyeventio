@@ -40,6 +40,14 @@ def test_read_input_card():
     assert hasattr(f, 'input_card')
 
 
+def test_read_telescopes():
+    f = eventio.IACTFile(testfile)
+
+    assert f.num_telescopes == 1
+    assert hasattr(f, 'telescope_positions')
+    assert f.telescope_positions['x'][0] == approx(0)
+
+
 def test_get_item():
     f = eventio.IACTFile(testfile)
 
