@@ -34,10 +34,10 @@ class EventIOFile:
             log.info('Found uncompressed file')
             self.__filehandle = self.__mm
 
-        self.__objects = read_all_headers(self, toplevel=True)
+        self._objects = read_all_headers(self, toplevel=True)
 
     def __len__(self):
-        return len(self.__objects)
+        return len(self._objects)
 
     def seek(self, position, whence=0):
         return self.__filehandle.seek(position, whence)
@@ -63,22 +63,22 @@ class EventIOFile:
         self.__file.close()
 
     def __getitem__(self, idx):
-        return self.__objects[idx]
+        return self._objects[idx]
 
     def __iter__(self):
-        return iter(self.__objects)
+        return iter(self._objects)
 
     def __repr__(self):
         r = '{}(path={}, objects=[\n'.format(self.__class__.__name__, self.path)
 
-        if len(self.__objects) <= 8:
-            for o in self.__objects:
+        if len(self._objects) <= 8:
+            for o in self._objects:
                 r += '  {}\n'.format(o)
         else:
-            for o in self.__objects[:4]:
+            for o in self._objects[:4]:
                 r += '  {}\n'.format(o)
             r += '\t...\n'
-            for o in self.__objects[-4:]:
+            for o in self._objects[-4:]:
                 r += '  {}\n'.format(o)
         r += '])'
         return r
@@ -96,13 +96,13 @@ class EventIOObject:
         self.header = header
         self.position = 0
 
-        self.__objects = []
+        self._objects = []
 
         if self.header.only_sub_objects:
-            self.__objects = read_all_headers(self, toplevel=False)
+            self._objects = read_all_headers(self, toplevel=False)
 
     def __getitem__(self, idx):
-        return self.__objects[idx]
+        return self._objects[idx]
 
     def parse_data_field(self):
         ''' Read the data in this field
@@ -112,10 +112,8 @@ class EventIOObject:
         raise NotImplemented
 
     def __repr__(self):
-        if len(self.__objects) > 0:
-            subitems = ', subitems=[\n    {}\n  ]'.format(
-                ',\n    '.join(str(o) for o in self.__objects)
-            )
+        if len(self._objects) > 0:
+            subitems = ', subitems={}'.format(len(self._objects))
         else:
             subitems = ''
 
@@ -167,12 +165,11 @@ class UnknownObject(EventIOObject):
         super().__init__(eventio_file, header, first_byte)
 
     def __repr__(self):
-        return '{}[{}](first={}, length={})'.format(
-            self.__class__.__name__,
-            self.header.type,
-            self.first_byte,
-            self.header.length,
-        )
+        first, *last = super().__repr__().split('(first')
+
+        return '{}[{}](first'.format(
+            self.__class__.__name__, self.eventio_type
+        ) + ''.join(last)
 
 
 def unpack_type(_type):
