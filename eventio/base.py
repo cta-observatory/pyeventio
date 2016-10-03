@@ -5,6 +5,7 @@ import gzip
 
 import logging
 import warnings
+import io
 
 from .tools import read_ints
 from .exceptions import WrongTypeException
@@ -28,7 +29,7 @@ class EventIOFile:
         if path.endswith('.gz'):
             log.info('Found gzipped file')
             self.__compfile = gzip.GzipFile(mode='r', fileobj=self.__mm)
-            self.__filehandle = self.__compfile
+            self.__filehandle = io.BufferedReader(self.__compfile)
         else:
             log.info('Found uncompressed file')
             self.__filehandle = self.__mm
