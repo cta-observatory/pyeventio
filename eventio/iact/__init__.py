@@ -1,5 +1,6 @@
 ''' Methods to read in and parse the IACT EventIO object types '''
 import numpy as np
+from numpy.lib.recfunctions import append_fields
 import struct
 
 from ..tools import read_ints, read_from
@@ -17,9 +18,17 @@ __all__ = [
 
 
 class CorsikaRunHeader(EventIOObject):
+    '''
+    This object contains the corsika run header block
+    '''
     eventio_type = 1200
 
     def parse_data_field(self):
+        '''
+        Read the data in this EventIOItem
+
+        Returns a dictionary with the items of the CORSIKA run header block
+        '''
         self.seek(0)
         data = self.read()
         n, = struct.unpack('i', data[:4])
@@ -36,6 +45,9 @@ class CorsikaRunHeader(EventIOObject):
 
 
 class CorsikaTelescopeDefinition(EventIOObject):
+    '''
+    This object contains the coordinates of the telescopes of the simulated array
+    '''
     eventio_type = 1201
 
     def __init__(self, eventio_file, header, first_byte):
@@ -83,9 +95,15 @@ class CorsikaTelescopeDefinition(EventIOObject):
 
 
 class CorsikaEventHeader(EventIOObject):
+    ''' This Object contains the CORSIKA event header block '''
     eventio_type = 1202
 
     def parse_data_field(self):
+        '''
+        Read the data in this EventIOItem
+
+        Returns a dictionary containing the keys of the CORSIKA event header block
+        '''
         self.seek(0)
         data = self.read()
         n, = struct.unpack('i', data[:4])
@@ -108,6 +126,7 @@ class CorsikaArrayOffsets(EventIOObject):
     def __init__(self, eventio_file, header, first_byte):
         super().__init__(eventio_file, header, first_byte)
         self.num_arrays, = read_ints(1, self)
+        self.num_reuses = self.num_arrays
 
     def __getitem__(self, idx):
         return self.telescope_offsets[idx]
@@ -117,14 +136,8 @@ class CorsikaArrayOffsets(EventIOObject):
         Read the data in this EventIOItem
 
         Returns a structured numpy array with columns (t, x, y, weight)
-        with a row for each array.
-
-        ---> write_tel_offset
-        float32 toff[narray]
-        float32 xoff[narray]
-        float32 yoff[narray]
-        maybe:
-            float32 weight[narray]
+        with a row for each array. This object is used to store the
+        array position and contains one set of coordinates for each reuse.
         '''
         self.seek(4)
         data = self.read()
@@ -153,10 +166,19 @@ class CorsikaArrayOffsets(EventIOObject):
 
 
 class CorsikaTelescopeData(EventIOObject):
+    '''
+    A container class for the photon bunches.
+    Usually contains one photon bunch object (IACTPhotons)
+    per simulated telescope
+    '''
     eventio_type = 1204
 
 
 class IACTPhotons(EventIOObject):
+    '''
+    This object contains the data of the simulated cherenkov photons
+    for a single telescope
+    '''
     eventio_type = 1205
 
     def __init__(self, eventio_file, header, first_byte):
@@ -174,6 +196,20 @@ class IACTPhotons(EventIOObject):
         )
 
     def parse_data_field(self):
+        '''
+        Read the data in this EventIOObject
+
+        Returns a numpy structured array with a record for each photon
+        and the following columns:
+            x:         x coordinate in cm
+            y:         y coordinate in cm
+            cx:        cosine of incident angle in x direction
+            cy:        cosine of incident angle in y direction
+            time:      time since first interaction in ns
+            zem:       Emission height in cm above sea level
+            lambda:    wavelength in nm
+            scattered: indicates if the photon was scattered in the atmosphere
+        '''
         self.seek(12)
 
         columns = ('x', 'y', 'cx', 'cy', 'time', 'zem', 'photons', 'lambda')
@@ -194,6 +230,14 @@ class IACTPhotons(EventIOObject):
             block,
             names=columns,
         )
+
+        bunches = append_fields(
+            bunches,
+            data=bunches['lambda'] < 0,
+            dtype=bool,
+            names='scattered',
+        )
+        bunches['lambda'] = np.abs(bunches['lambda'])
 
         if self.compact:
             bunches = bunches.astype([(c, 'float32') for c in columns])
@@ -247,9 +291,18 @@ class CorsikaEventEndBlock(EventIOObject):
 
 
 class CorsikaRunEndBlock(EventIOObject):
+    ''' This Object contains the CORSIKA run end block '''
     eventio_type = 1210
 
     def parse_data_field(self):
+        '''
+        Read the data in this EventIOObject
+
+        Returns the CORSIKA run end block as arrays of floats.
+        No parsing yet, sorry. The meaning is defined in the CORSIKA
+        User Guide.
+        '''
+
         self.seek(0)
         n, = read_ints(1, self)
 
@@ -264,6 +317,7 @@ class CorsikaRunEndBlock(EventIOObject):
 
 
 class CorsikaLongitudinal(EventIOObject):
+    ''' This Object contains the CORSIKA longitudinal shower data block '''
     eventio_type = 1211
 
     def __init__(self, eventio_file, header, first_byte):
@@ -274,6 +328,13 @@ class CorsikaLongitudinal(EventIOObject):
         return self.longitudinal_data[idx]
 
     def parse_data_field(self):
+        '''
+        Read the data in this EventIOObject
+
+        Returns the CORSIKA longitudinal shower data block as arrays of floats.
+        No parsing yet, sorry. The meaning is defined in the CORSIKA
+        User Guide.
+        '''
         self.seek(0)
         n, = read_ints(1, self)
 
@@ -288,9 +349,15 @@ class CorsikaLongitudinal(EventIOObject):
 
 
 class CorsikaInputCard(EventIOObject):
+    ''' This Object contains the CORSIKA steering card '''
     eventio_type = 1212
 
     def parse_data_field(self):
+        '''
+        Read the data in this EventIOObject
+
+        Returns the CORSIKA steering card as string.
+        '''
         self.seek(0)
         return self.read().decode()
 
