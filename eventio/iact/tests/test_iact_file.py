@@ -69,8 +69,8 @@ def test_bunches():
 
     columns = ('x', 'y', 'cx', 'cy', 'time', 'zem', 'photons', 'lambda', 'scattered')
 
-    assert event.photon_bunches.shape == (382, )
-    assert event.photon_bunches.dtype.names == columns
+    assert event.photon_bunches[0].shape == (382, )
+    assert event.photon_bunches[0].dtype.names == columns
 
 
 def test_event_header():
