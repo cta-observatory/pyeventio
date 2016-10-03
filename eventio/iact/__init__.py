@@ -87,7 +87,7 @@ class IACTFile(EventIOFile):
 
         if not isinstance(self._objects[2], CorsikaTelescopeDefinition):
             raise WrongTypeException('Object 2 is not a CORSIKA telescope definition')
-        self.num_telescopes = self._objects[2].num_telescopes
+        self.n_telescopes = self._objects[2].n_telescopes
         self.telescope_positions = self._objects[2].parse_data_field()
 
         self._parse_events()
@@ -104,30 +104,30 @@ class IACTFile(EventIOFile):
         return (
             '{}(\n'
             '  path={}\n'
-            '  num_telescopes={}\n'
-            '  num_events={}\n'
+            '  n_telescopes={}\n'
+            '  n_events={}\n'
             ')'
         ).format(
             self.__class__.__name__,
             self.path,
-            self.num_telescopes,
-            self.num_events,
+            self.n_telescopes,
+            self.n_events,
         )
 
     def __len__(self):
-        return self.num_events
+        return self.n_events
 
     def __iter__(self):
-        for event_num in range(self.num_events):
+        for event_num in range(self.n_events):
             yield self[event_num]
 
     def __getitem__(self, idx):
         if idx < 0:
-            idx = self.num_events - idx
-        if idx >= self.num_events:
+            idx = self.n_events - idx
+        if idx >= self.n_events:
             raise ValueError(
                 'Index {} is out of range for {} with {} Events'.format(
-                    idx, self.__class__.__name__, self.num_events,
+                    idx, self.__class__.__name__, self.n_events,
                 ))
         return self._build_event(idx)
 
@@ -148,7 +148,7 @@ class IACTFile(EventIOFile):
                 self._shower_objects[-1]['end_block'] = obj
 
             elif isinstance(obj, CorsikaArrayOffsets):
-                reuse_values.append(obj.num_reuses)
+                reuse_values.append(obj.n_reuses)
                 self._shower_objects[-1]['array_offsets'] = obj
 
             elif isinstance(obj, CorsikaTelescopeData):
@@ -156,16 +156,16 @@ class IACTFile(EventIOFile):
                     self._shower_objects[-1]['telescope_data'] = []
                 self._shower_objects[-1]['telescope_data'].append(obj)
 
-        self.num_showers = len(self._shower_objects)
+        self.n_showers = len(self._shower_objects)
 
         if reuse_values:
-            assert len(reuse_values) == self.num_showers
+            assert len(reuse_values) == self.n_showers
             self.reuse = True
-            self.num_events = sum(reuse_values)
+            self.n_events = sum(reuse_values)
             self.first_event_in_shower = np.cumsum(reuse_values) - np.array(reuse_values)
         else:
             self.reuse = False
-            self.num_events = len(self._shower_objects)
+            self.n_events = len(self._shower_objects)
 
     def _build_event(self, event_num):
         if self.reuse:
@@ -180,12 +180,16 @@ class IACTFile(EventIOFile):
         time_offset = objects['array_offsets'].time_offset
 
         photon_bunches = {}
+        n_photons = []
+        n_bunches = []
         for data in objects['telescope_data'][reuse_num]:
             if isinstance(data, IACTPhotons):
                 photon_bunches[data.telescope] = data.parse_data_field()
                 photon_bunches[data.telescope]['x']  # -= array_offset['x']
                 photon_bunches[data.telescope]['y']  # -= array_offset['y']
                 photon_bunches[data.telescope]['time']  # -= time_offset
+                n_photons.append(data.n_photons)
+                n_bunches.append(data.n_bunches)
 
         event = CorsikaEvent(
             header=objects['header'].parse_data_field(),
@@ -195,6 +199,11 @@ class IACTFile(EventIOFile):
             x_offset=array_offset['x'],
             y_offset=array_offset['y'],
             weight=array_offset['weight'],
+            event_number=event_num,
+            shower=shower,
+            reuse=reuse_num + 1,
+            n_photons=np.array(n_photons),
+            n_bunches=np.array(n_bunches),
         )
 
         return event
@@ -202,7 +211,12 @@ class IACTFile(EventIOFile):
 
 CorsikaEventTuple = namedtuple(
     'CorsikaEventTuple',
-    'header end_block photon_bunches time_offset x_offset y_offset weight'
+    [
+        'header', 'end_block', 'photon_bunches',
+        'time_offset', 'x_offset', 'y_offset', 'weight',
+        'event_number', 'shower', 'reuse',
+        'n_photons', 'n_bunches',
+    ]
 )
 
 
@@ -211,6 +225,13 @@ class CorsikaEvent(CorsikaEventTuple):
     A single event as simulated by corsika
 
     Members:
+      event_number
+
+      shower:
+          the id of the simulated shower
+
+      reuse:
+          reuse index for this shower
 
       header:
         a dictionary containing the corsika event header
@@ -244,8 +265,9 @@ class CorsikaEvent(CorsikaEventTuple):
         Only different from 1 if importance sampling was used.
     '''
     def __repr__(self):
-        return '{}(num_telescopes={}, num_photons=[{}])'.format(
+        return '{}(event_number={}, n_telescopes={}, n_photons=[{}])'.format(
             self.__class__.__name__,
-            len(self.photon_bunches),
-            ', '.join('{:.5g}'.format(len(p)) for p in self.photon_bunches.values())
+            self.event_number,
+            len(self.n_bunches),
+            self.n_photons,
         )

@@ -14,7 +14,7 @@ def test_file_open():
     eventio.IACTFile(testfile)
 
 
-def test_num_events():
+def test_n_events():
     ''' tests if the number of events in the testfile is 1 '''
     f = eventio.IACTFile(testfile)
     assert len(f) == 1
@@ -43,7 +43,7 @@ def test_read_input_card():
 def test_read_telescopes():
     f = eventio.IACTFile(testfile)
 
-    assert f.num_telescopes == 1
+    assert f.n_telescopes == 1
     assert hasattr(f, 'telescope_positions')
     assert f.telescope_positions['x'][0] == approx(0)
 

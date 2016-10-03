@@ -29,7 +29,7 @@ def test_telescope_definition():
     f = eventio.EventIOFile(testfile)
     telescope_definition = f[2]
     assert isinstance(telescope_definition, CorsikaTelescopeDefinition)
-    assert telescope_definition.num_telescopes == 1
+    assert telescope_definition.n_telescopes == 1
 
     telescope_definition_data = telescope_definition.parse_data_field()
     assert telescope_definition_data['x'][0] == approx(0.0)
@@ -57,7 +57,7 @@ def test_corsica_array_offsets():
     offsets_object = f[4]
 
     assert isinstance(offsets_object, CorsikaArrayOffsets)
-    assert offsets_object.num_arrays == 1
+    assert offsets_object.n_arrays == 1
 
     offsets = offsets_object.parse_data_field()
     assert offsets['x'][0] == approx(-506.9717102050781)

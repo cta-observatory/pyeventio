@@ -68,10 +68,10 @@ def parse_corsika_event_header(event_header):
     d['flag for additional muon information on particle output file'] = h[93]
     d['step length factor for multiple scattering step length in EGS4'] = h[94]
     d['Cherenkov bandwidth in nm: (lower, upper) end'] = h[95:97]
-    num_reuse=h[97]
-    d['number i of uses of each Cherenkov event'] = num_reuse
-    core_x = h[98:98+num_reuse]
-    core_y = h[118:118+num_reuse]
+    n_reuse=h[97]
+    d['number i of uses of each Cherenkov event'] = n_reuse
+    core_x = h[98:98+n_reuse]
+    core_y = h[118:118+n_reuse]
     d['core location for scattered events in cm: (x,y)'] = np.vstack((core_x,core_y)).transpose()
     d['SIBYLL interaction flag (0.= no SIBYLL, 1.=vers.1.6; 2.=vers.2.1)'] = h[138]
     d['SIBYLL cross-section flag (0.= no SIBYLL, 1.=vers.1.6; 2.=vers.2.1)'] = h[139]

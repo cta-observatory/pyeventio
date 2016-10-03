@@ -64,10 +64,10 @@ class CorsikaTelescopeDefinition(EventIOObject):
 
     def __init__(self, eventio_file, header, first_byte):
         super().__init__(eventio_file, header, first_byte)
-        self.num_telescopes, = read_ints(1, self)
+        self.n_telescopes, = read_ints(1, self)
 
     def __len__(self):
-        return self.num_telescopes
+        return self.n_telescopes
 
     def parse_data_field(self):
         '''
@@ -79,7 +79,7 @@ class CorsikaTelescopeDefinition(EventIOObject):
         self.seek(4)
         data = self.read()
 
-        number_of_following_arrays = len(data) // (self.num_telescopes * 4)
+        number_of_following_arrays = len(data) // (self.n_telescopes * 4)
         if number_of_following_arrays != 4:
             # DN: I think this cannot happen, but who knows.
             msg = 'Number_of_following_arrays is: {}'
@@ -89,10 +89,10 @@ class CorsikaTelescopeDefinition(EventIOObject):
         block = np.frombuffer(
             data,
             dtype=dtype,
-            count=self.num_telescopes * dtype.itemsize,
+            count=self.n_telescopes * dtype.itemsize,
         )
         tel_pos = np.core.records.fromarrays(
-            block.reshape(4, self.num_telescopes),
+            block.reshape(4, self.n_telescopes),
             names=['x', 'y', 'z', 'r'],
         )
 
@@ -130,9 +130,9 @@ class CorsikaArrayOffsets(EventIOObject):
 
     def __init__(self, eventio_file, header, first_byte):
         super().__init__(eventio_file, header, first_byte)
-        self.num_arrays, = read_ints(1, self)
+        self.n_arrays, = read_ints(1, self)
         self.time_offset, = read_from('f', self)
-        self.num_reuses = self.num_arrays
+        self.n_reuses = self.n_arrays
 
     def parse_data_field(self):
         '''
@@ -145,24 +145,24 @@ class CorsikaArrayOffsets(EventIOObject):
         self.seek(8)
         data = self.read()
 
-        num_columns = len(data) / (self.num_arrays * 4)
-        assert num_columns.is_integer()
-        num_columns = int(num_columns)
-        if num_columns not in (2, 3):
+        n_columns = len(data) / (self.n_arrays * 4)
+        assert n_columns.is_integer()
+        n_columns = int(n_columns)
+        if n_columns not in (2, 3):
             # dneise: I think this cannot happen, but who knows.
             msg = 'Number of offset columns should be in 2 or 3, found {}'
-            raise Exception(msg.format(num_columns))
+            raise Exception(msg.format(n_columns))
 
         positions = np.frombuffer(
             data,
             dtype=np.float32,
-            count=self.num_arrays * num_columns,
-        ).reshape(num_columns, self.num_arrays)
+            count=self.n_arrays * n_columns,
+        ).reshape(n_columns, self.n_arrays)
 
-        if num_columns == 3:
+        if n_columns == 3:
             weights = positions[3, :]
         else:
-            weights = np.ones(self.num_arrays, dtype=np.float32)
+            weights = np.ones(self.n_arrays, dtype=np.float32)
 
         return np.core.records.fromarrays(
             [positions[0, :], positions[1, :], weights],
@@ -190,7 +190,7 @@ class IACTPhotons(EventIOObject):
         super().__init__(eventio_file, header, first_byte)
         self.compact = bool(self.header.version // 1000 == 1)
 
-        self.array, self.telescope, self.photons, self.n_bunches = read_from('hhfi', self)
+        self.array, self.telescope, self.n_photons, self.n_bunches = read_from('hhfi', self)
 
     def __repr__(self):
         return '{}(first={}, length={}, n_bunches={})'.format(
