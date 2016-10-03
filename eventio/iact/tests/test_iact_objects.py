@@ -4,20 +4,18 @@ from os import path
 
 from pytest import approx
 
+testfile = pkg_resources.resource_filename(
+    'eventio', path.join('resources', 'one_shower.dat')
+)
+
 
 def test_file_has_run_header():
     from eventio.iact import CorsikaRunHeader
-    testfile = pkg_resources.resource_filename(
-        'eventio', path.join('resources', 'one_shower.dat')
-    )
     f = eventio.EventIOFile(testfile)
     assert isinstance(f[0], CorsikaRunHeader)
 
 
 def test_read_run_header():
-    testfile = pkg_resources.resource_filename(
-        'eventio', path.join('resources', 'one_shower.dat')
-    )
     f = eventio.EventIOFile(testfile)
     run_header = f[0].parse_data_field()
 
@@ -28,9 +26,6 @@ def test_read_run_header():
 
 def test_telescope_definition():
     from eventio.iact import CorsikaTelescopeDefinition
-    testfile = pkg_resources.resource_filename(
-        'eventio', path.join('resources', 'one_shower.dat')
-    )
     f = eventio.EventIOFile(testfile)
     telescope_definition = f[2]
     assert isinstance(telescope_definition, CorsikaTelescopeDefinition)
@@ -45,9 +40,6 @@ def test_telescope_definition():
 
 def test_corsica_event_header():
     from eventio.iact import CorsikaEventHeader
-    testfile = pkg_resources.resource_filename(
-        'eventio', path.join('resources', 'one_shower.dat')
-    )
     f = eventio.EventIOFile(testfile)
     event_header_object = f[3]
 
@@ -61,9 +53,6 @@ def test_corsica_event_header():
 
 def test_corsica_array_offsets():
     from eventio.iact import CorsikaArrayOffsets
-    testfile = pkg_resources.resource_filename(
-        'eventio', path.join('resources', 'one_shower.dat')
-    )
     f = eventio.EventIOFile(testfile)
     offsets_object = f[4]
 
@@ -77,9 +66,6 @@ def test_corsica_array_offsets():
 
 def test_event_has_382_bunches():
     from eventio.iact import IACTPhotons
-    testfile = pkg_resources.resource_filename(
-        'eventio', path.join('resources', 'one_shower.dat')
-    )
     f = eventio.EventIOFile(testfile)
     photons = f[5][0]
     assert isinstance(photons, IACTPhotons)
