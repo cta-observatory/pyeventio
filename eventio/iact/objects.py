@@ -85,23 +85,16 @@ class CorsikaTelescopeDefinition(EventIOObject):
             msg = 'Number_of_following_arrays is: {}'
             raise Exception(msg.format(number_of_following_arrays))
 
-        tel_pos = np.empty(
-            self.num_telescopes,
-            dtype=[('x', 'f4'), ('y', 'f4'), ('z', 'f4'), ('r', 'f4')],
-        )
-
-        arrays = np.frombuffer(
+        dtype = np.dtype('float32')
+        block = np.frombuffer(
             data,
-            dtype=np.float32,
-            count=self.num_telescopes * 4,
+            dtype=dtype,
+            count=self.num_telescopes * dtype.itemsize,
         )
-        arrays = arrays.reshape(4, self.num_telescopes)
-        x, y, z, r = np.vsplit(arrays, 4)
-
-        tel_pos['x'] = x
-        tel_pos['y'] = y
-        tel_pos['z'] = z
-        tel_pos['r'] = r
+        tel_pos = np.core.records.fromarrays(
+            block.reshape(4, self.num_telescopes),
+            names=['x', 'y', 'z', 'r'],
+        )
 
         return tel_pos
 
@@ -138,10 +131,8 @@ class CorsikaArrayOffsets(EventIOObject):
     def __init__(self, eventio_file, header, first_byte):
         super().__init__(eventio_file, header, first_byte)
         self.num_arrays, = read_ints(1, self)
+        self.time_offset, = read_from('f', self)
         self.num_reuses = self.num_arrays
-
-    def __getitem__(self, idx):
-        return self.telescope_offsets[idx]
 
     def parse_data_field(self):
         '''
@@ -151,29 +142,31 @@ class CorsikaArrayOffsets(EventIOObject):
         with a row for each array. This object is used to store the
         array position and contains one set of coordinates for each reuse.
         '''
-        self.seek(4)
+        self.seek(8)
         data = self.read()
 
-        num_columns = len(data) // (self.num_arrays * 4)
-        if num_columns not in (3, 4):
+        num_columns = len(data) / (self.num_arrays * 4)
+        assert num_columns.is_integer()
+        num_columns = int(num_columns)
+        if num_columns not in (2, 3):
             # dneise: I think this cannot happen, but who knows.
-            msg = 'Number of offset columns should be in 3 or 4, found {}'
+            msg = 'Number of offset columns should be in 2 or 3, found {}'
             raise Exception(msg.format(num_columns))
 
         positions = np.frombuffer(
             data,
             dtype=np.float32,
             count=self.num_arrays * num_columns,
-        ).reshape(num_columns, -1)
+        ).reshape(num_columns, self.num_arrays)
 
-        if num_columns == 4:
+        if num_columns == 3:
             weights = positions[3, :]
         else:
             weights = np.ones(self.num_arrays, dtype=np.float32)
 
         return np.core.records.fromarrays(
-            [positions[0, :], positions[1, :], positions[2, :], weights],
-            names=['t', 'x', 'y', 'weight'],
+            [positions[0, :], positions[1, :], weights],
+            names=['x', 'y', 'weight'],
         )
 
 
