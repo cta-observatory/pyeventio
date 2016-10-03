@@ -64,7 +64,6 @@ with eventio.IACTFile('data/telescope.dat') as f:
 
 If you like to plot the origin of the Cherenkov photons of the first event in file `data/telescope.dat` for the first telescope, have a look into
 [this example](https://github.com/fact-project/pyeventio/blob/new_api/examples/plot_production_3d.py)
-```
 
 It might look similar to this picture:
 
