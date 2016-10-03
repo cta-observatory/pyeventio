@@ -222,8 +222,10 @@ def read_header(f, toplevel):
         except ValueError:
             f.seek(_start_point)
             raise
+        level = 0
     else:
         endianness = f.header.endianness
+        level = f.header.level + 1
 
     if endianness == '>':
         raise NotImplementedError('Big endian byte order is not supported by this reader')
@@ -248,6 +250,7 @@ def read_header(f, toplevel):
         length,
         _id,
         _tell,
+        level,
     )
 
     return return_value
@@ -257,7 +260,8 @@ HeaderBase = namedtuple(
     'HeaderBase',
     [
         'endianness', 'type', 'version', 'user', 'extended',
-        'only_sub_objects',  'length', 'id', 'data_field_first_byte'
+        'only_sub_objects',  'length', 'id', 'data_field_first_byte',
+        'level'
     ]
 )
 
