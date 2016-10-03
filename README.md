@@ -62,31 +62,11 @@ with eventio.IACTFile('data/telescope.dat') as f:
 
 ### Second Example
 
-If you like to plot the origin of the Cherenkov photons of the first event in file `data/telescope.dat` for the first telescope you can do:
-```{python}
-import matplotlib.pyplot as plt
-from mpl_toolkits.mplot3d import Axes3D
-
-fig = plt.figure()
-ax = fig.add_subplot(111, projection='3d')
-
-import eventio
-with eventio.EventIOFile('data/telescope.dat') as f:
-  b = f[0].photon_bunches[0]
-
-cz = 1 - (b['cx']**2 + b['cy']**2)
-
-x = b['x'] + ((b['zem']-f.current_event_header['observation levels']) / cz)*b['cx']
-y = b['y'] + ((b['zem']-f.current_event_header['observation levels']) / cz)*b['cy']
-
-ax.plot(x / 100, y / 100, b['zem'] / 1e5, 'o')
-ax.set_xlabel('x / m')
-ax.set_ylabel('y / m')
-ax.set_zlabel('z / km')
-plt.show()
+If you like to plot the origin of the Cherenkov photons of the first event in file `data/telescope.dat` for the first telescope, have a look into
+[this example](https://github.com/fact-project/pyeventio/blob/new_api/examples/plot_production_3d.py)
 ```
 
-It might look similar to this picture.
+It might look similar to this picture:
 
 ![an example shower](https://raw.githubusercontent.com/fact-project/pyeventio/master/a_shower.png)
 
