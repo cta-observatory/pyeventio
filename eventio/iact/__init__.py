@@ -265,7 +265,7 @@ class CorsikaEvent(CorsikaEventTuple):
         Only different from 1 if importance sampling was used.
     '''
     def __repr__(self):
-        return '{}(event_number={}, n_telescopes={}, n_photons=[{}])'.format(
+        return '{}(event_number={}, n_telescopes={}, n_photons={})'.format(
             self.__class__.__name__,
             self.event_number,
             len(self.n_bunches),

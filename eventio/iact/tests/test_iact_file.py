@@ -8,6 +8,9 @@ from pytest import approx, raises
 testfile = pkg_resources.resource_filename(
     'eventio', path.join('resources', 'one_shower.dat')
 )
+testfile_reuse = pkg_resources.resource_filename(
+    'eventio', path.join('resources', '3_gammas_reuse_5.dat')
+)
 
 
 def test_file_open():
@@ -89,3 +92,12 @@ def test_event_end_block():
     event = f[0]
 
     assert hasattr(event, 'end_block')
+
+
+def test_event_with_reuse():
+    f = eventio.IACTFile(testfile_reuse)
+    assert f.n_events == 15
+    assert f.n_showers == 3
+    for i, e in enumerate(f):
+        assert e.event_number == i
+        assert e.reuse == (i % 5) + 1
