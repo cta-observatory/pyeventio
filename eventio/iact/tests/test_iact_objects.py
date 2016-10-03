@@ -70,3 +70,12 @@ def test_event_has_382_bunches():
     photons = f[5][0]
     assert isinstance(photons, IACTPhotons)
     assert photons.n_bunches == 382
+
+
+def test_bunches():
+    f = eventio.EventIOFile(testfile)
+    photons = f[5][0]
+    bunches = photons.parse_data_field()
+
+    columns = ('x', 'y', 'cx', 'cy', 'time', 'zem', 'photons', 'lambda', 'scattered')
+    assert bunches.dtype.names == columns
