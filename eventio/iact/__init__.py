@@ -100,6 +100,20 @@ class IACTFile(EventIOFile):
         else:
             self.end_block = self._objects[-1].parse_data_field()
 
+    def __repr__(self):
+        return (
+            '{}(\n'
+            '  path={}\n'
+            '  num_telescopes={}\n'
+            '  num_events={}\n'
+            ')'
+        ).format(
+            self.__class__.__name__,
+            self.path,
+            self.num_telescopes,
+            self.num_events,
+        )
+
     def __len__(self):
         return self.num_events
 
