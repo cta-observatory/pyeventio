@@ -26,18 +26,18 @@ def parse_corsika_event_header(event_header):
     d['angle in radian: (zenith, azimuth)'] = h[10:12]
     n_random_number_sequences = int(round(h[12]))
     if (n_random_number_sequences < 1) or (n_random_number_sequences > 10):
-        raise ValueError('number of random number sequences n must be 0 < n < 11, but is: '+str(h[12]))
-    seed_info = h[13:13 + 3*n_random_number_sequences].reshape(n_random_number_sequences,-1)
-    d['random number sequences: (seed, #calls, #billion calls)']=seed_info
+        raise ValueError('Number of random number sequences n must be 0 < n < 11, but is: '+str(h[12]))
+    seed_info = h[13:13 + 3 * n_random_number_sequences].reshape(n_random_number_sequences, -1)
+    d['random number sequences: (seed, #calls, #billion calls)'] = seed_info
     d['run number'] = int(round(h[43]))
     d['date of begin run (yymmdd)'] = int(round(h[44]))
     d['version of program'] = h[45]
     n_obs_levels = int(round(h[46]))
     if (n_obs_levels < 1) or (n_obs_levels > 10):
         raise ValueError('number of observation levels n must be 0 < n < 11, but is: '+str(h[46]))
-    d['observation levels']=h[47:47+n_obs_levels].reshape(n_obs_levels,-1)
-    d['slope of energy spektrum']=h[57]
-    d['energy range']=h[58:60]
+    d['observation levels'] = h[47:47 + n_obs_levels]
+    d['slope of energy spektrum'] = h[57]
+    d['energy range'] = h[58:60]
     d['kin. energy cutoff for hadrons in GeV'] = h[60]
     d['kin. energy cutoff for muons in GeV'] = h[61]
     d['kin. energy cutoff for electrons in GeV'] = h[62]

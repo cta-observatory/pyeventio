@@ -23,7 +23,7 @@ b = event.photon_bunches[0]
 
 cz = 1 - (b['cx']**2 + b['cy']**2)
 
-obslevel = event.header['observation levels'][0][0]
+obslevel = event.header['observation levels'][0]
 
 x = b['x'] + ((b['zem'] - obslevel) / cz) * b['cx']
 y = b['y'] + ((b['zem'] - obslevel) / cz) * b['cy']
