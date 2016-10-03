@@ -372,4 +372,20 @@ class CorsikaInputCard(EventIOObject):
         Returns the CORSIKA steering card as string.
         '''
         self.seek(0)
-        return self.read().decode()
+        # read number of items in the input card
+        n, = read_from('i', self)
+
+        # corsika input card is stored as null terminated strings
+        data = self.read().decode()
+        strings = data.split('\0')
+        inputcard = [
+            remove_ascii_control_characters(string)
+            for string in strings
+            if string
+        ]
+        return inputcard
+
+
+def remove_ascii_control_characters(string, mapping=dict.fromkeys(range(32))):
+    ''' See http://stackoverflow.com/a/4324823/3838691 '''
+    return string.translate(mapping)
