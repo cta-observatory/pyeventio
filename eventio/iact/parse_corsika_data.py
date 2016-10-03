@@ -136,6 +136,7 @@ def parse_corsika_run_header(run_header):
     d['theta angle of normal vector of inclined observation plane'] = h[77]
     d['phi angle of normal vector of inclined observation plane'] = h[78]
     # now some constants, I don't understand
+    d['NSHOW'] = h[93]
     d['CKA'] = h[94:134]
     d['CETA'] = h[134:139]
     d['CSTRBA'] = h[139:150]

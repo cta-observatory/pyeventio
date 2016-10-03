@@ -1,3 +1,6 @@
+import warnings
+import logging
+
 from ..base import known_objects, EventIOFile
 from ..exceptions import WrongTypeException
 from .objects import (
@@ -36,6 +39,8 @@ known_objects.update({
     ]
 })
 
+log = logging.getLogger(__name__)
+
 
 class IACTFile(EventIOFile):
     '''
@@ -48,6 +53,23 @@ class IACTFile(EventIOFile):
 
     For example, it iterates over CorsikaEvent instances and
     IACTFile[n] will return the nth event in the file.
+
+    The structure of an IACT EventIO file is assumed to be like this:
+
+    CorsikaRunHeader
+    CorsikaInputCard
+    CorsikaTelescopeDefinition
+
+    For each Event:
+      CorsikaEventHeader
+      CorsikaArrayOffsets
+      For each reuse:
+        CorsikaTelescopeData
+        For each Telescope:
+          IACTPhotons
+      CorsikaEventEndBlock
+
+    CorsikaRunEndBlock
     '''
 
     def __init__(self, path):
@@ -55,12 +77,19 @@ class IACTFile(EventIOFile):
 
         if not isinstance(self._objects[0], CorsikaRunHeader):
             raise WrongTypeException('Object 0 is not a CORSIKA Run Header')
+        self.header = self._objects[0].parse_data_field()
 
         if not isinstance(self._objects[1], CorsikaInputCard):
             raise WrongTypeException('Object 1 is not a CORSIKA Input Card')
-
-        self.run_header = self._objects[0].parse_data_field()
         self.input_card = self._objects[1].parse_data_field()
+
+        if not isinstance(self._objects[-1], CorsikaRunEndBlock):
+            warnings.warn(
+                'Last Object is not a CORSIKA Run End Block.'
+                'The file seems to be truncated.'
+            )
+        else:
+            self.end_block = self._objects[-1].parse_data_field()
 
 
 class CorsikaEvent:
