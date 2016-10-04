@@ -69,8 +69,8 @@ class ObjectHeader(tuple):
                 raise
             level = 0
         else:
-            endianness = f.header.endianness
-            level = f.header.level + 1
+            endianness = None
+            level = None
 
         if endianness == '>':
             raise NotImplementedError('Big endian byte order is not supported by this reader')
