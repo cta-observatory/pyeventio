@@ -20,11 +20,15 @@ def test_parse_sync_bytes():
         oh.parse_sync_bytes(struct.pack('I', 0))
 
 
-from eventio.event_io_file import object_headers
-def test_object_headers():
-    list_of_headers = object_headers(one_shower)
+from eventio.event_io_file import object_generator, object_list
 
-from eventio.event_io_file import yield_objects
-def test_yield_objects():
-    for obj in yield_objects(one_shower):
-        pass
+def test_object_headers__equal__yield_objects():
+
+    for testfile in (one_shower, three_with_reuse):
+        lis = object_list(testfile)
+        gen = object_generator(testfile)
+
+        for i,o in enumerate(gen):
+            assert o.headers == lis[i].headers
+            # payload for the object in the list_of_objects gets only loaded now
+            assert o.payload == lis[i].payload
