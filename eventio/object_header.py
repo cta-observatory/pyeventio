@@ -1,10 +1,7 @@
-from builtins import property as _property, tuple as _tuple
-from operator import itemgetter as _itemgetter
-from collections import OrderedDict
 import struct
 from .tools import read_ints
 import logging
-log = logging.getLogger()
+log = logging.getLogger(__name__)
 
 from functools import namedtuple
 TypeInfo = namedtuple('TypeInfo', 'type version user extended')
