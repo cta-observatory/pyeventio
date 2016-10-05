@@ -1,153 +1,4 @@
-''' Methods to read in and parse the IACT EventIO object types '''
 import numpy as np
-
-from .tools import unpack_from, read_ints
-
-__all__ = [
-    'iact_types',
-    'read_type_1200',
-    'read_type_1201',
-    'read_type_1202',
-    'read_type_1203',
-    'read_type_1212',
-    'read_type_1209',
-    'read_type_1210',
-    'read_type_1204',
-    'parse_corsika_run_header',
-    'parse_corsika_event_header',
-]
-
-
-def read_type_1200(f, head=None):
-    n, = read_ints(1, f)
-    if n != 273:
-        raise ValueError('Wrong size: was not 273 but {}'.format(n))
-
-    block = np.frombuffer(
-        f.read(n * 4),
-        dtype=np.float32,
-        count=n
-    )
-
-    return parse_corsika_run_header(block)
-
-
-def read_type_1201(f, head=None):
-    ''' ---> write_tel_pos
-    int32 ntel
-    float32 x[ntel]
-    float32 y[ntel]
-    float32 z[ntel]
-    float32 r[ntel]
-    '''
-    ntel, = unpack_from('i', f)
-    number_of_following_arrays = int((head.length - 4) / ntel / 4)
-    if number_of_following_arrays != 4:
-        # DN: I think this cannot happen, but who knows.
-        msg = 'Number_of_following_arrays is: {}'
-        raise Exception(msg.format(number_of_following_arrays))
-
-    tel_pos = np.empty(
-        ntel,
-        dtype=[('x', 'f4'), ('y', 'f4'), ('z', 'f4'), ('r', 'f4')],
-    )
-
-    arrays = np.frombuffer(
-        f.read(ntel * 4 * 4),
-        dtype=np.float32,
-        count=ntel * 4
-    )
-    arrays = arrays.reshape(4, ntel)
-    x, y, z, r = np.vsplit(arrays, 4)
-
-    tel_pos['x'] = x
-    tel_pos['y'] = y
-    tel_pos['z'] = z
-    tel_pos['r'] = r
-
-    return tel_pos
-
-
-def read_type_1202(f, head=None):
-    n, = read_ints(1, f)
-    if n != 273:
-        raise Exception('read_type_1200: first n was not 273 but '+str(n))
-
-    block = np.frombuffer(
-        f.read(n*4),
-        dtype=np.float32,
-        count=n)
-
-    return parse_corsika_event_header(block)
-
-
-def read_type_1203(f, head=None):
-    ''' ---> write_tel_offset
-
-    int32 narray,
-    float32 toff,
-    float32 xoff[narray]
-    float32 yoff[narray]
-    maybe:
-        float32 weight[narray]
-
-    '''
-    length_first_two = 4 + 4
-    narray, toff = unpack_from('if', f)
-    number_of_following_arrays = int((head.length - length_first_two) / narray / 4)
-    if number_of_following_arrays not in [2, 3]:
-        # dneise: I think this cannot happen, but who knows.
-        msg = 'in read_type_1201: number_of_following_arrays is: {}'
-        raise Exception(msg.format(number_of_following_arrays))
-
-    xoff = np.frombuffer(
-        f.read(narray * 4),
-        dtype=np.float32,
-        count=narray,
-    )
-    yoff = np.frombuffer(
-        f.read(narray * 4),
-        dtype=np.float32,
-        count=narray,
-    )
-    weight = np.ones(narray, dtype=np.float32)
-
-    if number_of_following_arrays == 3:
-        weight = np.frombuffer(f.read(narray * 4), dtype=np.float32, count=narray)
-
-    return narray, toff, xoff, yoff, weight
-
-
-def read_type_1204(f, head=None, headers_only=True):
-    if not head.only_sub_objects:
-        raise Exception('Type 1204 ususally has only sub objects, this one has not!!')
-    return list(pb.photon_bunches(f, headers_only=headers_only))
-
-
-def read_type_1209(f, head=None):
-    n, = read_ints(1, f)
-    if n != 273:
-        raise Exception('read_type_1209: first n was not 273 but '+str(n))
-
-    block = np.frombuffer(
-        f.read(n*4),
-        dtype=np.float32,
-        count=n)
-
-    return block
-
-
-def read_type_1210(f, head=None):
-    n, = read_ints(1, f)
-    block = np.frombuffer(
-        f.read(n*4),
-        dtype=np.float32,
-        count=n)
-    return block
-
-
-def read_type_1212(f, head=None):
-    return f.read(head.length)
 
 
 def parse_corsika_event_header(event_header):
@@ -175,18 +26,18 @@ def parse_corsika_event_header(event_header):
     d['angle in radian: (zenith, azimuth)'] = h[10:12]
     n_random_number_sequences = int(round(h[12]))
     if (n_random_number_sequences < 1) or (n_random_number_sequences > 10):
-        ValueException('number of random number sequences n must be 0 < n < 11, but is: '+str(h[12]))
-    seed_info = h[13:13 + 3*n_random_number_sequences].reshape(n_random_number_sequences,-1)
-    d['random number sequences: (seed, #calls, #billion calls)']=seed_info
-    d['run number'] = h[43]
+        raise ValueError('Number of random number sequences n must be 0 < n < 11, but is: '+str(h[12]))
+    seed_info = h[13:13 + 3 * n_random_number_sequences].reshape(n_random_number_sequences, -1)
+    d['random number sequences: (seed, #calls, #billion calls)'] = seed_info
+    d['run number'] = int(round(h[43]))
     d['date of begin run (yymmdd)'] = int(round(h[44]))
     d['version of program'] = h[45]
     n_obs_levels = int(round(h[46]))
     if (n_obs_levels < 1) or (n_obs_levels > 10):
-        ValueException('number of observation levels n must be 0 < n < 11, but is: '+str(h[46]))
-    d['observation levels']=h[47:47+n_obs_levels].reshape(n_obs_levels,-1)
-    d['slope of energy spektrum']=h[57]
-    d['energy range']=h[58:60]
+        raise ValueError('number of observation levels n must be 0 < n < 11, but is: '+str(h[46]))
+    d['observation levels'] = h[47:47 + n_obs_levels]
+    d['slope of energy spektrum'] = h[57]
+    d['energy range'] = h[58:60]
     d['kin. energy cutoff for hadrons in GeV'] = h[60]
     d['kin. energy cutoff for muons in GeV'] = h[61]
     d['kin. energy cutoff for electrons in GeV'] = h[62]
@@ -217,10 +68,10 @@ def parse_corsika_event_header(event_header):
     d['flag for additional muon information on particle output file'] = h[93]
     d['step length factor for multiple scattering step length in EGS4'] = h[94]
     d['Cherenkov bandwidth in nm: (lower, upper) end'] = h[95:97]
-    num_reuse=h[97]
-    d['number i of uses of each Cherenkov event'] = num_reuse
-    core_x = h[98:98+num_reuse]
-    core_y = h[118:118+num_reuse]
+    n_reuse=h[97]
+    d['number i of uses of each Cherenkov event'] = n_reuse
+    core_x = h[98:98+n_reuse]
+    core_y = h[118:118+n_reuse]
     d['core location for scattered events in cm: (x,y)'] = np.vstack((core_x,core_y)).transpose()
     d['SIBYLL interaction flag (0.= no SIBYLL, 1.=vers.1.6; 2.=vers.2.1)'] = h[138]
     d['SIBYLL cross-section flag (0.= no SIBYLL, 1.=vers.1.6; 2.=vers.2.1)'] = h[139]
@@ -268,9 +119,9 @@ def parse_corsika_run_header(run_header):
     d['version of program'] = h[3]
     n_obs_levels = int(round(h[4]))
     if (n_obs_levels < 1) or (n_obs_levels > 10):
-        ValueException('number of observation levels n must be 0 < n < 11, but is: '+str(h[4]))
+        raise ValueError('number of observation levels n must be 0 < n < 11, but is: '+str(h[4]))
     d['observation levels']=h[5:5+n_obs_levels]
-    d['slope of energy spektrum']=h[15]
+    d['slope of energy spectrum']=h[15]
     d['energy range']=h[16:18]
     d['flag for EGS4 treatment of em. component'] = h[18]
     d['flag for NKG treatment of em. component'] = h[19]
@@ -285,6 +136,7 @@ def parse_corsika_run_header(run_header):
     d['theta angle of normal vector of inclined observation plane'] = h[77]
     d['phi angle of normal vector of inclined observation plane'] = h[78]
     # now some constants, I don't understand
+    d['NSHOW'] = h[93]
     d['CKA'] = h[94:134]
     d['CETA'] = h[134:139]
     d['CSTRBA'] = h[139:150]
@@ -299,15 +151,3 @@ def parse_corsika_run_header(run_header):
     d['NFLPI0 + 100 x NFLPIF'] = h[271]
     d['NFLCHE + 100 x NFRAGM'] = h[272]
     return d
-
-
-iact_types = {
-    1200: read_type_1200,
-    1201: read_type_1201,
-    1202: read_type_1202,
-    1203: read_type_1203,
-    1212: read_type_1212,
-    1209: read_type_1209,
-    1210: read_type_1210,
-    1204: read_type_1204,
-}

@@ -25,14 +25,6 @@ def test_can_open_file():
     eventio.EventIOFile(testfile)
 
 
-def test_file_has_run_header():
-    testfile = pkg_resources.resource_filename(
-        'eventio', path.join('resources', 'one_shower.dat')
-    )
-    f = eventio.EventIOFile(testfile)
-    f.run_header
-
-
 def test_file_is_iterable():
     testfile = pkg_resources.resource_filename(
         'eventio', path.join('resources', 'one_shower.dat')
@@ -42,19 +34,21 @@ def test_file_is_iterable():
         pass
 
 
-def test_file_has_at_least_one_event():
+def test_file_has_correct_types():
     testfile = pkg_resources.resource_filename(
         'eventio', path.join('resources', 'one_shower.dat')
     )
     f = eventio.EventIOFile(testfile)
-    event = next(f)
-    assert isinstance(event, eventio.photonbunches.PhotonBundle)
+    types = [o.header.type for o in f]
+
+    assert types == [1200, 1212, 1201, 1202, 1203, 1204, 1209, 1210]
 
 
-def test_event_has_382_bunches():
+def test_types_gzipped():
     testfile = pkg_resources.resource_filename(
-        'eventio', path.join('resources', 'one_shower.dat')
+        'eventio', path.join('resources', 'one_shower.dat.gz')
     )
     f = eventio.EventIOFile(testfile)
-    event = next(f)
-    assert event.header.n_bunches == 382
+    types = [o.header.type for o in f]
+
+    assert types == [1200, 1212, 1201, 1202, 1203, 1204, 1209, 1210]
