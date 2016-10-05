@@ -47,7 +47,7 @@ def generate_event(shower):
     array_offsets = parse_eventio_object(shower[1])
     end_block = parse_eventio_object(shower[-1])
 
-    for reuse_id, reuse_event in enumerate(shower[2:-1]):
+    for reuse_event in shower[2:-1]:
         photon_bunches = parse_eventio_object(reuse_event)
 
         yield CorsikaEvent(
@@ -59,7 +59,7 @@ def generate_event(shower):
             y_offset=array_offsets.offsets['y'],
             weight=array_offsets.offsets['weight'],
             shower=shower[0].headers[0].id,
-            reuse=reuse_id,
+            reuse=reuse_event.headers[0].id + 1,
         )
 
 CorsikaEvent = namedtuple(
@@ -112,6 +112,7 @@ class IACTFile:
         self.n_telescopes = self.telescope_definition.n_telescopes
         self.telescope_positions = self.telescope_definition.tel_pos
         self.showers = sort_objects_into_showers(self.objects[3:-1])
+        self.n_events = sum(len(s)-3 for s in self.showers)
 
         self._iter = None
     def __iter__(self):

@@ -67,45 +67,50 @@ def test_get_item():
 
 
 def test_iterating():
-    f = eventio.IACTFile(testfile)
+    with open(testfile_path, 'rb') as testfile:
+        f = eventio.IACTFile(testfile)
 
-    for event in f:
-        assert isinstance(event, eventio.iact.CorsikaEvent)
+        for event in f:
+            assert isinstance(event, eventio.iact.CorsikaEvent)
 
 
 def test_bunches():
-    f = eventio.IACTFile(testfile)
+    with open(testfile_path, 'rb') as testfile:
+        f = eventio.IACTFile(testfile)
+        event = next(f)
 
-    event = f[0]
+        columns = ('x', 'y', 'cx', 'cy', 'time', 'zem', 'photons', 'lambda', 'scattered')
 
-    columns = ('x', 'y', 'cx', 'cy', 'time', 'zem', 'photons', 'lambda', 'scattered')
-
-    assert event.photon_bunches[0].shape == (382, )
-    assert event.photon_bunches[0].dtype.names == columns
+        assert event.photon_bunches.shape == (382, )
+        assert event.photon_bunches.dtype.names == columns
 
 
 def test_event_header():
-    f = eventio.IACTFile(testfile)
-    event = f[0]
+    with open(testfile_path, 'rb') as testfile:
+        f = eventio.IACTFile(testfile)
+        event = next(f)
 
-    assert hasattr(event, 'header')
-    assert event.header['event number'] == 1
-    assert event.header['angle in radian: (zenith, azimuth)'][0] == approx(0.0)
-    assert event.header['angle in radian: (zenith, azimuth)'][1] == approx(0.0)
-    assert event.header['total energy in GeV'] == approx(9.3249321)
+        assert hasattr(event, 'header')
+        assert event.header['event number'] == 1
+        assert event.header['angle in radian: (zenith, azimuth)'][0] == approx(0.0)
+        assert event.header['angle in radian: (zenith, azimuth)'][1] == approx(0.0)
+        assert event.header['total energy in GeV'] == approx(9.3249321)
 
 
 def test_event_end_block():
-    f = eventio.IACTFile(testfile)
-    event = f[0]
+    with open(testfile_path, 'rb') as testfile:
+        f = eventio.IACTFile(testfile)
+        event = next(f)
 
-    assert hasattr(event, 'end_block')
+        assert hasattr(event, 'end_block')
 
 
 def test_event_with_reuse():
-    f = eventio.IACTFile(testfile_reuse)
-    assert f.n_events == 15
-    assert f.n_showers == 3
-    for i, e in enumerate(f):
-        assert e.event_number == i
-        assert e.reuse == (i % 5) + 1
+    with open(testfile_reuse_path, 'rb') as testfile:
+        f = eventio.IACTFile(testfile)
+
+        assert len(f.showers) == 3
+        assert f.n_events == 15
+        for i, e in enumerate(f):
+            assert e.reuse == (i % 5) + 1
+            assert e.shower == (i // 5) + 1
