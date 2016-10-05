@@ -34,11 +34,11 @@ class EventIOFile:
             log.info('Found uncompressed file')
             self.__filehandle = self.__mm
 
-        self._objects = read_all_headers(self, toplevel=True)
-        log.info('File contains {} top level objects'.format(len(self._objects)))
+        self.objects = read_all_headers(self, toplevel=True)
+        log.info('File contains {} top level objects'.format(len(self.objects)))
 
     def __len__(self):
-        return len(self._objects)
+        return len(self.objects)
 
     def seek(self, position, whence=0):
         return self.__filehandle.seek(position, whence)
@@ -64,22 +64,22 @@ class EventIOFile:
         self.__file.close()
 
     def __getitem__(self, idx):
-        return self._objects[idx]
+        return self.objects[idx]
 
     def __iter__(self):
-        return iter(self._objects)
+        return iter(self.objects)
 
     def __repr__(self):
         r = '{}(path={}, objects=[\n'.format(self.__class__.__name__, self.path)
 
-        if len(self._objects) <= 8:
-            for o in self._objects:
+        if len(self.objects) <= 8:
+            for o in self.objects:
                 r += '  {}\n'.format(o)
         else:
-            for o in self._objects[:4]:
+            for o in self.objects[:4]:
                 r += '  {}\n'.format(o)
             r += '\t...\n'
-            for o in self._objects[-4:]:
+            for o in self.objects[-4:]:
                 r += '  {}\n'.format(o)
         r += '])'
         return r
@@ -97,13 +97,13 @@ class EventIOObject:
         self.header = header
         self.position = 0
 
-        self._objects = []
+        self.objects = []
 
         if self.header.only_sub_objects:
-            self._objects = read_all_headers(self, toplevel=False)
+            self.objects = read_all_headers(self, toplevel=False)
 
     def __getitem__(self, idx):
-        return self._objects[idx]
+        return self.objects[idx]
 
     def parse_data_field(self):
         ''' Read the data in this field
@@ -113,8 +113,8 @@ class EventIOObject:
         raise NotImplemented
 
     def __repr__(self):
-        if len(self._objects) > 0:
-            subitems = ', subitems={}'.format(len(self._objects))
+        if len(self.objects) > 0:
+            subitems = ', subitems={}'.format(len(self.objects))
         else:
             subitems = ''
 

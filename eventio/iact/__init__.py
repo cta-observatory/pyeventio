@@ -77,28 +77,28 @@ class IACTFile(EventIOFile):
     def __init__(self, path):
         super().__init__(path)
 
-        if not isinstance(self._objects[0], CorsikaRunHeader):
+        if not isinstance(self.objects[0], CorsikaRunHeader):
             raise WrongTypeException('Object 0 is not a CORSIKA run header')
-        self.header = self._objects[0].parse_data_field()
+        self.header = self.objects[0].parse_data_field()
 
-        if not isinstance(self._objects[1], CorsikaInputCard):
+        if not isinstance(self.objects[1], CorsikaInputCard):
             raise WrongTypeException('Object 1 is not a CORSIKA input card')
-        self.input_card = self._objects[1].parse_data_field()
+        self.input_card = self.objects[1].parse_data_field()
 
-        if not isinstance(self._objects[2], CorsikaTelescopeDefinition):
+        if not isinstance(self.objects[2], CorsikaTelescopeDefinition):
             raise WrongTypeException('Object 2 is not a CORSIKA telescope definition')
-        self.n_telescopes = self._objects[2].n_telescopes
-        self.telescope_positions = self._objects[2].parse_data_field()
+        self.n_telescopes = self.objects[2].n_telescopes
+        self.telescope_positions = self.objects[2].parse_data_field()
 
         self._parse_events()
 
-        if not isinstance(self._objects[-1], CorsikaRunEndBlock):
+        if not isinstance(self.objects[-1], CorsikaRunEndBlock):
             warnings.warn(
                 'Last Object is not a CORSIKA Run End Block.'
                 'The file seems to be truncated.'
             )
         else:
-            self.end_block = self._objects[-1].parse_data_field()
+            self.end_block = self.objects[-1].parse_data_field()
 
     def __repr__(self):
         return (
@@ -136,7 +136,7 @@ class IACTFile(EventIOFile):
         self._shower_objects = []
         reuse_values = []
 
-        for obj in self._objects:
+        for obj in self.objects:
             if isinstance(obj, CorsikaRunEndBlock):
                 break
 
