@@ -68,7 +68,7 @@ def parse_corsika_event_header(event_header):
     d['flag for additional muon information on particle output file'] = h[93]
     d['step length factor for multiple scattering step length in EGS4'] = h[94]
     d['Cherenkov bandwidth in nm: (lower, upper) end'] = h[95:97]
-    n_reuse=h[97]
+    n_reuse=int(h[97])
     d['number i of uses of each Cherenkov event'] = n_reuse
     core_x = h[98:98+n_reuse]
     core_y = h[118:118+n_reuse]
