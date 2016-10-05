@@ -43,24 +43,27 @@ def test_run_end_block():
 
 
 def test_read_input_card():
-    f = eventio.IACTFile(testfile)
+    with open(testfile_path, 'rb') as testfile:
+        f = eventio.IACTFile(testfile)
 
-    assert hasattr(f, 'input_card')
+        assert hasattr(f, 'input_card')
 
 
 def test_read_telescopes():
-    f = eventio.IACTFile(testfile)
+    with open(testfile_path, 'rb') as testfile:
+        f = eventio.IACTFile(testfile)
 
-    assert f.n_telescopes == 1
-    assert hasattr(f, 'telescope_positions')
-    assert f.telescope_positions['x'][0] == approx(0)
+        assert f.n_telescopes == 1
+        assert hasattr(f, 'telescope_positions')
+        assert f.telescope_positions['x'][0] == approx(0)
 
 
 def test_get_item():
-    f = eventio.IACTFile(testfile)
+    with open(testfile_path, 'rb') as testfile:
+        f = eventio.IACTFile(testfile)
 
-    event = f[0]
-    assert isinstance(event, eventio.iact.CorsikaEvent)
+        event = next(f)
+        assert isinstance(event, eventio.iact.CorsikaEvent)
 
 
 def test_iterating():
