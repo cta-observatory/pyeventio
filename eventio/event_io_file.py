@@ -27,20 +27,29 @@ def objects(file):
     # file is not closed here, since the EventIOObjects, need to read from it
     # who closes this file? I don't know.
 
-def yield_all_objects(f, previous_headers=None, toplevel=True):
+def yield_all_objects(f, previous_headers=None, toplevel=True, end_of_stream_pos=None):
     if previous_headers is None:
         previous_headers = []
     while True:
         try:
             header = ObjectHeader.from_file(f, toplevel)
-            payload = f.read(header.length)
+            f.seek(header.data_field_first_byte)
             if not header.only_sub_objects:
                 yield EventIOObject(headers=previous_headers + [header], file=f)
             else:
-                for o in yield_all_objects(BytesIO(payload), previous_headers + [header], toplevel=False):
+                for o in yield_all_objects(
+                        f,
+                        previous_headers=previous_headers + [header],
+                        toplevel=False,
+                        end_of_stream_pos=header.data_field_first_byte + header.length,
+                    ):
                     yield o
+            pos = f.seek(header.data_field_first_byte + header.length)
         except ValueError:
             warnings.warn('File seems to be truncated')
             break
         except struct.error:
+            break
+
+        if end_of_stream_pos and end_of_stream_pos <= pos:
             break
