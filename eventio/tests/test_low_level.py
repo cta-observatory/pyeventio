@@ -36,3 +36,11 @@ def test_payload_has_correct_size():
         with open(testfile_path, 'rb') as testfile:
             for o in objects(testfile):
                 assert len(o.payload) == o.headers[-1].length
+
+def test_object_file_is_really_a_file():
+    from eventio.event_io_file import objects
+
+    for testfile_path in (one_shower, three_with_reuse):
+        with open(testfile_path, 'rb') as testfile:
+            for o in objects(testfile):
+                assert isinstance(o._file, io.BufferedReader)
