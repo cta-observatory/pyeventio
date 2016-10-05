@@ -20,8 +20,9 @@ def test_file_open():
 
 def test_n_events():
     ''' tests if the number of events in the testfile is 1 '''
-    f = eventio.IACTFile(testfile)
-    assert len(f) == 1
+    with open(testfile_path, 'rb') as testfile:
+        f = eventio.IACTFile(testfile)
+        assert len(f.showers) == 1
 
 
 def test_read_run_header():
