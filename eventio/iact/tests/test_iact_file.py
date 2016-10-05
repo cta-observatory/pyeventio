@@ -36,8 +36,10 @@ def test_read_run_header():
 
 
 def test_run_end_block():
-    f = eventio.IACTFile(testfile)
-    assert hasattr(f, 'end_block')
+    with open(testfile_path, 'rb') as testfile:
+        f = eventio.IACTFile(testfile)
+
+        assert hasattr(f, 'end_block')
 
 
 def test_read_input_card():
