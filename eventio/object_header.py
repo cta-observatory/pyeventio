@@ -63,10 +63,8 @@ def ObjectHeader_from_file(cls, f, toplevel=True):
         except ValueError:
             f.seek(_start_point)
             raise
-        level = 0
     else:
         endianness = None
-        level = None
 
     _type, _id, length = read_ints(3, f)
 
@@ -88,7 +86,6 @@ def ObjectHeader_from_file(cls, f, toplevel=True):
         length,
         _id,
         _tell,
-        level,
     )
 
 
@@ -97,7 +94,6 @@ ObjectHeader = namedtuple(
     [
         'endianness', 'type', 'version', 'user', 'extended',
         'only_sub_objects',  'length', 'id', 'data_field_first_byte',
-        'level'
     ]
 )
 
