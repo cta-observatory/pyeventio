@@ -15,8 +15,6 @@ class EventIOObject:
 
     def __getattr__(self, attr):
         if attr == "payload":
-            if self._file.closed:
-                self._file = open(self._file.name, 'rb')
             start_address = sum(h.data_field_first_byte for h in self.headers)
             self._file.seek(start_address)
             self.payload = self._file.read(self.headers[-1].length)
@@ -25,8 +23,7 @@ class EventIOObject:
     def __repr__(self):
         return repr(self.headers)
 
-def objects(path):
-    f = open(path, 'rb')
+def objects(file):
     return [o for o in yield_all_objects(f)]
     # file is not closed here, since the EventIOObjects, need to read from it
     # who closes this file? I don't know.

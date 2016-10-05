@@ -103,8 +103,8 @@ class IACTFile:
     CorsikaRunEndBlock
     '''
 
-    def __init__(self, path):
-        self.objects = objects(path)
+    def __init__(self, file):
+        self.objects = objects(file)
         self.run_header = parse_eventio_object(self.objects[0])
         self.input_card= parse_eventio_object(self.objects[1])
         self.telescope_definition = parse_eventio_object(self.objects[2])
