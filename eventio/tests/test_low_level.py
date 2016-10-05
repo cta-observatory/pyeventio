@@ -23,7 +23,7 @@ def test_objects_have_headers_and_payload():
     from eventio.event_io_file import objects
 
     for testfile_path in (one_shower, three_with_reuse):
-        with open(testfile_path) as testfile:
+        with open(testfile_path, 'rb') as testfile:
             for o in objects(testfile):
                 o.headers
                 # payload is loaded on access only
