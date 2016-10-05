@@ -1,5 +1,5 @@
 import struct
-from .object_header import ObjectHeader
+from .object_header import make_ObjectHeader
 from io import BytesIO
 
 __all__ = ['object_headers', 'yield_objects']
@@ -9,7 +9,7 @@ def read_all_object_headers(f, toplevel=True):
     object_headers = []
     while True:
         try:
-            header = ObjectHeader(f, toplevel)
+            header = make_ObjectHeader(f, toplevel)
             payload = f.read(header.length)
             if not header.only_sub_objects:
                 object_headers.append(header)
@@ -34,7 +34,7 @@ def yield_all_objects(f, previous_headers=None, toplevel=True):
         previous_headers = []
     while True:
         try:
-            header = ObjectHeader(f, toplevel)
+            header = make_ObjectHeader(f, toplevel)
             payload = f.read(header.length)
             if not header.only_sub_objects:
                 yield previous_headers + [header], payload
