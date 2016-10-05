@@ -3,6 +3,7 @@ import eventio
 import struct
 from os import path
 from pytest import raises
+import io
 
 one_shower = pkg_resources.resource_filename(
     'eventio', path.join('resources', 'one_shower.dat')
