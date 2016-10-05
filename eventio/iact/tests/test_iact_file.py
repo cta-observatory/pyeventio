@@ -26,12 +26,13 @@ def test_n_events():
 
 
 def test_read_run_header():
-    f = eventio.IACTFile(testfile)
+    with open(testfile_path, 'rb') as testfile:
+        f = eventio.IACTFile(testfile)
 
-    assert hasattr(f, 'header')
-    assert f.header['energy range'][0] == approx(5.0)
-    assert f.header['energy range'][1] == approx(100.0)
-    assert f.header['slope of energy spectrum'] == approx(-2.7)
+        f.run_header
+        assert f.run_header['energy range'][0] == approx(5.0)
+        assert f.run_header['energy range'][1] == approx(100.0)
+        assert f.run_header['slope of energy spectrum'] == approx(-2.7)
 
 
 def test_run_end_block():
