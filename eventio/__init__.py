@@ -1,3 +1,3 @@
-from .event_io_file import object_generator, object_list
+from .event_io_file import objects
 from .iact import IACTFile
-__all__ = ['object_generator', 'object_list', 'IACTFile']
+__all__ = ['objects', 'IACTFile']
