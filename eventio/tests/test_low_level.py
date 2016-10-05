@@ -28,3 +28,11 @@ def test_objects_have_headers_and_payload():
                 o.headers
                 # payload is loaded on access only
                 o.payload
+
+def test_payload_has_correct_size():
+    from eventio.event_io_file import objects
+
+    for testfile_path in (one_shower, three_with_reuse):
+        with open(testfile_path, 'rb') as testfile:
+            for o in objects(testfile):
+                assert len(o.payload) == o.headers[-1].length
