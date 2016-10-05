@@ -5,16 +5,17 @@ from os import path
 from pytest import approx, raises
 
 
-testfile = pkg_resources.resource_filename(
+testfile_path = pkg_resources.resource_filename(
     'eventio', path.join('resources', 'one_shower.dat')
 )
-testfile_reuse = pkg_resources.resource_filename(
+testfile_reuse_path = pkg_resources.resource_filename(
     'eventio', path.join('resources', '3_gammas_reuse_5.dat')
 )
 
 
 def test_file_open():
-    eventio.IACTFile(testfile)
+    with open(testfile_path, 'rb') as testfile:
+        eventio.IACTFile(testfile)
 
 
 def test_n_events():
