@@ -24,7 +24,7 @@ class EventIOObject:
         return repr(self.headers)
 
 def objects(file):
-    return [o for o in yield_all_objects(f)]
+    return [o for o in yield_all_objects(file)]
     # file is not closed here, since the EventIOObjects, need to read from it
     # who closes this file? I don't know.
 
