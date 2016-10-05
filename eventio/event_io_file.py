@@ -15,8 +15,7 @@ class EventIOObject:
 
     def __getattr__(self, attr):
         if attr == "payload":
-            start_address = sum(h.data_field_first_byte for h in self.headers)
-            self._file.seek(start_address)
+            self._file.seek(self.headers[-1].data_field_first_byte)
             self.payload = self._file.read(self.headers[-1].length)
         return self.payload
 
