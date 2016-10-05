@@ -1,5 +1,5 @@
 import struct
-from .tools import read_ints
+from .tools import read_from
 import logging
 log = logging.getLogger(__name__)
 
@@ -30,10 +30,9 @@ def extend_length(extended, length):
 
 LITTLE_ENDIAN_MARKER = 0xD41F8A37
 BIG_ENDIAN_MARKER = struct.unpack("<I", struct.pack(">I", LITTLE_ENDIAN_MARKER))[0]
-def parse_sync_bytes(sync):
+def parse_sync_bytes(int_value):
     ''' returns the endianness as given by the sync byte '''
 
-    int_value = struct.unpack('<I', sync)[0]
     if int_value == LITTLE_ENDIAN_MARKER:
         return '<'
     elif int_value == BIG_ENDIAN_MARKER:
@@ -54,25 +53,19 @@ def ObjectHeader_from_file(cls, f, toplevel=True):
     f -- a file like object, supporting read and seek(also backwards)
     toplevel -- boolean (default: True)
     '''
-    _start_point = f.tell()
-
     if toplevel is True:
-        sync = f.read(4)
-        try:
-            endianness = parse_sync_bytes(sync)
-        except ValueError:
-            f.seek(_start_point)
-            raise
+        sync = read_from('<I', f)[0]
+        endianness = parse_sync_bytes(sync)
     else:
         endianness = None
 
-    _type, _id, length = read_ints(3, f)
+    _type, _id, length = read_from('<3I', f)
 
     _type = unpack_type(_type)
     only_sub_objects, length = unpack_length(length)
 
     if _type.extended:
-        extended, = read_ints(1, f)
+        extended, = read_from('<I', f)
         length = extend_length(extended, length)
 
     _tell = f.tell()
