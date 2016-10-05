@@ -1,5 +1,5 @@
 import struct
-from .object_header import make_ObjectHeader
+from .object_header import ObjectHeader
 from io import BytesIO
 
 class EventIOObject:
@@ -48,7 +48,7 @@ def yield_all_objects(f, previous_headers=None, toplevel=True, read_payload=True
         previous_headers = []
     while True:
         try:
-            header = make_ObjectHeader(f, toplevel)
+            header = ObjectHeader.from_file(f, toplevel)
             payload = f.read(header.length)
             if not header.only_sub_objects:
                 if read_payload:

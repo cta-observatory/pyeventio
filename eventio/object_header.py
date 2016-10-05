@@ -44,9 +44,8 @@ def parse_sync_bytes(sync):
                 LITTLE_ENDIAN_MARKER, BIG_ENDIAN_MARKER, int_value)
         )
 
-
-def make_ObjectHeader(f, toplevel=True):
-    '''return an ObjectHeader read from a file.
+def ObjectHeader_from_file(cls, f, toplevel=True):
+    '''create ObjectHeader from file.
 
     Depending on `toplevel` read 3 or 4 ints from the file
     and create an ObjectHeader from it.
@@ -79,7 +78,7 @@ def make_ObjectHeader(f, toplevel=True):
         length = extend_length(extended, length)
 
     _tell = f.tell()
-    return ObjectHeader(
+    return cls(
         endianness,
         _type.type,
         _type.version,
@@ -102,3 +101,4 @@ ObjectHeader = namedtuple(
     ]
 )
 
+ObjectHeader.from_file = classmethod(ObjectHeader_from_file)
