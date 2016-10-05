@@ -9,7 +9,7 @@ import io
 
 from .tools import read_ints
 from .exceptions import WrongTypeException
-from .object_header import ObjectHeader
+from .object_header import make_ObjectHeader
 
 log = logging.getLogger(__name__)
 
@@ -176,7 +176,7 @@ def read_all_headers(eventio_file_or_object, toplevel=True):
     while True:
         position = eventio_file_or_object.tell()
         try:
-            header = ObjectHeader(
+            header = make_ObjectHeader(
                 eventio_file_or_object,
                 toplevel,
             )
