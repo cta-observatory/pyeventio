@@ -11,9 +11,3 @@ def read_from(fmt, f):
         f.read(struct.calcsize(fmt))
     )
     return result
-
-
-def read_ints(n, f):
-    ''' read n ints from file f '''
-    return read_from('{:d}i'.format(n), f)
-
