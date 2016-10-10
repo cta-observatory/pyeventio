@@ -88,14 +88,12 @@ def test_bunches():
 
 
 def test_bunches_2():
-    f = eventio.IACTFile(testfile_two_telescopes)
-
-    event = f[0]
-
     columns = ('x', 'y', 'cx', 'cy', 'time', 'zem', 'photons', 'lambda', 'scattered')
 
-    assert len(event.photon_bunches) == 2
-    assert event.photon_bunches[1].dtype.names == columns
+    f = eventio.IACTFile(testfile_two_telescopes)
+    for event in f:
+        assert len(event.photon_bunches) == 2
+        assert event.photon_bunches[1].dtype.names == columns
 
 
 def test_event_header():
