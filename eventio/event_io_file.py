@@ -7,43 +7,28 @@ log = logging.getLogger(__name__)
 from functools import namedtuple
 TypeInfo = namedtuple('TypeInfo', 'type version user extended')
 
-import copy
+def object_tree(file, end=None, toplevel=True):
+    if end is None:
+        end = file.seek(0, 2)
+        file.seek(0)
 
-def unpack_type(_type):
-    t = _type & 0xffff
-    version = (_type & 0xfff00000) >> 20
-    user_bit = bool(_type & (1 << 16))
-    extended = bool(_type & (1 << 17))
-    return TypeInfo(t, version, user_bit, extended)
+    pos = file.tell()
+    tree = []
+    while pos < end:
+        header = ObjectHeader.from_file(file, toplevel)
+        if header.only_sub_objects:
+            data = object_tree(
+                    file,
+                    end=header.data_field_first_byte + header.length,
+                    toplevel=False,
+                )
+        else:
+            data = ObjectData(file=file, start_address=header.data_field_first_byte, length=header.length)
+            file.seek(header.length, 1)
+        tree.append((header, data))
+        pos = file.tell()
+    return tree
 
-
-def unpack_length(length):
-    only_sub_objects = bool(length & 1 << 30)
-    # bit 31 of length is reserved
-    length &= 0x3fffffff
-    return only_sub_objects, length
-
-
-def extend_length(extended, length):
-    extended &= 0xfff
-    length = length & extended << 12
-    return length
-
-
-LITTLE_ENDIAN_MARKER = 0xD41F8A37
-BIG_ENDIAN_MARKER = struct.unpack("<I", struct.pack(">I", LITTLE_ENDIAN_MARKER))[0]
-def parse_sync_bytes(int_value):
-    ''' returns the endianness as given by the sync byte '''
-
-    if int_value == LITTLE_ENDIAN_MARKER:
-        return '<'
-    elif int_value == BIG_ENDIAN_MARKER:
-        return '>'
-    else:
-        raise ValueError(
-            'Sync must be 0x{0:X} or 0x{1:X}. Got: {2:X}'.format(
-                LITTLE_ENDIAN_MARKER, BIG_ENDIAN_MARKER, int_value)
-        )
 
 def ObjectHeader_from_file(cls, f, toplevel=True):
     '''create ObjectHeader from file.
@@ -102,44 +87,43 @@ class ObjectData:
 
     def __getattr__(self, attr):
         if attr == "value":
-            self._file.seek(self.headers[-1].data_field_first_byte)
-            self.value = self._file.read(self.headers[-1].length)
+            self._file.seek(self.start_address)
+            self.value = self._file.read(self.length)
         return self.value
 
     def __repr__(self):
         return "{s.__class__.__name__}(addr={s.start_address}, len={s.length})".format(s=self)
 
-def object_tree(file, end=None, toplevel=True):
-    print(file.tell())
-    try:
-        if end is None:
-            end = file.seek(0, 2)
-            file.seek(0)
 
-        pos = file.tell()
-        tree = []
-        while pos < end:
-            header = ObjectHeader.from_file(file, toplevel)
-            assert header.length + header.data_field_first_byte <= end
-            old_header = copy.copy(header)
-            if header.only_sub_objects:
-                data = object_tree(
-                        file,
-                        end=header.data_field_first_byte + header.length,
-                        toplevel=False,
-                    )
-            else:
-                data = ObjectData(file=file, start_address=header.data_field_first_byte, length=header.length)
-            file.seek(header.length + header.data_field_first_byte)
-            assert old_header == header
-            tree.append((header, data))
-            pos = file.tell()
-            print (pos, end, pos<end)
-        return tree
-    
-    except Exception as e:
-        print(header)
-        print(e)
-        #raise
-        return tree
-    
+LITTLE_ENDIAN_MARKER = 0xD41F8A37
+BIG_ENDIAN_MARKER = struct.unpack("<I", struct.pack(">I", LITTLE_ENDIAN_MARKER))[0]
+def parse_sync_bytes(int_value):
+    ''' returns the endianness as given by the sync byte '''
+
+    if int_value == LITTLE_ENDIAN_MARKER:
+        return '<'
+    elif int_value == BIG_ENDIAN_MARKER:
+        return '>'
+    else:
+        raise ValueError(
+            'Sync must be 0x{0:X} or 0x{1:X}. Got: {2:X}'.format(
+                LITTLE_ENDIAN_MARKER, BIG_ENDIAN_MARKER, int_value)
+        )
+
+def unpack_type(_type):
+    t = _type & 0xffff
+    version = (_type & 0xfff00000) >> 20
+    user_bit = bool(_type & (1 << 16))
+    extended = bool(_type & (1 << 17))
+    return TypeInfo(t, version, user_bit, extended)
+
+def unpack_length(length):
+    only_sub_objects = bool(length & 1 << 30)
+    # bit 31 of length is reserved
+    length &= 0x3fffffff
+    return only_sub_objects, length
+
+def extend_length(extended, length):
+    extended &= 0xfff
+    length = length & extended << 12
+    return length
