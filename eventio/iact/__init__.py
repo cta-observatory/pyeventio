@@ -5,7 +5,7 @@ from collections import namedtuple
 from ..exceptions import WrongTypeException
 log = logging.getLogger(__name__)
 from .objects import parse_eventio_object
-from ..event_io_file import objects
+from ..event_io_file import object_tree
 
 def sort_objects_into_showers(objects):
     '''
@@ -104,7 +104,7 @@ class IACTFile:
     '''
 
     def __init__(self, file):
-        self.objects = objects(file)
+        self.objects = objects_tree(file)
         self.run_header = parse_eventio_object(self.objects[0])
         self.input_card= parse_eventio_object(self.objects[1])
         self.telescope_definition = parse_eventio_object(self.objects[2])

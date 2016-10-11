@@ -14,34 +14,45 @@ three_with_reuse = pkg_resources.resource_filename(
 )
 
 def test_parse_sync_bytes():
-    import eventio.object_header as oh
-    assert '<' == oh.parse_sync_bytes(struct.pack('I', oh.LITTLE_ENDIAN_MARKER))
-    assert '>' == oh.parse_sync_bytes(struct.pack('I', oh.BIG_ENDIAN_MARKER))
+    import eventio.event_io_file as oh
+    assert '<' == oh.parse_sync_bytes(oh.LITTLE_ENDIAN_MARKER)
+    assert '>' == oh.parse_sync_bytes(oh.BIG_ENDIAN_MARKER)
     with raises(ValueError):
-        oh.parse_sync_bytes(struct.pack('I', 0))
+        oh.parse_sync_bytes(0)
 
 def test_objects_have_headers_and_payload():
-    from eventio.event_io_file import objects
+    from eventio.event_io_file import object_tree
 
     for testfile_path in (one_shower, three_with_reuse):
         with open(testfile_path, 'rb') as testfile:
-            for o in objects(testfile):
-                o.headers
-                # payload is loaded on access only
-                o.payload
+            for header, data in object_tree(testfile):
+                # data can be list or ObjectData instance.
+                # lists have no `value` member, so for the moment I just try
+                try:
+                    data.value # fetching data from disk lazily.
+                except AttributeError:
+                    pass
 
 def test_payload_has_correct_size():
-    from eventio.event_io_file import objects
+    from eventio.event_io_file import object_tree
 
     for testfile_path in (one_shower, three_with_reuse):
         with open(testfile_path, 'rb') as testfile:
-            for o in objects(testfile):
-                assert len(o.payload) == o.headers[-1].length
+            for header, data in object_tree(testfile):
+                try:
+                    value = data.value
+                except AttributeError:
+                    pass
+                else:
+                    assert len(value) == header.length
 
 def test_object_file_is_really_a_file():
-    from eventio.event_io_file import objects
+    from eventio.event_io_file import object_tree
 
     for testfile_path in (one_shower, three_with_reuse):
         with open(testfile_path, 'rb') as testfile:
-            for o in objects(testfile):
-                assert isinstance(o._file, io.BufferedReader)
+            for header, data in object_tree(testfile):
+                try:
+                    assert isinstance(data._file, io.BufferedReader)
+                except AttributeError:
+                    pass
