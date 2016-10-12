@@ -132,4 +132,4 @@ def read_length_field(f):
     return only_sub_objects, uint32_word
 
 def read_extension(f):
-    return (read_from('<I', f)[0] & 0xfff) << 12
+    return (read_from('<I', f)[0] & 0xfff) << 30
