@@ -14,14 +14,14 @@ three_with_reuse = pkg_resources.resource_filename(
 )
 
 def test_parse_sync_bytes():
-    import eventio.event_io_file as oh
-    assert '<' == oh.parse_sync_bytes(oh.LITTLE_ENDIAN_MARKER)
-    assert '>' == oh.parse_sync_bytes(oh.BIG_ENDIAN_MARKER)
+    import eventio.file
+    assert '<' == eventio.file.parse_sync_bytes(eventio.file.LITTLE_ENDIAN_MARKER)
+    assert '>' == eventio.file.parse_sync_bytes(eventio.file.BIG_ENDIAN_MARKER)
     with raises(ValueError):
-        oh.parse_sync_bytes(0)
+        eventio.file.parse_sync_bytes(0)
 
 def test_objects_have_headers_and_payload():
-    from eventio.event_io_file import object_tree
+    from eventio.file import object_tree
 
     for testfile_path in (one_shower, three_with_reuse):
         with open(testfile_path, 'rb') as testfile:
@@ -34,7 +34,7 @@ def test_objects_have_headers_and_payload():
                     pass
 
 def test_payload_has_correct_size():
-    from eventio.event_io_file import object_tree
+    from eventio.file import object_tree
 
     for testfile_path in (one_shower, three_with_reuse):
         with open(testfile_path, 'rb') as testfile:
@@ -47,7 +47,7 @@ def test_payload_has_correct_size():
                     assert len(value) == header.length
 
 def test_object_file_is_really_a_file():
-    from eventio.event_io_file import object_tree
+    from eventio.file import object_tree
 
     for testfile_path in (one_shower, three_with_reuse):
         with open(testfile_path, 'rb') as testfile:

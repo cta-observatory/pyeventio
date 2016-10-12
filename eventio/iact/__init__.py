@@ -5,7 +5,7 @@ from collections import namedtuple
 from .exceptions import WrongTypeException
 log = logging.getLogger(__name__)
 from .objects import parse_eventio_object
-from ..event_io_file import object_tree
+from .. import object_tree
 
 def sort_objects_into_showers(objects):
     '''
