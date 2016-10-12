@@ -22,7 +22,8 @@ def parse_eventio_object(obj):
         1201: make_CorsikaTelescopeDefinition,
         1202: make_CorsikaEventHeader,
         1203: make_CorsikaArrayOffsets,
-        1204: make_IACTPhotons,
+        1204: make_TelescopeEvents,
+        1205: make_IACTPhotons,
         1209: make_CorsikaEventEndBlock,
         1210: make_CorsikaRunEndBlock,
         1211: make_CorsikaLongitudinal,
@@ -143,10 +144,12 @@ def make_CorsikaArrayOffsets(obj):
 
     return CorsikaArrayOffsets(time_offset, offsets)
 
+def make_TelescopeEvents(obj):
+    return [make_IACTPhotons(obj) for obj in obj[1]]
+
+
 def make_IACTPhotons(obj):
     '''
-    Read the data in this EventIOObject
-
     Returns a numpy structured array with a record for each photon
     and the following columns:
         x:         x coordinate in cm
@@ -158,9 +161,6 @@ def make_IACTPhotons(obj):
         lambda:    wavelength in nm
         scattered: indicates if the photon was scattered in the atmosphere
     '''
-
-    obj = obj[1][0] # strip off the surrounding type 1204 object
-
     compact = bool(obj[0].version // 1000 == 1)
 
     array, telescope, n_photons, n_bunches = struct.unpack_from('hhfi', obj[1].value)

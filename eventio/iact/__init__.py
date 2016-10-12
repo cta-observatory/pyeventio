@@ -48,19 +48,21 @@ def generate_event(shower):
     end_block = parse_eventio_object(shower[-1])
 
     for reuse_event in shower[2:-1]:
-        photon_bunches = parse_eventio_object(reuse_event)
-
-        yield CorsikaEvent(
-            header=header,
-            end_block=end_block,
-            photon_bunches=photon_bunches,
-            time_offset=array_offsets.time_offset,
-            x_offset=array_offsets.offsets['x'],
-            y_offset=array_offsets.offsets['y'],
-            weight=array_offsets.offsets['weight'],
-            shower=shower[0][0].id,
-            reuse=reuse_event[0].id + 1,
-        )
+        telescope_events = parse_eventio_object(reuse_event)
+        corsika_events = []
+        for photon_bunches in telescope_events:
+            corsika_events.append(CorsikaEvent(
+                header=header,
+                end_block=end_block,
+                photon_bunches=photon_bunches,
+                time_offset=array_offsets.time_offset,
+                x_offset=array_offsets.offsets['x'],
+                y_offset=array_offsets.offsets['y'],
+                weight=array_offsets.offsets['weight'],
+                shower=shower[0][0].id,
+                reuse=reuse_event[0].id + 1,
+            ))
+        yield corsika_events
 
 CorsikaEvent = namedtuple(
     'CorsikaEvent',
