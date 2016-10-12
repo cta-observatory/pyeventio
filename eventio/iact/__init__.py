@@ -2,17 +2,17 @@ import warnings
 import logging
 import numpy as np
 from collections import namedtuple
-from ..exceptions import WrongTypeException
+from .exceptions import WrongTypeException
 log = logging.getLogger(__name__)
 from .objects import parse_eventio_object
 from ..event_io_file import object_tree
 
 def sort_objects_into_showers(objects):
     '''
-    The objects in IACT run files build up showers 
+    The objects in IACT run files build up showers
     when looking at the object.headers[-1].type of a list of objects
     (where the first 3 and the last 1 object was stripped off already)
-    we find a shower looks like this: 
+    we find a shower looks like this:
     [...
      1202,
      1203,

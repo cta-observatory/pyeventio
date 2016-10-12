@@ -6,7 +6,7 @@ import io
 
 from functools import namedtuple
 
-from ..exceptions import WrongSizeException
+from .exceptions import WrongSizeException
 from .parse_corsika_data import (
     parse_corsika_event_header,
     parse_corsika_run_header,
@@ -28,7 +28,7 @@ def parse_eventio_object(obj):
         1210: make_CorsikaRunEndBlock,
         1211: make_CorsikaLongitudinal,
         1212: make_CorsikaInputCard,
-    }   
+    }
     return type_to_parser.get(type_, lambda x: x)(obj)
 
 
@@ -61,7 +61,7 @@ def make_CorsikaTelescopeDefinition(obj):
     Returns a structured numpy array with columns (x, y, z, r)
     with a row for each telescope
     '''
-    
+
     n_telescopes = struct.unpack_from('i', obj[1].value)[0]
 
     data = obj[1].value[4:]
