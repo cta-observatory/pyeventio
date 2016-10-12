@@ -1,11 +1,5 @@
 import struct
-from io import BytesIO
-from .tools import read_from
-import logging
-log = logging.getLogger(__name__)
-
 from functools import namedtuple
-TypeInfo = namedtuple('TypeInfo', 'type version user extended')
 
 def object_tree(file, end=None, toplevel=True):
     if end is None:
@@ -68,6 +62,17 @@ def ObjectHeader_from_file(cls, f, toplevel=True):
         _tell,
     )
 
+def read_from(fmt, f):
+    '''
+    read the struct fmt specification from file f
+    Moves the current position.
+    '''
+    result = struct.unpack_from(
+        fmt,
+        f.read(struct.calcsize(fmt))
+    )
+    return result
+
 
 ObjectHeader = namedtuple(
     'ObjectHeader',
@@ -109,6 +114,8 @@ def parse_sync_bytes(int_value):
             'Sync must be 0x{0:X} or 0x{1:X}. Got: {2:X}'.format(
                 LITTLE_ENDIAN_MARKER, BIG_ENDIAN_MARKER, int_value)
         )
+
+TypeInfo = namedtuple('TypeInfo', 'type version user extended')
 
 def unpack_type(_type):
     t = _type & 0xffff
