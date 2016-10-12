@@ -11,6 +11,9 @@ testfile = pkg_resources.resource_filename(
 testfile_reuse = pkg_resources.resource_filename(
     'eventio', path.join('resources', '3_gammas_reuse_5.dat')
 )
+testfile_two_telescopes = pkg_resources.resource_filename(
+    'eventio', path.join('resources', 'two_telescopes.dat')
+)
 
 
 def test_file_open():
@@ -51,6 +54,14 @@ def test_read_telescopes():
     assert f.telescope_positions['x'][0] == approx(0)
 
 
+def test_read_telescopes_2():
+    f = eventio.IACTFile(testfile_two_telescopes)
+
+    assert f.n_telescopes == 2
+    assert hasattr(f, 'telescope_positions')
+    assert f.telescope_positions['x'][1] == approx(5000)
+
+
 def test_get_item():
     f = eventio.IACTFile(testfile)
 
@@ -74,6 +85,15 @@ def test_bunches():
 
     assert event.photon_bunches[0].shape == (382, )
     assert event.photon_bunches[0].dtype.names == columns
+
+
+def test_bunches_2():
+    columns = ('x', 'y', 'cx', 'cy', 'time', 'zem', 'photons', 'lambda', 'scattered')
+
+    f = eventio.IACTFile(testfile_two_telescopes)
+    for event in f:
+        assert len(event.photon_bunches) == 2
+        assert event.photon_bunches[1].dtype.names == columns
 
 
 def test_event_header():
