@@ -44,7 +44,7 @@ def ObjectHeader_from_file(cls, f, toplevel=True):
     id_field = read_from('<I', f)[0]
     only_sub_objects, length = read_length_field(f)
     if type_version_field.extended:
-        length &= read_extension(f)
+        length += read_extension(f)
 
     data_field_first_byte = f.tell()
     return cls(
@@ -114,31 +114,60 @@ def parse_sync_bytes(int_value):
 
 TypeInfo = namedtuple('TypeInfo', 'type version user extended')
 
-TYPE_LENGTH_BITS = 16
-USER_BIT_POSITION = 16
-EXTENDED_BIT_POSITION = 17
-VERSION_LENGTH_BITS = 12
-VERSION_POSITION = 20
-ONLY_SUB_OBJECTS_BIT_POSITION = 30
-NORMAL_LENGTH_LENGTH_BITS = 30
-EXTENDED_LENGTH_LENGTH_BITS = 12
+# The following functions perform bit magic.
+# they extract some N-bit words and 1-bit 'flags' from 32bit words
+# So we need '(LEN)GTH' and '(POS)ITION' to find and extract them.
+# both LEN and POS are measured in bits.
+# POS starts at zero of course.
+
+TYPE_LEN = 16
+TYPE_POS = 0
+
+USER_LEN = 1
+USER_POS = 16
+
+EXTENDED_LEN = 1
+EXTENDED_POS = 17
+
+VERSION_LEN = 12
+VERSION_POS = 20
+
+ONLYSUBOBJECTS_LEN = 1
+ONLYSUBOBJECTS_POS = 30
+
+LENGTH_LEN = 30
+LENGTH_POS = 0
+
+EXTENSION_LEN = 12
+EXTENSION_POS = 0
+
+def bool_bit_from_pos(uint32_word, pos):
+    return bool(uint32_word & (1 << pos))
+
+def len_bits_from_pos(uint32_word, len, pos):
+    return (uint32_word >> pos) & ((1 << len)-1)
 
 def read_type_field(f):
     uint32_word = read_from('<I', f)[0]
-
-    t = uint32_word & ((1<<TYPE_LENGTH_BITS)-1)
-    user_bit = bool(uint32_word & (1 << USER_BIT_POSITION))
-    extended = bool(uint32_word & (1 << EXTENDED_BIT_POSITION))
-    version = (uint32_word & (((1<<VERSION_LENGTH_BITS)-1) << VERSION_POSITION)) >> VERSION_POSITION
-    return TypeInfo(t, version, user_bit, extended)
+    _type = len_bits_from_pos(uint32_word, TYPE_LEN, TYPE_POS)
+    user_bit = bool_bit_from_pos(uint32_word, USER_POS)
+    extended = bool_bit_from_pos(uint32_word, EXTENDED_POS)
+    version = len_bits_from_pos(uint32_word, VERSION_LEN, VERSION_POS)
+    return TypeInfo(_type, version, user_bit, extended)
 
 def read_length_field(f):
     uint32_word = read_from('<I', f)[0]
-
-    only_sub_objects = bool(uint32_word & 1 << ONLY_SUB_OBJECTS_BIT_POSITION)
-    # bit 31 of uint32_word is reserved
-    uint32_word &= (1<<NORMAL_LENGTH_LENGTH_BITS)-1
-    return only_sub_objects, uint32_word
+    only_sub_objects = bool_bit_from_pos(uint32_word, ONLYSUBOBJECTS_POS)
+    length = len_bits_from_pos(uint32_word, LENGTH_LEN, LENGTH_POS)
+    return only_sub_objects, length
 
 def read_extension(f):
-    return (read_from('<I', f)[0] & ((1<<EXTENDED_LENGTH_LENGTH_BITS)-1)) << NORMAL_LENGTH_LENGTH_BITS
+    uint32_word = read_from('<I', f)[0]
+    extension = len_bits_from_pos(uint32_word, EXTENSION_LEN, EXTENSION_POS)
+    # we push the length-extension some many bits to the left,
+    # i.e. we multiply with such a high number, that we can simply
+    # use the += operator further up in `ObjectHeader_from_file` to
+    # combine the normal (small) length and this extension.
+    extension <<= LENGTH_LEN
+    return extension
+
