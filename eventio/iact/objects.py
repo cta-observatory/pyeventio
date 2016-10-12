@@ -16,17 +16,17 @@ def parse_objects(sequence):
     return map(parse_eventio_object, sequence)
 
 def parse_eventio_object(obj):
-    type_ = tuple(h.type for h in obj.headers)
+    type_ = obj[0].type
     type_to_parser = {
-        (1200,): make_CorsikaRunHeader,
-        (1201,): make_CorsikaTelescopeDefinition,
-        (1202,): make_CorsikaEventHeader,
-        (1203,): make_CorsikaArrayOffsets,
-        (1204, 1205): make_IACTPhotons,
-        (1209,): make_CorsikaEventEndBlock,
-        (1210,): make_CorsikaRunEndBlock,
-        (1211,): make_CorsikaLongitudinal,
-        (1212,): make_CorsikaInputCard,
+        1200: make_CorsikaRunHeader,
+        1201: make_CorsikaTelescopeDefinition,
+        1202: make_CorsikaEventHeader,
+        1203: make_CorsikaArrayOffsets,
+        1204: make_IACTPhotons,
+        1209: make_CorsikaEventEndBlock,
+        1210: make_CorsikaRunEndBlock,
+        1211: make_CorsikaLongitudinal,
+        1212: make_CorsikaInputCard,
     }   
     return type_to_parser.get(type_, lambda x: x)(obj)
 
@@ -39,12 +39,12 @@ def make_CorsikaRunHeader(obj):
     Returns a dictionary with the items of the CORSIKA run header block
     '''
 
-    n, = struct.unpack('i', obj.payload[:4])
+    n, = struct.unpack('i', obj[1].value[:4])
     if n != 273:
         raise WrongSizeException('Expected 273 bytes, but found {}'.format(n))
 
     block = np.frombuffer(
-        obj.payload[4:],
+        obj[1].value[4:],
         dtype=np.float32,
         count=n,
     )
@@ -61,9 +61,9 @@ def make_CorsikaTelescopeDefinition(obj):
     with a row for each telescope
     '''
     
-    n_telescopes = struct.unpack_from('i', obj.payload)[0]
+    n_telescopes = struct.unpack_from('i', obj[1].value)[0]
 
-    data = obj.payload[4:]
+    data = obj[1].value[4:]
 
     number_of_following_arrays = len(data) // (n_telescopes * 4)
     if number_of_following_arrays != 4:
@@ -90,13 +90,13 @@ def make_CorsikaEventHeader(obj):
 
     Returns a dictionary containing the keys of the CORSIKA event header block
     '''
-    payload = obj.payload
-    n = struct.unpack_from('i', payload)[0]
+    value = obj[1].value
+    n = struct.unpack_from('i', value)[0]
     if n != 273:
         raise WrongSizeException('Expected 273 bytes, but found {}'.format(n))
 
     block = np.frombuffer(
-        payload,
+        value,
         dtype=np.float32,
         count=n,
         offset=struct.calcsize('i'),
@@ -114,9 +114,9 @@ def make_CorsikaArrayOffsets(obj):
     array position and contains one set of coordinates for each reuse.
     '''
 
-    n_arrays, time_offset = struct.unpack_from('if', obj.payload)
+    n_arrays, time_offset = struct.unpack_from('if', obj[1].value)
 
-    n_columns = (len(obj.payload)-struct.calcsize('if')) / (n_arrays * 4)
+    n_columns = (len(obj[1].value)-struct.calcsize('if')) / (n_arrays * 4)
     assert n_columns.is_integer()
     n_columns = int(n_columns)
     if n_columns not in (2, 3):
@@ -125,7 +125,7 @@ def make_CorsikaArrayOffsets(obj):
         raise Exception(msg.format(n_columns))
 
     positions = np.frombuffer(
-        obj.payload,
+        obj[1].value,
         dtype=np.float32,
         count=n_arrays * n_columns,
         offset=struct.calcsize('if'),
@@ -159,9 +159,11 @@ def make_IACTPhotons(obj):
         scattered: indicates if the photon was scattered in the atmosphere
     '''
 
-    compact = bool(obj.headers[-1].version // 1000 == 1)
+    obj = obj[1][0] # strip off the surrounding type 1204 object
 
-    array, telescope, n_photons, n_bunches = struct.unpack_from('hhfi', obj.payload)
+    compact = bool(obj[0].version // 1000 == 1)
+
+    array, telescope, n_photons, n_bunches = struct.unpack_from('hhfi', obj[1].value)
 
     if compact:
         dtype = np.dtype('int16')
@@ -170,7 +172,7 @@ def make_IACTPhotons(obj):
 
     columns = ('x', 'y', 'cx', 'cy', 'time', 'zem', 'photons', 'lambda')
     block = np.frombuffer(
-        obj.payload,
+        obj[1].value,
         dtype=dtype,
         count=n_bunches * len(columns),
         offset=struct.calcsize('hhfi')
@@ -216,9 +218,9 @@ def make_float_block(obj):
     User Guide.
     '''
     return np.frombuffer(
-        obj.payload,
+        obj[1].value,
         dtype=np.dtype('float32'),
-        count=struct.unpack_from('i', obj.payload)[0],
+        count=struct.unpack_from('i', obj[1].value)[0],
         offset=struct.calcsize('i')
     )
 make_CorsikaEventEndBlock = make_float_block
@@ -232,7 +234,7 @@ def make_CorsikaInputCard(obj):
     Returns the CORSIKA steering card as string.
     '''
     # corsika input card is stored as null terminated strings
-    strings = obj.payload.decode().split('\0')
+    strings = obj[1].value.decode().split('\0')
     inputcard = [
         remove_ascii_control_characters(string)
         for string in strings
