@@ -26,7 +26,7 @@ def sort_objects_into_showers(objects):
     showers = []
     while True:
         try:
-            idx = [o.headers[-1].type for o in objects].index(1209) + 1
+            idx = [o[0].type for o in objects].index(1209) + 1
         except:
             break
         new_shower, objects = objects[:idx], objects[idx:]
@@ -58,8 +58,8 @@ def generate_event(shower):
             x_offset=array_offsets.offsets['x'],
             y_offset=array_offsets.offsets['y'],
             weight=array_offsets.offsets['weight'],
-            shower=shower[0].headers[0].id,
-            reuse=reuse_event.headers[0].id + 1,
+            shower=shower[0][0].id,
+            reuse=reuse_event[0].id + 1,
         )
 
 CorsikaEvent = namedtuple(
@@ -70,7 +70,6 @@ CorsikaEvent = namedtuple(
         'shower', 'reuse',
     ]
 )
-
 
 
 class IACTFile:
@@ -104,7 +103,7 @@ class IACTFile:
     '''
 
     def __init__(self, file):
-        self.objects = objects_tree(file)
+        self.objects = object_tree(file)
         self.run_header = parse_eventio_object(self.objects[0])
         self.input_card= parse_eventio_object(self.objects[1])
         self.telescope_definition = parse_eventio_object(self.objects[2])
