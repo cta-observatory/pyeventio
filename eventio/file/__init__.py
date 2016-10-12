@@ -114,22 +114,31 @@ def parse_sync_bytes(int_value):
 
 TypeInfo = namedtuple('TypeInfo', 'type version user extended')
 
+TYPE_LENGTH_BITS = 16
+USER_BIT_POSITION = 16
+EXTENDED_BIT_POSITION = 17
+VERSION_LENGTH_BITS = 12
+VERSION_POSITION = 20
+ONLY_SUB_OBJECTS_BIT_POSITION = 30
+NORMAL_LENGTH_LENGTH_BITS = 30
+EXTENDED_LENGTH_LENGTH_BITS = 12
+
 def read_type_field(f):
     uint32_word = read_from('<I', f)[0]
 
-    t = uint32_word & 0xffff
-    version = (uint32_word & (0xfff << 20)) >> 20
-    user_bit = bool(uint32_word & (1 << 16))
-    extended = bool(uint32_word & (1 << 17))
+    t = uint32_word & ((1<<TYPE_LENGTH_BITS)-1)
+    user_bit = bool(uint32_word & (1 << USER_BIT_POSITION))
+    extended = bool(uint32_word & (1 << EXTENDED_BIT_POSITION))
+    version = (uint32_word & (((1<<VERSION_LENGTH_BITS)-1) << VERSION_POSITION)) >> VERSION_POSITION
     return TypeInfo(t, version, user_bit, extended)
 
 def read_length_field(f):
     uint32_word = read_from('<I', f)[0]
 
-    only_sub_objects = bool(uint32_word & 1 << 30)
+    only_sub_objects = bool(uint32_word & 1 << ONLY_SUB_OBJECTS_BIT_POSITION)
     # bit 31 of uint32_word is reserved
-    uint32_word &= 0x3fffffff
+    uint32_word &= (1<<NORMAL_LENGTH_LENGTH_BITS)-1
     return only_sub_objects, uint32_word
 
 def read_extension(f):
-    return (read_from('<I', f)[0] & 0xfff) << 30
+    return (read_from('<I', f)[0] & ((1<<EXTENDED_LENGTH_LENGTH_BITS)-1)) << NORMAL_LENGTH_LENGTH_BITS
