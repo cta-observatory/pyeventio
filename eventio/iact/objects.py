@@ -12,33 +12,9 @@ from .parse_corsika_data import (
     parse_corsika_run_header,
 )
 
-def parse_objects(sequence):
-    return map(parse_eventio_object, sequence)
-
-def parse_eventio_object(obj):
-    type_ = obj[0].type
-    type_to_parser = {
-        1200: make_CorsikaRunHeader,
-        1201: make_CorsikaTelescopeDefinition,
-        1202: make_CorsikaEventHeader,
-        1203: make_CorsikaArrayOffsets,
-        1204: make_TelescopeEvents,
-        1205: make_IACTPhotons,
-        1209: make_CorsikaEventEndBlock,
-        1210: make_CorsikaRunEndBlock,
-        1211: make_CorsikaLongitudinal,
-        1212: make_CorsikaInputCard,
-    }
-    return type_to_parser.get(type_, lambda x: x)(obj)
-
-
 def make_CorsikaRunHeader(obj):
-    '''
-    This object contains the corsika run header block
-    Read the data in this EventIOItem
-
-    Returns a dictionary with the items of the CORSIKA run header block
-    '''
+    ''' return namedtuple with items of CORSIKA run header block.'''
+    assert obj[0].type == 1200
 
     n, = struct.unpack('i', obj[1].value[:4])
     if n != 273:
@@ -61,6 +37,7 @@ def make_CorsikaTelescopeDefinition(obj):
     Returns a structured numpy array with columns (x, y, z, r)
     with a row for each telescope
     '''
+    assert obj[0].type == 1201
 
     n_telescopes = struct.unpack_from('i', obj[1].value)[0]
 
@@ -86,11 +63,9 @@ def make_CorsikaTelescopeDefinition(obj):
 
 
 def make_CorsikaEventHeader(obj):
-    '''
-    Read the data in this EventIOItem
+    '''Return a namedtuple containing the keys of the CORSIKA event header block'''
+    assert obj[0].type == 1202
 
-    Returns a dictionary containing the keys of the CORSIKA event header block
-    '''
     value = obj[1].value
     n = struct.unpack_from('i', value)[0]
     if n != 273:
@@ -107,13 +82,15 @@ def make_CorsikaEventHeader(obj):
 
 CorsikaArrayOffsets = namedtuple('CorsikaArrayOffsets', 'time_offset, offsets')
 def make_CorsikaArrayOffsets(obj):
-    '''
-    Read the data in this EventIOItem
+    '''Return a namedtuple(time_offset, offsets)
 
-    Returns a structured numpy array with columns (t, x, y, weight)
-    with a row for each array. This object is used to store the
+        time_offset: a float
+        offsets: structured numpy array with columns (x, y, weight)
+
+    This object is used to store the
     array position and contains one set of coordinates for each reuse.
     '''
+    assert obj[0].type == 1203
 
     n_arrays, time_offset = struct.unpack_from('if', obj[1].value)
 
@@ -145,6 +122,7 @@ def make_CorsikaArrayOffsets(obj):
     return CorsikaArrayOffsets(time_offset, offsets)
 
 def make_TelescopeEvents(obj):
+    assert obj[0].type == 1204
     return [make_IACTPhotons(obj) for obj in obj[1]]
 
 
@@ -161,6 +139,8 @@ def make_IACTPhotons(obj):
         lambda:    wavelength in nm
         scattered: indicates if the photon was scattered in the atmosphere
     '''
+    assert obj[0].type == 1205
+
     compact = bool(obj[0].version // 1000 == 1)
 
     array, telescope, n_photons, n_bunches = struct.unpack_from('hhfi', obj[1].value)
@@ -211,7 +191,6 @@ def make_IACTPhotons(obj):
 
     return bunches
 
-
 def make_float_block(obj):
     '''
     No parsing yet, sorry. The meaning is defined in the CORSIKA
@@ -223,16 +202,17 @@ def make_float_block(obj):
         count=struct.unpack_from('i', obj[1].value)[0],
         offset=struct.calcsize('i')
     )
-make_CorsikaEventEndBlock = make_float_block
-make_CorsikaRunEndBlock = make_float_block
-make_CorsikaLongitudinal = make_float_block
+def make_CorsikaEventEndBlock(obj):
+    assert obj[0].type == 1209
+    return make_float_block(obj)
+
+def make_CorsikaRunEndBlock(obj):
+    assert obj[0].type == 1210
+    return make_float_block(obj)
 
 def make_CorsikaInputCard(obj):
-    '''
-    Read the data in this EventIOObject
-
-    Returns the CORSIKA steering card as string.
-    '''
+    '''Return the CORSIKA steering card as string.'''
+    assert obj[0].type == 1212
     # corsika input card is stored as null terminated strings
     strings = obj[1].value.decode().split('\0')
     inputcard = [
