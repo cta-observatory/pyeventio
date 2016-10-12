@@ -4,7 +4,6 @@ import numpy as np
 from collections import namedtuple
 from .exceptions import WrongTypeException
 log = logging.getLogger(__name__)
-from .objects import parse_eventio_object
 from .. import object_tree
 
 def sort_objects_into_showers(objects):
@@ -43,12 +42,12 @@ def generate_event(shower):
         - IACTPhotons(more than one or even zero)
         - CorsikaEventEndBlock(exactly 1)
     '''
-    header = parse_eventio_object(shower[0])
-    array_offsets = parse_eventio_object(shower[1])
-    end_block = parse_eventio_object(shower[-1])
+    header = objects.make_CorsikaEventHeader(shower[0])
+    array_offsets = objects.make_CorsikaArrayOffsets(shower[1])
+    end_block = objects.make_CorsikaEventEndBlock(shower[-1])
 
     for reuse_event in shower[2:-1]:
-        telescope_events = parse_eventio_object(reuse_event)
+        telescope_events = objects.make_TelescopeEvents(reuse_event)
         corsika_events = []
         for photon_bunches in telescope_events:
             corsika_events.append(CorsikaEvent(
@@ -106,10 +105,10 @@ class IACTFile:
 
     def __init__(self, file):
         self.objects = object_tree(file)
-        self.run_header = parse_eventio_object(self.objects[0])
-        self.input_card= parse_eventio_object(self.objects[1])
-        self.telescope_definition = parse_eventio_object(self.objects[2])
-        self.end_block = parse_eventio_object(self.objects[-1])
+        self.run_header = objects.make_CorsikaRunHeader(self.objects[0])
+        self.input_card= objects.make_CorsikaInputCard(self.objects[1])
+        self.telescope_definition = objects.make_CorsikaTelescopeDefinition(self.objects[2])
+        self.end_block = objects.make_CorsikaRunEndBlock(self.objects[-1])
         self.n_telescopes = self.telescope_definition.n_telescopes
         self.telescope_positions = self.telescope_definition.tel_pos
         self.showers = sort_objects_into_showers(self.objects[3:-1])
