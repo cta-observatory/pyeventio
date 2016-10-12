@@ -52,8 +52,10 @@ def test_event_has_382_bunches():
     from eventio.iact.objects import parse_eventio_object
     with open(testfile_path, 'rb') as testfile:
         f = eventio.object_tree(testfile)
-        bunches = parse_eventio_object(f[5])
+        telescope_events = parse_eventio_object(f[5])
+        assert len(telescope_events) == 1
 
+        bunches = telescope_events[0]
         assert len(bunches) == 382
 
 
@@ -61,7 +63,9 @@ def test_bunches():
     from eventio.iact.objects import parse_eventio_object
     with open(testfile_path, 'rb') as testfile:
         f = eventio.object_tree(testfile)
-        bunches = parse_eventio_object(f[5])
+        telescope_events = parse_eventio_object(f[5])
+        assert len(telescope_events) == 1
 
+        bunches = telescope_events[0]
         columns = ('x', 'y', 'cx', 'cy', 'time', 'zem', 'photons', 'lambda', 'scattered')
         assert bunches.dtype.names == columns

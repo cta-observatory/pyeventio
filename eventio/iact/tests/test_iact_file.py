@@ -11,7 +11,7 @@ testfile_path = pkg_resources.resource_filename(
 testfile_reuse_path = pkg_resources.resource_filename(
     'eventio', path.join('resources', '3_gammas_reuse_5.dat')
 )
-testfile_two_telescopes = pkg_resources.resource_filename(
+testfile_two_telescopes_path = pkg_resources.resource_filename(
     'eventio', path.join('resources', 'two_telescopes.dat')
 )
 
@@ -62,11 +62,12 @@ def test_read_telescopes():
 
 
 def test_read_telescopes_2():
-    f = eventio.IACTFile(testfile_two_telescopes)
+    with open(testfile_two_telescopes_path, 'rb') as testfile_two_telescopes:
+        f = eventio.IACTFile(testfile_two_telescopes)
 
-    assert f.n_telescopes == 2
-    assert hasattr(f, 'telescope_positions')
-    assert f.telescope_positions['x'][1] == approx(5000)
+        assert f.n_telescopes == 2
+        assert hasattr(f, 'telescope_positions')
+        assert f.telescope_positions['x'][1] == approx(5000)
 
 
 def test_get_item():
@@ -86,37 +87,42 @@ def test_iterating():
 def test_bunches():
     with open(testfile_path, 'rb') as testfile:
         f = eventio.IACTFile(testfile)
-        event = next(f)
+        telescope_events = next(f)
 
         columns = ('x', 'y', 'cx', 'cy', 'time', 'zem', 'photons', 'lambda', 'scattered')
 
-        assert event.photon_bunches.shape == (382, )
-        assert event.photon_bunches.dtype.names == columns
+        assert telescope_events[0].photon_bunches.shape == (382, )
+        assert telescope_events[0].photon_bunches.dtype.names == columns
 
 
 def test_bunches_2():
     columns = ('x', 'y', 'cx', 'cy', 'time', 'zem', 'photons', 'lambda', 'scattered')
 
-    f = eventio.IACTFile(testfile_two_telescopes)
-    for event in f:
-        assert len(event.photon_bunches) == 2
-        assert event.photon_bunches[1].dtype.names == columns
+    print(testfile_two_telescopes_path)
+
+    with open(testfile_two_telescopes_path, 'rb') as testfile_two_telescopes:
+        f = eventio.IACTFile(testfile_two_telescopes)
+
+        for telescope_events in f:
+            assert len(telescope_events) == 2
+            for event in telescope_events:
+                assert event.photon_bunches[1].dtype.names == columns
 
 
 def test_event_header():
     with open(testfile_path, 'rb') as testfile:
         f = eventio.IACTFile(testfile)
-        event = next(f)
+        telescope_events = next(f)
 
-        assert hasattr(event, 'header')
+        assert hasattr(telescope_events[0], 'header')
 
 
 def test_event_end_block():
     with open(testfile_path, 'rb') as testfile:
         f = eventio.IACTFile(testfile)
-        event = next(f)
+        telescope_events = next(f)
 
-        assert hasattr(event, 'end_block')
+        assert hasattr(telescope_events[0], 'end_block')
 
 
 def test_event_with_reuse():
@@ -125,6 +131,8 @@ def test_event_with_reuse():
 
         assert len(f.showers) == 3
         assert f.n_events == 15
-        for i, e in enumerate(f):
+        for i, telescope_events in enumerate(f):
+            assert len(telescope_events) == 1
+            e = telescope_events[0]
             assert e.reuse == (i % 5) + 1
             assert e.shower == (i // 5) + 1
