@@ -40,26 +40,23 @@ def ObjectHeader_from_file(cls, f, toplevel=True):
     else:
         endianness = None
 
-    _type, _id, length = read_from('<3I', f)
+    type_version_field = read_type_field(f)
+    id_field = read_from('<I', f)[0]
+    only_sub_objects, length = read_length_field(f)
+    if type_version_field.extended:
+        length &= read_extension(f)
 
-    _type = unpack_type(_type)
-    only_sub_objects, length = unpack_length(length)
-
-    if _type.extended:
-        extended, = read_from('<I', f)
-        length = extend_length(extended, length)
-
-    _tell = f.tell()
+    data_field_first_byte = f.tell()
     return cls(
         endianness,
-        _type.type,
-        _type.version,
-        _type.user,
-        _type.extended,
+        type_version_field.type,
+        type_version_field.version,
+        type_version_field.user,
+        type_version_field.extended,
         only_sub_objects,
         length,
-        _id,
-        _tell,
+        id_field,
+        data_field_first_byte,
     )
 
 def read_from(fmt, f):
@@ -117,20 +114,22 @@ def parse_sync_bytes(int_value):
 
 TypeInfo = namedtuple('TypeInfo', 'type version user extended')
 
-def unpack_type(_type):
-    t = _type & 0xffff
-    version = (_type & 0xfff00000) >> 20
-    user_bit = bool(_type & (1 << 16))
-    extended = bool(_type & (1 << 17))
+def read_type_field(f):
+    uint32_word = read_from('<I', f)[0]
+
+    t = uint32_word & 0xffff
+    version = (uint32_word & (0xfff << 20)) >> 20
+    user_bit = bool(uint32_word & (1 << 16))
+    extended = bool(uint32_word & (1 << 17))
     return TypeInfo(t, version, user_bit, extended)
 
-def unpack_length(length):
-    only_sub_objects = bool(length & 1 << 30)
-    # bit 31 of length is reserved
-    length &= 0x3fffffff
-    return only_sub_objects, length
+def read_length_field(f):
+    uint32_word = read_from('<I', f)[0]
 
-def extend_length(extended, length):
-    extended &= 0xfff
-    length = length & extended << 12
-    return length
+    only_sub_objects = bool(uint32_word & 1 << 30)
+    # bit 31 of uint32_word is reserved
+    uint32_word &= 0x3fffffff
+    return only_sub_objects, uint32_word
+
+def read_extension(f):
+    return (read_from('<I', f)[0] & 0xfff) << 12
