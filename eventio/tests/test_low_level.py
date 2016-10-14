@@ -20,19 +20,6 @@ def test_parse_sync_bytes():
     with raises(ValueError):
         eventio.file.parse_sync_bytes(0)
 
-def test_objects_have_headers_and_payload():
-    from eventio.file import object_tree
-
-    for testfile_path in (one_shower, three_with_reuse):
-        with open(testfile_path, 'rb') as testfile:
-            for header, data in object_tree(testfile):
-                # data can be list or ObjectData instance.
-                # lists have no `value` member, so for the moment I just try
-                try:
-                    data.value # fetching data from disk lazily.
-                except AttributeError:
-                    pass
-
 def test_payload_has_correct_size():
     from eventio.file import object_tree
 
