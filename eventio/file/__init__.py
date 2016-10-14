@@ -1,25 +1,54 @@
 import struct
 from functools import namedtuple
 
-def object_tree(file, end=None, toplevel=True):
-    if end is None:
+class Object(list):
+    def __init__(self, header=None, file=None, *args, **kwargs):
+        super().__init__()
+        if not header is None:
+            self.type = header.type
+            self.version = header.version
+            self.id = header.id
+            self.user = header.user
+
+            self._only_sub_objects = header.only_sub_objects
+            self._file = file
+            self._length = header.length
+            self._start_address = header.data_field_first_byte
+
+    def fetch_data(self):
+        if not self._only_sub_objects:
+            self._file.seek(self._start_address)
+            return self._file.read(self._length)
+        else:
+            return self
+
+    def __repr__(self):
+        header = ''
+        if hasattr(self, 'type'):
+            header = '{s.type},{s.version},{s.id}'.format(s=self)
+        body = super().__repr__()[1:-1]
+        return '<' + header + '|' + body + '>'
+
+def object_tree(file, header=None, toplevel=True):
+    if header is None:
         end = file.seek(0, 2)
         file.seek(0)
+    else:
+        end = header.data_field_first_byte + header.length
 
     pos = file.tell()
-    tree = []
+    tree = Object(header=header, file=file)
     while pos < end:
         header = ObjectHeader.from_file(file, toplevel)
         if header.only_sub_objects:
-            data = object_tree(
+            tree.append(object_tree(
                     file,
-                    end=header.data_field_first_byte + header.length,
+                    header=header,
                     toplevel=False,
-                )
+                ))
         else:
-            data = ObjectData(file=file, start_address=header.data_field_first_byte, length=header.length)
             file.seek(header.length, 1)
-        tree.append((header, data))
+            tree.append(Object(header=header, file=file))
         pos = file.tell()
     return tree
 
@@ -81,20 +110,7 @@ ObjectHeader = namedtuple(
 
 ObjectHeader.from_file = classmethod(ObjectHeader_from_file)
 
-class ObjectData:
-    def __init__(self, file, start_address, length):
-        self._file = file
-        self.start_address = start_address
-        self.length = length
 
-    def __getattr__(self, attr):
-        if attr == "value":
-            self._file.seek(self.start_address)
-            self.value = self._file.read(self.length)
-        return self.value
-
-    def __repr__(self):
-        return "{s.__class__.__name__}(addr={s.start_address}, len={s.length})".format(s=self)
 
 
 LITTLE_ENDIAN_MARKER = 0xD41F8A37
