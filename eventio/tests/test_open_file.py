@@ -40,7 +40,7 @@ def test_file_has_correct_types():
         'eventio', path.join('resources', 'one_shower.dat')
     )
     with open(testfile_path, 'rb') as testfile:
-        types = [ header.type for header, data in eventio.object_tree(testfile)]
+        types = [ obj.type for obj in eventio.object_tree(testfile)]
         assert types == [1200, 1212, 1201, 1202, 1203, 1204, 1209, 1210]
 
 
@@ -50,6 +50,5 @@ def test_types_gzipped():
         'eventio', path.join('resources', 'one_shower.dat.gz')
     )
     with gzip.GzipFile(testfile_path, 'rb') as testfile:
-        types = [ header.type for header, data in eventio.object_tree(testfile)]
+        types = [ obj.type for obj in eventio.object_tree(testfile)]
         assert types == [1200, 1212, 1201, 1202, 1203, 1204, 1209, 1210]
-        

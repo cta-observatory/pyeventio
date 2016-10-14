@@ -25,21 +25,16 @@ def test_payload_has_correct_size():
 
     for testfile_path in (one_shower, three_with_reuse):
         with open(testfile_path, 'rb') as testfile:
-            for header, data in object_tree(testfile):
-                try:
-                    value = data.value
-                except AttributeError:
-                    pass
-                else:
-                    assert len(value) == header.length
+            for obj in object_tree(testfile):
+                if not obj._only_sub_objects:
+                    data = obj.fetch_data()
+                    assert len(data) == obj._length
 
 def test_object_file_is_really_a_file():
     from eventio.file import object_tree
 
     for testfile_path in (one_shower, three_with_reuse):
         with open(testfile_path, 'rb') as testfile:
-            for header, data in object_tree(testfile):
-                try:
-                    assert isinstance(data._file, io.BufferedReader)
-                except AttributeError:
-                    pass
+            for obj in object_tree(testfile):
+                if not obj._only_sub_objects:
+                    assert isinstance(obj._file, io.BufferedReader)
