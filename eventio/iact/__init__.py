@@ -5,6 +5,7 @@ from collections import namedtuple
 from .exceptions import WrongTypeException
 log = logging.getLogger(__name__)
 from .. import object_tree
+from . import objects
 
 def sort_objects_into_showers(objects):
     '''
@@ -25,7 +26,7 @@ def sort_objects_into_showers(objects):
     showers = []
     while True:
         try:
-            idx = [o[0].type for o in objects].index(1209) + 1
+            idx = [o.type for o in objects].index(1209) + 1
         except:
             break
         new_shower, objects = objects[:idx], objects[idx:]
@@ -58,8 +59,8 @@ def generate_event(shower):
                 x_offset=array_offsets.offsets['x'],
                 y_offset=array_offsets.offsets['y'],
                 weight=array_offsets.offsets['weight'],
-                shower=shower[0][0].id,
-                reuse=reuse_event[0].id + 1,
+                shower=shower[0].id,
+                reuse=reuse_event.id + 1,
             ))
         yield corsika_events
 
