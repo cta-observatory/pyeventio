@@ -1,19 +1,36 @@
 import struct
 from functools import namedtuple
 
-class Object(list):
-    def __init__(self, header=None, file=None, *args, **kwargs):
-        super().__init__()
-        if not header is None:
-            self.type = header.type
-            self.version = header.version
-            self.id = header.id
-            self.user = header.user
+def object_tree(file, filesize=None):
+    if filesize is None:
+        filesize = file.seek(0, 2)
+        file.seek(0)
 
-            self._only_sub_objects = header.only_sub_objects
-            self._file = file
-            self._length = header.length
-            self._start_address = header.data_field_first_byte
+    tree = []
+    while file.tell() < filesize:
+        tree.append(Object(file))
+
+    return tree
+
+class Object(list):
+    def __init__(self, file, toplevel=True):
+        super().__init__()
+        header = ObjectHeader.from_file(file, toplevel)
+        self.type = header.type
+        self.version = header.version
+        self.id = header.id
+        self.user = header.user
+
+        self._only_sub_objects = header.only_sub_objects
+        self._length = header.length
+        self._start_address = header.data_field_first_byte
+        self._file = file
+
+        if self._only_sub_objects:
+            while self._file.tell() < header.data_field_first_byte + header.length:
+                self.append(Object(self._file, toplevel=False))
+        else:
+            self._file.seek(header.length, 1)
 
     def fetch_data(self):
         if not self._only_sub_objects:
@@ -28,29 +45,6 @@ class Object(list):
             header = '{s.type},{s.version},{s.id}'.format(s=self)
         body = super().__repr__()[1:-1]
         return '<' + header + '|' + body + '>'
-
-def object_tree(file, header=None, toplevel=True):
-    if header is None:
-        end = file.seek(0, 2)
-        file.seek(0)
-    else:
-        end = header.data_field_first_byte + header.length
-
-    pos = file.tell()
-    tree = Object(header=header, file=file)
-    while pos < end:
-        header = ObjectHeader.from_file(file, toplevel)
-        if header.only_sub_objects:
-            tree.append(object_tree(
-                    file,
-                    header=header,
-                    toplevel=False,
-                ))
-        else:
-            file.seek(header.length, 1)
-            tree.append(Object(header=header, file=file))
-        pos = file.tell()
-    return tree
 
 
 def ObjectHeader_from_file(cls, f, toplevel=True):
@@ -109,9 +103,6 @@ ObjectHeader = namedtuple(
 )
 
 ObjectHeader.from_file = classmethod(ObjectHeader_from_file)
-
-
-
 
 LITTLE_ENDIAN_MARKER = 0xD41F8A37
 BIG_ENDIAN_MARKER = struct.unpack("<I", struct.pack(">I", LITTLE_ENDIAN_MARKER))[0]
@@ -186,4 +177,3 @@ def read_extension(f):
     # combine the normal (small) length and this extension.
     extension <<= LENGTH_LEN
     return extension
-
