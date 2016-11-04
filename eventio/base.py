@@ -7,8 +7,8 @@ import logging
 import warnings
 import io
 
-from .tools import read_ints
 from .exceptions import WrongTypeException
+from .tools import read_from
 
 log = logging.getLogger(__name__)
 
@@ -173,27 +173,6 @@ class UnknownObject(EventIOObject):
         ) + ''.join(last)
 
 
-def unpack_type(_type):
-    t = _type & 0xffff
-    version = (_type & 0xfff00000) >> 20
-    user_bit = bool(_type & (1 << 16))
-    extended = bool(_type & (1 << 17))
-    return TypeInfo(t, version, user_bit, extended)
-
-
-def unpack_length(length):
-    only_sub_objects = bool(length & 1 << 30)
-    # bit 31 of length is reserved
-    length &= 0x3fffffff
-    return only_sub_objects, length
-
-
-def extend_length(extended, length):
-    extended &= 0xfff
-    length = length & extended << 12
-    return length
-
-
 def parse_sync_bytes(sync):
     ''' returns the endianness as given by the sync byte '''
 
@@ -213,15 +192,9 @@ def parse_sync_bytes(sync):
 
 
 def read_header(f, toplevel):
-    _start_point = f.tell()
-
     if toplevel is True:
         sync = f.read(4)
-        try:
-            endianness = parse_sync_bytes(sync)
-        except ValueError:
-            f.seek(_start_point)
-            raise
+        endianness = parse_sync_bytes(sync)
         level = 0
     else:
         endianness = f.header.endianness
@@ -230,26 +203,24 @@ def read_header(f, toplevel):
     if endianness == '>':
         raise NotImplementedError('Big endian byte order is not supported by this reader')
 
-    _type, _id, length = read_ints(3, f)
+    type_version_field = read_type_field(f)
+    id_field = read_from('<I', f)[0]
+    only_sub_objects, length = read_length_field(f)
 
-    _type = unpack_type(_type)
-    only_sub_objects, length = unpack_length(length)
+    if type_version_field.extended:
+        length += read_extension(f)
 
-    if _type.extended:
-        extended, = read_ints(1, f)
-        length = extend_length(extended, length)
-
-    _tell = f.tell()
+    data_field_first_byte = f.tell()
     return_value = (
         endianness,
-        _type.type,
-        _type.version,
-        _type.user,
-        _type.extended,
+        type_version_field.type,
+        type_version_field.version,
+        type_version_field.user,
+        type_version_field.extended,
         only_sub_objects,
         length,
-        _id,
-        _tell,
+        id_field,
+        data_field_first_byte,
         level,
     )
 
@@ -299,3 +270,66 @@ def read_all_headers(eventio_file_or_object, toplevel=True):
             break
 
     return objects
+
+
+# The following functions perform bit magic.
+# they extract some N-bit words and 1-bit 'flags' from 32bit words
+# So we need '(LEN)GTH' and '(POS)ITION' to find and extract them.
+# both LEN and POS are measured in bits.
+# POS starts at zero of course.
+
+TYPE_LEN = 16
+TYPE_POS = 0
+
+USER_LEN = 1
+USER_POS = 16
+
+EXTENDED_LEN = 1
+EXTENDED_POS = 17
+
+VERSION_LEN = 12
+VERSION_POS = 20
+
+ONLYSUBOBJECTS_LEN = 1
+ONLYSUBOBJECTS_POS = 30
+
+LENGTH_LEN = 30
+LENGTH_POS = 0
+
+EXTENSION_LEN = 12
+EXTENSION_POS = 0
+
+
+def bool_bit_from_pos(uint32_word, pos):
+    return bool(uint32_word & (1 << pos))
+
+
+def len_bits_from_pos(uint32_word, len, pos):
+    return (uint32_word >> pos) & ((1 << len)-1)
+
+
+def read_type_field(f):
+    uint32_word = read_from('<I', f)[0]
+    _type = len_bits_from_pos(uint32_word, TYPE_LEN, TYPE_POS)
+    user_bit = bool_bit_from_pos(uint32_word, USER_POS)
+    extended = bool_bit_from_pos(uint32_word, EXTENDED_POS)
+    version = len_bits_from_pos(uint32_word, VERSION_LEN, VERSION_POS)
+    return TypeInfo(_type, version, user_bit, extended)
+
+
+def read_length_field(f):
+    uint32_word = read_from('<I', f)[0]
+    only_sub_objects = bool_bit_from_pos(uint32_word, ONLYSUBOBJECTS_POS)
+    length = len_bits_from_pos(uint32_word, LENGTH_LEN, LENGTH_POS)
+    return only_sub_objects, length
+
+
+def read_extension(f):
+    uint32_word = read_from('<I', f)[0]
+    extension = len_bits_from_pos(uint32_word, EXTENSION_LEN, EXTENSION_POS)
+    # we push the length-extension some many bits to the left,
+    # i.e. we multiply with such a high number, that we can simply
+    # use the += operator further up in `ObjectHeader_from_file` to
+    # combine the normal (small) length and this extension.
+    extension <<= LENGTH_LEN
+    return extension
