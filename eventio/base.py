@@ -1,6 +1,5 @@
 import struct
 from collections import namedtuple
-import mmap
 import gzip
 
 import logging
