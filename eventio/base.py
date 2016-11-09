@@ -1,6 +1,5 @@
 import struct
 from collections import namedtuple
-import mmap
 import gzip
 
 import logging
@@ -24,15 +23,15 @@ class EventIOFile:
         log.info('Opening new file {}'.format(path))
         self.path = path
         self.__file = open(path, 'rb')
-        self.__mm = mmap.mmap(self.__file.fileno(), 0, prot=mmap.PROT_READ)
+
 
         if path.endswith('.gz'):
             log.info('Found gzipped file')
-            self.__compfile = gzip.GzipFile(mode='r', fileobj=self.__mm)
+            self.__compfile = gzip.GzipFile(mode='r', fileobj=self.__file)
             self.__filehandle = io.BufferedReader(self.__compfile)
         else:
             log.info('Found uncompressed file')
-            self.__filehandle = self.__mm
+            self.__filehandle = self.__file
 
         self.objects = read_all_headers(self, toplevel=True)
         log.info('File contains {} top level objects'.format(len(self.objects)))
