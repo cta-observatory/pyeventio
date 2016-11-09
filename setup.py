@@ -2,7 +2,7 @@ from setuptools import setup
 
 setup(
     name='pyeventio',
-    version='0.2.1',
+    version='0.2.2',
     description='Python read-only implementation of the EventIO file format',
     url='https://github.com/fact-project/pyeventio',
     author='Dominik Neise, Maximilian Noethe',
