@@ -24,7 +24,6 @@ class EventIOFile:
         self.path = path
         self.__file = open(path, 'rb')
 
-
         if path.endswith('.gz'):
             log.info('Found gzipped file')
             self.__compfile = gzip.GzipFile(mode='r', fileobj=self.__file)
@@ -59,7 +58,6 @@ class EventIOFile:
         return self
 
     def __exit__(self, exc_type, exc_value, traceback):
-        self.__mm.close()
         self.__file.close()
 
     def __getitem__(self, idx):
