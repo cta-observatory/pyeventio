@@ -326,7 +326,7 @@ def read_length_field(f):
 def read_extension(f):
     uint32_word = read_from('<I', f)[0]
     extension = len_bits_from_pos(uint32_word, EXTENSION_LEN, EXTENSION_POS)
-    # we push the length-extension some many bits to the left,
+    # we push the length-extension so many bits to the left,
     # i.e. we multiply with such a high number, that we can simply
     # use the += operator further up in `ObjectHeader_from_file` to
     # combine the normal (small) length and this extension.
