@@ -55,7 +55,6 @@ class EventIOFile:
         return self
 
     def __exit__(self, exc_type, exc_value, traceback):
-        self.__mm.close()
         self.__file.close()
 
     def __getitem__(self, idx):
