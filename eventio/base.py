@@ -104,7 +104,7 @@ class EventIOObject:
 
         should return nice python objects, e.g. structured numpy arrays
         '''
-        raise NotImplemented
+        raise NotImplementedError
 
     def __repr__(self):
         if len(self.objects) > 0:
