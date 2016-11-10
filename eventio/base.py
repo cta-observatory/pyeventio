@@ -11,11 +11,7 @@ from .tools import read_from
 
 log = logging.getLogger(__name__)
 
-TypeInfo = namedtuple('TypeInfo', 'type version user extended')
-SYNC_MARKER_INT_VALUE = -736130505
-
 known_objects = {}
-
 
 class EventIOFile:
 
@@ -171,6 +167,7 @@ class UnknownObject(EventIOObject):
             self.__class__.__name__, self.eventio_type
         ) + ''.join(last)
 
+SYNC_MARKER_INT_VALUE = -736130505
 
 def parse_sync_bytes(sync):
     ''' returns the endianness as given by the sync byte '''
@@ -306,6 +303,7 @@ def bool_bit_from_pos(uint32_word, pos):
 def len_bits_from_pos(uint32_word, len, pos):
     return (uint32_word >> pos) & ((1 << len)-1)
 
+TypeInfo = namedtuple('TypeInfo', 'type version user extended')
 
 def read_type_field(f):
     uint32_word = read_from('<I', f)[0]
