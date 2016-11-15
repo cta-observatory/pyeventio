@@ -12,7 +12,7 @@ deploy:
     # test pypi
   - provider: pypi
     distributions: sdist
-    server: https://testpypi.python.org/pypi
+    server: https://pypi.python.org/pypi
     user: "dneise"
     password:
       secure: uFmXYQqgnzyPaChrngGWjx1DPsIOOKKB9unaQa8wHtWrj5z8ptB+swnSHHp0LU9sB1PHBEXgU6sdQMaUl4G7tq8vWnmwBfwuSkwjZo4mSeJFh+ZxM8DDCXEv904e1/zL/I/qlWpfk4jT1mAgN10ONcsYQvNLbZl2CBag+89gDAYCGcbQFVzNL8GWyDKRRk2Ua2hUiG2hE2olCvbqEp6l/qjlz+NxEP66PMZoaAu91MnyZHUcB/EJqU6chNuvbmLW45PVzpStwbY785KbCfan3r4LqzoG22t2L/MPeVYvRJFDcctj0sXSvf/i4YcNITknbCtMr9giECJKlJYmDiYmODiSVGhF+GX3ut/bu6iIGFpfg/sI4dCqJVzcs/jd93+pOWkyC+c4kRk3uP2Qu/csai5JFm+aYociXGWWi98XPZRRAzTsv5kWNHvEBM5KtX6ZJALHGX1Jvsytao+6fB9Re4pOe2JNaoOb8GTShbzOafNkI1WlwZCW3cAnYxXLsJgeW7rvYXBEQR0NAhJF7F+Dsg6OMgtiLRTtgxmWDiQoS4wHg4cSoo1BotGHHOvoxS8z8L+JY3u7mHIbd3y5R73hSIUbyBsU3cQd1fXYkAoXLOmhvCwb5z6k0J9I1ugxzYLOmQjLQCNVmn6sIh79x2gD0qrDvcvTDzVbeqBOO9KTjM8=
