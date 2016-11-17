@@ -8,14 +8,16 @@ before_script:
 - pip install --upgrade pytest>=3.0.0
 script:
 - python setup.py test
+
+
 deploy:
     # test pypi
   - provider: pypi
     distributions: sdist
     server: https://pypi.python.org/pypi
-    user: "dneise"
+    user: "fact-deploybot"
     password:
-      secure: uFmXYQqgnzyPaChrngGWjx1DPsIOOKKB9unaQa8wHtWrj5z8ptB+swnSHHp0LU9sB1PHBEXgU6sdQMaUl4G7tq8vWnmwBfwuSkwjZo4mSeJFh+ZxM8DDCXEv904e1/zL/I/qlWpfk4jT1mAgN10ONcsYQvNLbZl2CBag+89gDAYCGcbQFVzNL8GWyDKRRk2Ua2hUiG2hE2olCvbqEp6l/qjlz+NxEP66PMZoaAu91MnyZHUcB/EJqU6chNuvbmLW45PVzpStwbY785KbCfan3r4LqzoG22t2L/MPeVYvRJFDcctj0sXSvf/i4YcNITknbCtMr9giECJKlJYmDiYmODiSVGhF+GX3ut/bu6iIGFpfg/sI4dCqJVzcs/jd93+pOWkyC+c4kRk3uP2Qu/csai5JFm+aYociXGWWi98XPZRRAzTsv5kWNHvEBM5KtX6ZJALHGX1Jvsytao+6fB9Re4pOe2JNaoOb8GTShbzOafNkI1WlwZCW3cAnYxXLsJgeW7rvYXBEQR0NAhJF7F+Dsg6OMgtiLRTtgxmWDiQoS4wHg4cSoo1BotGHHOvoxS8z8L+JY3u7mHIbd3y5R73hSIUbyBsU3cQd1fXYkAoXLOmhvCwb5z6k0J9I1ugxzYLOmQjLQCNVmn6sIh79x2gD0qrDvcvTDzVbeqBOO9KTjM8=
+      secure: "Zk1PFwdQR0c0rOnceWr6Rs+iECVRfjugJW2DCV/3K0NohY6OPMAWvaw8TAm1QeeQxZ8JD4wc0lYGQYctFrNqXfsPrmfsSoAqg4F1yVJt5/3B/+nWgzLP2BZhVQ5TfqEd4x5TP/3KR1b4HYA/it47IrIicfzszRLO7wXRVXf+pMzmw87mHyrai2YZt2oq8xOltWMc3FxsZY5C/1XRLQ0OSeqdN7OXHIPH4w+9vlp7ameDaAMbMLBzOZcuYrYguYhvduAGBpzncv1ZhKBdvsmUNbVPF3wyy1ggfrcU3ssS4NFn9Qm20busNY4A+CtiKzPHZ++mlaygCQxTg023n3r0Sx5absM0gPDwjsJLWp3oHF+5TbW3yzmpHgNyuyrUc6l8hw1i82Rayss0T7LCLeua5gUG/FquNmB/OVSnxGatlK0xE7MNLtIxqLscjUc8mz6lwgIN8xKowJ3ircGYXIS2fJhWbg5ku2G+kd1EIQ2InBTDPCR4g3x/XBLhG2PY5LViWYuzSymym1ncHcFRtaFmricuZES/Mg1R9PX2lkYp2ajhgj2pyTrhahmyE2d9gAY9Xj0fcmg842Y3/0NPPXyKMrjIAobwamay+AHhDPS2Rsgv1kNNL9oTZxy2IE1S/6FTfO+R8+shyff8UeDHIq49KrWsEf+gNRCxgsrR9UJXH3U="
     on:
       branch: master
       tags: true
