@@ -185,6 +185,7 @@ class IACTPhotons(EventIOObject):
     for a single telescope
     '''
     eventio_type = 1205
+    columns = ('x', 'y', 'cx', 'cy', 'time', 'zem', 'photons', 'lambda')
 
     def __init__(self, eventio_file, header, first_byte):
         super().__init__(eventio_file, header, first_byte)
@@ -215,29 +216,30 @@ class IACTPhotons(EventIOObject):
             lambda:    wavelength in nm
             scattered: indicates if the photon was scattered in the atmosphere
         '''
-        self.seek(12)
-
-        columns = ('x', 'y', 'cx', 'cy', 'time', 'zem', 'photons', 'lambda')
 
         if self.compact:
             dtype = np.dtype('int16')
         else:
             dtype = np.dtype('float32')
 
+        if self.n_bunches == 0:
+            return np.array([], dtype=[(col, dtype) for col in self.columns])
+
+        self.seek(12)
         block = np.frombuffer(
-            self.read(self.n_bunches * len(columns) * dtype.itemsize),
+            self.read(self.n_bunches * len(self.columns) * dtype.itemsize),
             dtype=dtype,
-            count=self.n_bunches * len(columns)
+            count=self.n_bunches * len(self.columns)
         )
-        block = block.reshape(self.n_bunches, len(columns))
+        block = block.reshape(self.n_bunches, len(self.columns))
 
         bunches = np.core.records.fromrecords(
             block,
-            names=columns,
+            names=self.columns,
         )
 
         if self.compact:
-            bunches = bunches.astype([(c, 'float32') for c in columns])
+            bunches = bunches.astype([(c, 'float32') for c in self.columns])
             bunches['x'] *= 0.1  # now in cm
             bunches['y'] *= 0.1  # now in cm
 
