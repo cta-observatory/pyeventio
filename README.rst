@@ -49,7 +49,7 @@ install with
 
 ::
 
-    pip install pyeventio
+    pip install eventio
 
 Open a file produced by the IACT CORSIKA extension
 --------------------------------------------------
