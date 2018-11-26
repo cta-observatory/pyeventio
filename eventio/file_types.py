@@ -1,6 +1,10 @@
 import gzip
 
-from .constants import SYNC_MARKER_LITTLE_ENDIAN, SYNC_MARKER_BIG_ENDIAN
+from .constants import (
+    SYNC_MARKER_SIZE,
+    SYNC_MARKER_LITTLE_ENDIAN,
+    SYNC_MARKER_BIG_ENDIAN,
+)
 
 
 def is_gzip(path):
@@ -15,14 +19,14 @@ def is_gzip(path):
 
 def is_eventio(path):
     '''
-    Test if a file is an eventio file by checking it's first four bytes
+    Test if a file is a valid eventio file by checking if the sync marker is there.
     '''
     if is_gzip(path):
         with gzip.open(path, 'rb') as f:
-            marker_bytes = f.read(4)
+            marker_bytes = f.read(SYNC_MARKER_SIZE)
     else:
         with open(path, 'rb') as f:
-            marker_bytes = f.read(4)
+            marker_bytes = f.read(SYNC_MARKER_SIZE)
 
     little = marker_bytes == SYNC_MARKER_LITTLE_ENDIAN
     big = marker_bytes == SYNC_MARKER_BIG_ENDIAN

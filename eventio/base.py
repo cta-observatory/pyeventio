@@ -7,6 +7,7 @@ import warnings
 from .file_types import is_gzip, is_eventio
 from .bits import bool_bit_from_pos, get_bits_from_word
 from . import constants
+from .exceptions import WrongTypeException
 
 log = logging.getLogger(__name__)
 
@@ -36,7 +37,7 @@ class EventIOFile:
 
     def __next__(self):
         self._filehandle.seek(self._next_header_pos)
-        header = self._read_next_header()
+        header = read_next_header(self)
         self._next_header_pos = self._filehandle.tell() + header.length
         return EventIOObject(header, parent=self)
 
@@ -49,51 +50,6 @@ class EventIOFile:
     def read(self, size=-1):
         return self._filehandle.read(size)
 
-    def _read_next_header(self):
-        '''Read the next header object from the file'''
-        header_bytes = self._filehandle.read(constants.OBJECT_HEADER_SIZE)
-
-        if len(header_bytes) == 0:
-            raise StopIteration
-
-        if len(header_bytes) < constants.OBJECT_HEADER_SIZE:
-            log.warning('File seems to be truncated')
-            warnings.warn('File seems to be truncated')
-            raise StopIteration
-
-        endianness = parse_sync_bytes(header_bytes[:4])
-
-        if endianness == '>':
-            raise NotImplementedError(
-                'Big endian byte order is not supported by this reader'
-            )
-
-        type_version_field = parse_type_field(header_bytes[4:8])
-        id_field = struct.unpack('<I', header_bytes[8:12])
-        only_sub_objects, length = parse_length_field(header_bytes[12:16])
-
-        if type_version_field.extended:
-            extension_field = self._filehandle.read(constants.EXTENSION_SIZE)
-            if len(extension_field) < constants.EXTENSION_SIZE:
-                log.warning('File seems to be truncated')
-                warnings.warn('File seems to be truncated')
-                raise StopIteration
-            length += parse_extension_field(extension_field)
-
-        data_field_first_byte = self._filehandle.tell()
-
-        return ObjectHeader(
-            endianness,
-            type_version_field.type,
-            type_version_field.version,
-            type_version_field.user,
-            type_version_field.extended,
-            only_sub_objects,
-            length,
-            id_field,
-            data_field_first_byte,
-        )
-
     def __enter__(self):
         return self
 
@@ -102,6 +58,66 @@ class EventIOFile:
 
     def close(self):
         self._filehandle.close()
+
+
+def check_size_or_stopiteration(data, expected_length, warn_zero=False):
+    if len(data) == 0:
+        if warn_zero:
+            log.warning('File seems to be truncated')
+            warnings.warn('File seems to be truncated')
+        raise StopIteration
+
+    if len(data) < expected_length:
+        log.warning('File seems to be truncated')
+        warnings.warn('File seems to be truncated')
+        raise StopIteration
+
+
+def read_next_header(eventio, toplevel=True):
+    '''Read the next header object from the file
+    Assumes position of `eventio` is at the beginning of a new header.
+
+    Raises stop iteration if not enough data is available.
+    '''
+    if toplevel:
+        sync = eventio.read(constants.SYNC_MARKER_SIZE)
+        check_size_or_stopiteration(sync, constants.SYNC_MARKER_SIZE)
+        endianness = parse_sync_bytes(sync)
+    else:
+        endianness = eventio.header.endianness
+
+    if endianness == '>':
+        raise NotImplementedError(
+            'Big endian byte order is not supported by this reader'
+        )
+
+    header_bytes = eventio.read(constants.OBJECT_HEADER_SIZE)
+    check_size_or_stopiteration(
+        header_bytes, constants.OBJECT_HEADER_SIZE, warn_zero=toplevel
+    )
+
+    type_version_field = parse_type_field(header_bytes[0:4])
+    id_field = struct.unpack('<I', header_bytes[4:8])
+    only_subobjects, length = parse_length_field(header_bytes[8:12])
+
+    if type_version_field.extended:
+        extension_field = eventio.read(constants.EXTENSION_SIZE)
+        check_size_or_stopiteration(extension_field, constants.EXTENSION_SIZE, True)
+        length += parse_extension_field(extension_field)
+
+    data_field_first_byte = eventio.tell()
+
+    return ObjectHeader(
+        endianness,
+        type_version_field.type,
+        type_version_field.version,
+        type_version_field.user,
+        type_version_field.extended,
+        only_subobjects,
+        length,
+        id_field,
+        data_field_first_byte,
+    )
 
 
 def parse_sync_bytes(sync):
@@ -120,9 +136,96 @@ def parse_sync_bytes(sync):
     )
 
 
-class Object:
+class EventIOObject:
+    '''
+    Base Class for eventio objects.
+    Can be subclassed to implement different types of
+    EventIO objects and how their data payload is parsed into
+    python objects.
+
+    EventIO objects can basically play two roles:
+        - a binary or ascii data blob
+        - A list of other `EventIOObject`s
+
+    If an `EventIOObject` is a pure list of other `EventIOObject`s,
+    it can be iterated.
+    Otherwise, parsing of the binary data has to be implented in a subclass
+    or done "by hand" after reading the payload bytes.
+    '''
+    eventio_type = None
 
     def __init__(self, header, parent):
+        if self.eventio_type is not None and header.type != self.eventio_type:
+            raise WrongTypeException(self.eventio_type, header.type)
+
+        self.parent = parent
+        self.header = header
+        self._next_header_pos = 0
+
+    def read(self, size=-1):
+        '''Read bytes from the payload of this object.
+
+        Parameters
+        ----------
+        size: int
+            read `size` bytes from the payload of this object
+            If size == -1 (default), read all remaining bytes.
+        '''
+        pos = self.tell()
+
+        # read all remaining bytes.
+        if size == -1 or size > self.header.length - pos:
+            size = self.header.length - pos
+
+        data = self.parent.read(size=size)
+
+        return data
+
+    def __iter__(self):
+        if not self.header.only_subobjects:
+            raise ValueError(
+                'Only EventIOObjects that contain just subobjects are iterable'
+            )
+        return self
+
+    def __next__(self):
+        if not self.header.only_subobjects:
+            raise ValueError(
+                'Only EventIOObjects that contain just subobjects are iterable'
+            )
+        self.seek(self._next_header_pos)
+        header = read_next_header(self, toplevel=False)
+        self._next_header_pos = self.tell() + header.length
+        return EventIOObject(header, self)
+
+    def seek(self, offset, whence=0):
+        first = self.header.data_field_first_byte
+        if whence == 0:
+            assert offset >= 0
+            self.parent.seek(first + offset, whence)
+        elif whence == 1:
+            self.parent.seek(offset, whence)
+        elif whence == 2:
+            if offset > self.header.length:
+                offset = self.header.length
+            self._position = self.parent.seek(first + self.header.length - offset, 0)
+        else:
+            raise ValueError(
+                'invalid whence ({}, should be 0, 1 or 2)'.format(whence)
+            )
+        return self.tell()
+
+    def tell(self):
+        return self.parent.tell() - self.header.data_field_first_byte
+
+    def __repr__(self):
+        return '{}[{}](size={}, only_subobjects={}, first_byte={})'.format(
+            self.__class__.__name__,
+            self.header.type,
+            self.header.length,
+            self.header.only_subobjects,
+            self.header.data_field_first_byte
+        )
 
 
 ObjectHeader = namedtuple(
@@ -133,7 +236,7 @@ ObjectHeader = namedtuple(
         'version',
         'user',
         'extended',
-        'only_sub_objects',
+        'only_subobjects',
         'length',
         'id',
         'data_field_first_byte',
@@ -161,16 +264,16 @@ def parse_length_field(length_field):
 
     The length field contains:
 
-     - only_sub_objects: boolean
+     - only_subobjects: boolean
         This field tells us if the current object only consists of subobjects
         and does not contain any data on its own.
      - length: unsigend 30 bit unsigned integer
         The length of the data section of this object in bytes.
     '''
     word, = struct.unpack('<I', length_field)
-    only_sub_objects = bool_bit_from_pos(word, constants.ONLY_SUBOBJECTS_POS)
+    only_subobjects = bool_bit_from_pos(word, constants.ONLY_SUBOBJECTS_POS)
     length = get_bits_from_word(word, constants.LENGTH_NUM_BITS, constants.LENGTH_POS)
-    return only_sub_objects, length
+    return only_subobjects, length
 
 
 def parse_extension_field(extension_field):

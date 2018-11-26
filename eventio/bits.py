@@ -18,4 +18,3 @@ def get_bits_from_word(uint32_word, num_bits, first):
     the return value would be: 1011 (with leading zeros)
     '''
     return (uint32_word >> first) & ((1 << num_bits) - 1)
-
