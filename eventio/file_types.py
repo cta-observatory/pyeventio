@@ -1,5 +1,7 @@
 import gzip
 
+from .constants import SYNC_MARKER_LITTLE_ENDIAN, SYNC_MARKER_BIG_ENDIAN
+
 
 def is_gzip(path):
     '''Test if a file is gzipped by reading its first two bytes and compare
@@ -13,7 +15,7 @@ def is_gzip(path):
 
 def is_eventio(path):
     '''
-    Test if a file is an eventio file by checking it's first two bytes
+    Test if a file is an eventio file by checking it's first four bytes
     '''
     if is_gzip(path):
         with gzip.open(path, 'rb') as f:
@@ -22,4 +24,7 @@ def is_eventio(path):
         with open(path, 'rb') as f:
             marker_bytes = f.read(4)
 
-    return marker_bytes == b'\xd4\x1f\x8a\x37' or marker_bytes == b'\x37\x8a\x1f\xd4'
+    little = marker_bytes == SYNC_MARKER_LITTLE_ENDIAN
+    big = marker_bytes == SYNC_MARKER_BIG_ENDIAN
+
+    return little or big
