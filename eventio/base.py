@@ -14,6 +14,16 @@ log = logging.getLogger(__name__)
 known_objects = {}
 
 
+def is_gzip(path):
+    '''Test if a file is gzipped by reading its first two bytes and compare
+    to the gzip marker bytes.
+    '''
+    with open(path, 'rb') as f:
+        marker_bytes = f.read(2)
+
+    return marker_bytes[0] == 0x1f and marker_bytes[1] == 0x8b
+
+
 class EventIOFile:
 
     def __init__(self, path):
@@ -21,7 +31,7 @@ class EventIOFile:
         self.path = path
         self.__file = open(path, 'rb')
 
-        if path.endswith('.gz'):
+        if is_gzip(path):
             log.info('Found gzipped file')
             self.__compfile = gzip.GzipFile(mode='r', fileobj=self.__file)
             self.__filehandle = io.BufferedReader(self.__compfile)
