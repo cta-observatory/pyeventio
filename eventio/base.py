@@ -11,7 +11,7 @@ from .exceptions import WrongTypeException
 
 log = logging.getLogger(__name__)
 
-known_objects = {}
+KNOWN_OBJECTS = {}
 
 
 class EventIOFile:
@@ -39,7 +39,7 @@ class EventIOFile:
         self._filehandle.seek(self._next_header_pos)
         header = read_next_header(self)
         self._next_header_pos = self._filehandle.tell() + header.length
-        return EventIOObject(header, parent=self)
+        return KNOWN_OBJECTS.get(header.type, EventIOObject)(header, parent=self)
 
     def seek(self, position, whence=0):
         return self._filehandle.seek(position, whence)
@@ -196,7 +196,7 @@ class EventIOObject:
         self.seek(self._next_header_pos)
         header = read_next_header(self, toplevel=False)
         self._next_header_pos = self.tell() + header.length
-        return EventIOObject(header, self)
+        return KNOWN_OBJECTS.get(header.type, EventIOObject)(header, parent=self)
 
     def seek(self, offset, whence=0):
         first = self.header.data_field_first_byte

@@ -3,8 +3,9 @@ import logging
 import numpy as np
 from collections import namedtuple
 
-from ..base import known_objects, EventIOFile
+from ..base import KNOWN_OBJECTS, EventIOFile
 from ..exceptions import WrongTypeException
+
 from .objects import (
     CorsikaRunHeader,
     CorsikaTelescopeDefinition,
@@ -22,7 +23,7 @@ from .objects import (
 )
 
 
-known_objects.update({
+KNOWN_OBJECTS.update({
     o.eventio_type: o
     for o in [
         CorsikaRunHeader,
@@ -53,8 +54,7 @@ class IACTFile(EventIOFile):
     Instead of low-level access to eventio items, it provides
     direct access to telescope events and simulation settings.
 
-    For example, it iterates over CorsikaEvent instances and
-    IACTFile[n] will return the nth event in the file.
+    It is an Iterable of `CorsikaEvent`s.
 
     The structure of an IACT EventIO file is assumed to be like this:
 
@@ -77,95 +77,58 @@ class IACTFile(EventIOFile):
     def __init__(self, path):
         super().__init__(path)
 
-        if not isinstance(self.objects[0], CorsikaRunHeader):
-            raise WrongTypeException('Object 0 is not a CORSIKA run header')
-        self.header = self.objects[0].parse_data_field()
+        header_object = super().__next__()
+        if not isinstance(header_object, CorsikaRunHeader):
+            raise WrongTypeException('First object is not a CORSIKA run header')
+        self.header = header_object.parse_data_field()
 
-        if not isinstance(self.objects[1], CorsikaInputCard):
-            raise WrongTypeException('Object 1 is not a CORSIKA input card')
-        self.input_card = self.objects[1].parse_data_field()
+        input_card_object = super().__next__()
+        if not isinstance(input_card_object, CorsikaInputCard):
+            raise WrongTypeException('Second object is not a CORSIKA input card')
+        self.input_card = input_card_object.parse_data_field()
 
-        if not isinstance(self.objects[2], CorsikaTelescopeDefinition):
-            raise WrongTypeException('Object 2 is not a CORSIKA telescope definition')
-        self.n_telescopes = self.objects[2].n_telescopes
-        self.telescope_positions = self.objects[2].parse_data_field()
-
-        self._parse_events()
-
-        if not isinstance(self.objects[-1], CorsikaRunEndBlock):
-            warnings.warn(
-                'Last Object is not a CORSIKA Run End Block.'
-                'The file seems to be truncated.'
-            )
-        else:
-            self.end_block = self.objects[-1].parse_data_field()
+        telescope_object = super().__next__()
+        if not isinstance(telescope_object, CorsikaTelescopeDefinition):
+            raise WrongTypeException('Third Object is not a CORSIKA telescope definition')
+        self.n_telescopes = telescope_object.n_telescopes
+        self.telescope_positions = telescope_object.parse_data_field()
 
     def __repr__(self):
         return (
             '{}(\n'
             '  path={}\n'
             '  n_telescopes={}\n'
-            '  n_events={}\n'
             ')'
         ).format(
             self.__class__.__name__,
             self.path,
             self.n_telescopes,
-            self.n_events,
         )
 
-    def __len__(self):
-        return self.n_events
-
     def __iter__(self):
-        for event_num in range(self.n_events):
-            yield self[event_num]
+        ''' Get the next event '''
+        obj = super().__next__()
 
-    def __getitem__(self, idx):
-        if idx < 0:
-            idx = self.n_events - idx
-        if idx >= self.n_events:
-            raise ValueError(
-                'Index {} is out of range for {} with {} Events'.format(
-                    idx, self.__class__.__name__, self.n_events,
-                ))
-        return self._build_event(idx)
+        while not isinstance(obj, CorsikaRunEndBlock):
+            telescope_data = []
+            while not isinstance(obj, CorsikaEventEndBlock):
+                if isinstance(obj, CorsikaEventHeader):
+                    header = obj.parse_data_field()
 
-    def _parse_events(self):
-        ''' Sort the objects of this file according to the showers they belong to '''
-        self._shower_objects = []
-        reuse_values = []
+                elif isinstance(obj, CorsikaArrayOffsets):
+                    reuses = obj.n_reuses
+                    array_offsets = obj.parse_data_field()
 
-        for obj in self.objects:
-            if isinstance(obj, CorsikaRunEndBlock):
-                break
+                elif isinstance(obj, CorsikaTelescopeData):
+                    telescope_data.append(obj.parse_data_field())
 
-            if isinstance(obj, CorsikaEventHeader):
-                self._shower_objects.append({})
-                self._shower_objects[-1]['header'] = obj
+                obj = super().__next__()
 
-            elif isinstance(obj, CorsikaEventEndBlock):
-                self._shower_objects[-1]['end_block'] = obj
+            end_block = obj.parse_data_field()
+            return CorsikaEvent()
 
-            elif isinstance(obj, CorsikaArrayOffsets):
-                reuse_values.append(obj.n_reuses)
-                self._shower_objects[-1]['array_offsets'] = obj
+        self.run_end = obj.parse_data_field()
 
-            elif isinstance(obj, CorsikaTelescopeData):
-                if 'telescope_data' not in self._shower_objects[-1]:
-                    self._shower_objects[-1]['telescope_data'] = []
-                self._shower_objects[-1]['telescope_data'].append(obj)
-
-        self.n_showers = len(self._shower_objects)
-
-        if reuse_values:
-            assert len(reuse_values) == self.n_showers
-            self.reuse = True
-            self.n_events = sum(reuse_values)
-            self.first_event_in_shower = np.cumsum(reuse_values) - np.array(reuse_values)
-        else:
-            self.reuse = False
-            self.n_events = len(self._shower_objects)
 
     def _build_event(self, event_num):
         if self.reuse:
