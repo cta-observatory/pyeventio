@@ -6,6 +6,7 @@ import logging
 import warnings
 import io
 
+from .file_types import is_gzip, is_eventio
 from .exceptions import WrongTypeException
 from .tools import read_from
 
@@ -14,22 +15,15 @@ log = logging.getLogger(__name__)
 known_objects = {}
 
 
-def is_gzip(path):
-    '''Test if a file is gzipped by reading its first two bytes and compare
-    to the gzip marker bytes.
-    '''
-    with open(path, 'rb') as f:
-        marker_bytes = f.read(2)
-
-    return marker_bytes[0] == 0x1f and marker_bytes[1] == 0x8b
-
-
 class EventIOFile:
 
     def __init__(self, path):
         log.info('Opening new file {}'.format(path))
         self.path = path
         self.__file = open(path, 'rb')
+
+        if not is_eventio(path):
+            raise ValueError('File {} is not an eventio file'.format(path))
 
         if is_gzip(path):
             log.info('Found gzipped file')
