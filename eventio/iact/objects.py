@@ -1,7 +1,7 @@
 ''' Methods to read in and parse the IACT EventIO object types '''
+import struct
 import numpy as np
 from numpy.lib.recfunctions import append_fields
-import struct
 
 from ..tools import read_ints, read_from
 from ..base import EventIOObject
@@ -45,7 +45,8 @@ class CorsikaRunHeader(EventIOObject):
         data = self.read()
         n, = struct.unpack('i', data[:4])
         if n != 273:
-            raise WrongSizeException('Expected 273 bytes, but found {}'.format(n))
+            raise WrongSizeException(
+                'Expected 273 bytes, but found {}'.format(n))
 
         block = np.frombuffer(
             data,
@@ -58,7 +59,8 @@ class CorsikaRunHeader(EventIOObject):
 
 class CorsikaTelescopeDefinition(EventIOObject):
     '''
-    This object contains the coordinates of the telescopes of the simulated array
+    This object contains the coordinates of the telescopes
+    of the simulated array
     '''
     eventio_type = 1201
 
@@ -107,13 +109,15 @@ class CorsikaEventHeader(EventIOObject):
         '''
         Read the data in this EventIOItem
 
-        Returns a dictionary containing the keys of the CORSIKA event header block
+        Returns a dictionary containing the keys of the
+        CORSIKA event header block
         '''
         self.seek(0)
         data = self.read()
         n, = struct.unpack('i', data[:4])
         if n != 273:
-            raise WrongSizeException('Expected 273 bytes, but found {}'.format(n))
+            raise WrongSizeException(
+                'Expected 273 bytes, but found {}'.format(n))
 
         block = np.frombuffer(
             data,
@@ -191,7 +195,12 @@ class IACTPhotons(EventIOObject):
         super().__init__(eventio_file, header, first_byte)
         self.compact = bool(self.header.version // 1000 == 1)
 
-        self.array, self.telescope, self.n_photons, self.n_bunches = read_from('hhfi', self)
+        (
+            self.array,
+            self.telescope,
+            self.n_photons,
+            self.n_bunches
+        ) = read_from('hhfi', self)
 
     def __repr__(self):
         return '{}(first={}, length={}, n_bunches={})'.format(
@@ -252,7 +261,7 @@ class IACTPhotons(EventIOObject):
             # bunches['cy'] = bunches['cy'].clip(a_min=-1., a_max=1.)
 
             bunches['time'] *= 0.1  # in nanoseconds since first interaction.
-            bunches['zem'] = np.power(10., bunches['zem']*0.001)
+            bunches['zem'] = np.power(10., bunches['zem'] * 0.001)
             bunches['photons'] *= 0.01
 
         bunches = append_fields(
@@ -286,7 +295,8 @@ class CorsikaEventEndBlock(EventIOObject):
         self.seek(0)
         n, = read_ints(1, self)
         if n != 273:
-            raise WrongSizeException('Expected 273 bytes, but found {}'.format(n))
+            raise WrongSizeException(
+                'Expected 273 bytes, but found {}'.format(n))
 
         dtype = np.dtype('float32')
         block = np.frombuffer(
@@ -368,7 +378,9 @@ class CorsikaInputCard(EventIOObject):
         '''
         self.seek(0)
         # read number of items in the input card
-        n, = read_from('i', self)
+        # number of event is not needed, but we need to read it,
+        # to get rid of it.
+        read_from('i', self)
 
         # corsika input card is stored as null terminated strings
         data = self.read().decode()
@@ -381,6 +393,7 @@ class CorsikaInputCard(EventIOObject):
         return inputcard
 
 
-def remove_ascii_control_characters(string, mapping=dict.fromkeys(range(32))):
+def remove_ascii_control_characters(string):
     ''' See http://stackoverflow.com/a/4324823/3838691 '''
+    mapping = dict.fromkeys(range(32))
     return string.translate(mapping)
