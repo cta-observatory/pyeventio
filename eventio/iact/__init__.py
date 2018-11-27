@@ -1,7 +1,7 @@
 import logging
 from collections import namedtuple
 
-from ..base import KNOWN_OBJECTS, EventIOFile
+from ..base import KNOWN_OBJECTS, EventIOFile, EventIOObject
 from ..exceptions import check_type
 
 from .objects import (
@@ -21,24 +21,8 @@ from .objects import (
 )
 
 
-KNOWN_OBJECTS.update({
-    o.eventio_type: o
-    for o in [
-        CORSIKARunHeader,
-        CORSIKATelescopeDefinition,
-        CORSIKAEventHeader,
-        CORSIKAArrayOffsets,
-        CORSIKATelescopeData,
-        IACTPhotons,
-        IACTLayout,
-        IACTTriggerTime,
-        IACTPhotoElectrons,
-        CORSIKAEventEndBlock,
-        CORSIKARunEndBlock,
-        CORSIKALongitudinal,
-        CORSIKAInputCard,
-    ]
-})
+for cls in EventIOObject.__subclasses__():
+    KNOWN_OBJECTS[cls.eventio_type]: cls
 
 log = logging.getLogger(__name__)
 

@@ -1,4 +1,4 @@
-from ..base import known_objects, EventIOObject
+from ..base import KNOWN_OBJECTS, EventIOObject
 from .objects import (
     SimTelRunHeader,
     SimTelMCRunHeader,
@@ -31,6 +31,37 @@ from .objects import (
     SimTelCalibEvent,
 )
 
-for cls in globals().copy().values():
-    if isinstance(cls, type) and issubclass(cls, EventIOObject) and cls != EventIOObject:
-        known_objects[cls.eventio_type] = cls
+__all__ = [
+    'SimTelRunHeader',
+    'SimTelMCRunHeader',
+    'SimTelCamSettings',
+    'SimTelCamOrgan',
+    'SimTelPixelset',
+    'SimTelPixelDisable',
+    'SimTelCamsoftset',
+    'SimTelPointingCor',
+    'SimTelTrackSet',
+    'SimTelCentEvent',
+    'SimTelTrackEvent',
+    'SimTelTelEvent',
+    'SimTelEvent',
+    'SimTelTelEvtHead',
+    'SimTelTelADCSum',
+    'SimTelTelADCSamp',
+    'SimTelTelImage',
+    'SimTelShower',
+    'SimTelPixelTiming',
+    'SimTelPixelCalib',
+    'SimTelMCShower',
+    'SimTelMCEvent',
+    'SimTelTelMoni',
+    'SimTelLasCal',
+    'SimTelRunStat',
+    'SimTelMCRunStat',
+    'SimTelMCPeSum',
+    'SimTelPixelList',
+    'SimTelCalibEvent',
+]
+
+for cls in EventIOObject.__subclasses__():
+    KNOWN_OBJECTS[cls.eventio_type] = cls
