@@ -119,11 +119,72 @@ class SimTelCentEvent(EventIOObject):
 
 
 class SimTelTrackEvent(EventIOObject):
-    eventio_type = 2100
+    '''Tracking information for a simtel telescope event
+    This has no clear type number, since
+    Konrad Bernlöhr decided to encode the telescope id into
+    the container type as 2100 + tel_id % 100 + 1000 * (tel_id // 100)
+
+    So a container with type 2105 belongs to tel_id 5, 3105 to 105
+    '''
+    eventio_type = None
+
+    def __init__(self, header, parent):
+        self.eventio_type = header.type
+        super().__init__(header, parent)
+        self.telescope_id = self.type_to_telid(header.type)
+
+    @staticmethod
+    def type_to_telid(eventio_type):
+        base = eventio_type - 2100
+        return 100 * (base // 1000) + base % 1000
+
+    @staticmethod
+    def telid_to_type(telescope_id):
+        return 2100 + telescope_id % 100 + 1000 * (telescope_id // 100)
+
+    def __repr__(self):
+        return '{}[{}](telescope_id={}, size={}, first_byte={})'.format(
+            self.__class__.__name__,
+            self.eventio_type,
+            self.telescope_id,
+            self.header.length,
+            self.header.data_field_first_byte
+        )
 
 
 class SimTelTelEvent(EventIOObject):
-    eventio_type = 2200
+    '''A simtel telescope event
+    This has no clear type number, since
+    Konrad Bernlöhr decided to encode the telescope id into
+    the container type as 2200 + tel_id % 100 + 1000 * (tel_id // 100)
+
+    So a container with type 2205 belongs to tel_id 5, 3205 to 105
+    '''
+    eventio_type = None
+
+    def __init__(self, header, parent):
+        self.eventio_type = header.type
+        super().__init__(header, parent)
+        self.telescope_id = self.type_to_telid(header.type)
+        self.global_count = header.id
+
+    @staticmethod
+    def type_to_telid(eventio_type):
+        base = eventio_type - 2200
+        return 100 * (base // 1000) + base % 1000
+
+    @staticmethod
+    def telid_to_type(telescope_id):
+        return 2200 + telescope_id % 100 + 1000 * (telescope_id // 100)
+
+    def __repr__(self):
+        return '{}[{}](telescope_id={}, size={}, first_byte={})'.format(
+            self.__class__.__name__,
+            self.eventio_type,
+            self.telescope_id,
+            self.header.length,
+            self.header.data_field_first_byte
+        )
 
 
 class SimTelEvent(EventIOObject):
