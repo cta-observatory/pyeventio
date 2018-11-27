@@ -34,6 +34,44 @@ class HistoryConfig(EventIOObject):
 
 class SimTelRunHeader(EventIOObject):
     eventio_type = 2000
+    from .runheader_dtypes import (
+        runheader_dtype_part1,
+        runheader_dtype_part2
+    )
+
+    def parse_data_field(self):
+        ''' '''
+        self.seek(0)
+        data = self.read()
+
+        dt1 = SimTelRunHeader.runheader_dtype_part1
+
+        part1 = np.frombuffer(
+            data,
+            dtype=dt1,
+            count=1,
+        )[0]
+        dt2 = SimTelRunHeader.runheader_dtype_part2(part1['ntel'])
+        part2 = np.frombuffer(
+            data[dt1.itemsize:],
+            dtype=dt2,
+            count=1,
+        )[0]
+
+        # rest is two null-terminated strings
+        rest = data[dt1.itemsize + dt2.itemsize:].split(b'\x00')
+        target = rest[0]
+        observer = rest[1]
+
+        result = dict()
+        for name in part1.dtype.names:
+            result[name] = part1[name]
+        for name in part2.dtype.names:
+            result[name] = part2[name]
+        result['target'] = target
+        result['observer'] = observer
+
+        return result
 
 
 class SimTelMCRunHeader(EventIOObject):
@@ -50,7 +88,6 @@ class SimTelMCRunHeader(EventIOObject):
             data,
             dtype=header_type,
             count=1,
-            offset=0,
         ).view(np.recarray)[0]
 
 
