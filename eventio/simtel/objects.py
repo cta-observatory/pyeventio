@@ -1,6 +1,7 @@
-''' Methods to read in and parse the simtel_array EventIO object types '''
+''' Implementations of the simtel_array EventIO object types '''
+import numpy as np
 from ..base import EventIOObject
-from ..tools import read_ints, read_eventio_string
+from ..tools import read_ints, read_eventio_string, read_from
 
 
 class History(EventIOObject):
@@ -41,6 +42,33 @@ class SimTelMCRunHeader(EventIOObject):
 
 class SimTelCamSettings(EventIOObject):
     eventio_type = 2002
+
+    def __init__(self, header, parent):
+        super().__init__(header, parent)
+        self.telescope_id = header.id
+
+    def parse_data_field(self):
+        n_pixels, = read_from('<i', self)
+        focal_length, = read_from('<f', self)
+        pixel_x = np.frombuffer(self.read(n_pixels * 4), dtype='float32')
+        pixel_y = np.frombuffer(self.read(n_pixels * 4), dtype='float32')
+
+        return {
+            'telescope_id': self.telescope_id,
+            'n_pixels': n_pixels,
+            'focal_length': focal_length,
+            'pixel_x': pixel_x,
+            'pixel_y': pixel_y,
+        }
+
+    def __repr__(self):
+        return '{}[{}](telescope_id={}, size={}, first_byte={})'.format(
+            self.__class__.__name__,
+            self.eventio_type,
+            self.telescope_id,
+            self.header.length,
+            self.header.data_field_first_byte
+        )
 
 
 class SimTelCamOrgan(EventIOObject):
