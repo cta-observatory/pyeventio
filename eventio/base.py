@@ -97,7 +97,7 @@ def read_next_header(eventio, toplevel=True):
     )
 
     type_version_field = parse_type_field(header_bytes[0:4])
-    id_field = struct.unpack('<I', header_bytes[4:8])
+    id_field, = struct.unpack('<I', header_bytes[4:8])
     only_subobjects, length = parse_length_field(header_bytes[8:12])
 
     if type_version_field.extended:
