@@ -51,7 +51,7 @@ class SimTelMCRunHeader(EventIOObject):
             dtype=header_type,
             count=1,
             offset=0,
-        )
+        ).view(np.recarray)[0]
 
 
 class SimTelCamSettings(EventIOObject):
