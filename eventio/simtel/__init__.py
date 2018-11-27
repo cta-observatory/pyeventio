@@ -65,3 +65,9 @@ __all__ = [
 
 for cls in EventIOObject.__subclasses__():
     KNOWN_OBJECTS[cls.eventio_type] = cls
+
+for tel_id in range(1000):
+    KNOWN_OBJECTS[SimTelTelEvent.telid_to_type(tel_id)] = SimTelTelEvent
+
+for tel_id in range(1000):
+    KNOWN_OBJECTS[SimTelTrackEvent.telid_to_type(tel_id)] = SimTelTrackEvent
