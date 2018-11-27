@@ -1,6 +1,7 @@
 ''' Methods to read in and parse the simtel_array EventIO object types '''
+import numpy as np
 from ..base import EventIOObject
-from ..tools import read_ints, read_eventio_string
+from ..tools import read_ints, read_eventio_string, read_from, read_time
 
 
 class History(EventIOObject):
@@ -69,6 +70,43 @@ class SimTelTrackSet(EventIOObject):
 
 class SimTelCentEvent(EventIOObject):
     eventio_type = 2009
+
+    def __init__(self, header, parent):
+        super().__init__(header, parent)
+
+        if header.version > 2:
+            raise IOError('Unsupported CENTEVENT Version: {}'.format(header.version))
+
+        self.global_count = self.header.id
+
+    def parse_data_field(self):
+
+        event_info = {}
+        event_info['cpu_time'] = read_time(self)
+        event_info[']gps_time'] = read_time(self)
+        event_info['trigger_pattern'], = read_from('<i', self)
+        event_info['data_pattern'], = read_from('<i', self)
+
+        if self.header.version >= 1:
+            tels_trigger, = read_from('<h', self)
+            print(tels_trigger)
+            event_info['n_triggered_telescopes'] = tels_trigger
+
+            event_info['triggered_telescopes'] = np.frombuffer(
+                self.read(tels_trigger * 2), dtype='<i2',
+            )
+            event_info['trigger_times'] = np.frombuffer(
+                self.read(tels_trigger * 4), dtype='<f4',
+            )
+            tels_data, = read_from('<h', self)
+            event_info['n_telescopes_with_data'] = tels_data
+            event_info['telescopes_with_data'] = np.frombuffer(
+                self.read(tels_data * 2), dtype='<i2'
+            )
+
+        # TODO: read telttrg_type_mask
+
+        return event_info
 
 
 class SimTelTrackEvent(EventIOObject):

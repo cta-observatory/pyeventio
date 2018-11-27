@@ -32,3 +32,9 @@ def read_from_without_position_change(fmt, f):
     result = read_from(fmt, f)
     f.seek(position)
     return result
+
+
+def read_time(f):
+    '''Read a time as combination of seconds and nanoseconds'''
+    sec, nano = read_from('<ii', f)
+    return sec, nano
