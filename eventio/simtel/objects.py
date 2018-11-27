@@ -45,6 +45,11 @@ class SimTelMCRunHeader(EventIOObject):
         self.seek(0)
         data = self.read()
 
+        if self.header.version not in self.mc_runheader_dtype_map:
+            raise IOError(
+                'Unsupported version of MCRunHeader: {}'.format(self.header.version)
+            )
+
         header_type = self.mc_runheader_dtype_map[self.header.version]
         return np.frombuffer(
             data,
