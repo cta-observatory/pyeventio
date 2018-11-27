@@ -1,6 +1,6 @@
 import numpy as np
 
-simtel_runheader_dtype_v0_or_v1 = np.dtype([
+mc_runheader_dtype_v0_or_v1 = np.dtype([
     #(fieldname, type, shape)
     ('shower_prog_id', 'i4'),
     ('shower_prog_vers', 'i4'),
@@ -24,7 +24,7 @@ simtel_runheader_dtype_v0_or_v1 = np.dtype([
     ('atmosphere', 'i4'),
 ])
 
-simtel_runheader_dtype_v2 = np.dtype([
+mc_runheader_dtype_v2 = np.dtype([
     #(fieldname, type, shape)
     ('shower_prog_id', 'i4'),
     ('shower_prog_vers', 'i4'),
@@ -55,7 +55,7 @@ simtel_runheader_dtype_v2 = np.dtype([
 ])
 
 
-simtel_runheader_dtype_v3 = np.dtype([
+mc_runheader_dtype_v3 = np.dtype([
     #(fieldname, type, shape)
     ('shower_prog_id', 'i4'),
     ('shower_prog_vers', 'i4'),
@@ -87,7 +87,7 @@ simtel_runheader_dtype_v3 = np.dtype([
     ('corsika_high_E_detail', 'i4'),
 ])
 
-simtel_runheader_dtype_v4_or_higher = np.dtype([
+mc_runheader_dtype_v4_or_higher = np.dtype([
     #(fieldname, type, shape)
     ('shower_prog_id', 'i4'),
     ('shower_prog_vers', 'i4'),
@@ -121,10 +121,10 @@ simtel_runheader_dtype_v4_or_higher = np.dtype([
     ('corsika_high_E_detail', 'i4'),
 ])
 
-simtel_runheader_dtype_map = {
-    0: simtel_runheader_dtype_v0_or_v1,
-    1: simtel_runheader_dtype_v0_or_v1,
-    2: simtel_runheader_dtype_v2,
-    3: simtel_runheader_dtype_v3,
-    4: simtel_runheader_dtype_v4_or_higher,
+mc_runheader_dtype_map = {
+    0: mc_runheader_dtype_v0_or_v1,
+    1: mc_runheader_dtype_v0_or_v1,
+    2: mc_runheader_dtype_v2,
+    3: mc_runheader_dtype_v3,
+    4: mc_runheader_dtype_v4_or_higher,
 }
