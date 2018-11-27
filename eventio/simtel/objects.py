@@ -1,4 +1,5 @@
 ''' Methods to read in and parse the simtel_array EventIO object types '''
+import numpy as np
 from ..base import EventIOObject
 from ..tools import read_ints, read_eventio_string
 
@@ -37,6 +38,25 @@ class SimTelRunHeader(EventIOObject):
 
 class SimTelMCRunHeader(EventIOObject):
     eventio_type = 2001
+    from .mc_runheader_dtypes import mc_runheader_dtype_map
+
+    def parse_data_field(self):
+        ''' '''
+        self.seek(0)
+        data = self.read()
+
+        if self.header.version not in self.mc_runheader_dtype_map:
+            raise IOError(
+                'Unsupported version of MCRunHeader: {}'.format(self.header.version)
+            )
+
+        header_type = self.mc_runheader_dtype_map[self.header.version]
+        return np.frombuffer(
+            data,
+            dtype=header_type,
+            count=1,
+            offset=0,
+        ).view(np.recarray)[0]
 
 
 class SimTelCamSettings(EventIOObject):
