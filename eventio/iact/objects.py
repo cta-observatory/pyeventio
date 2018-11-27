@@ -13,23 +13,23 @@ from .parse_corsika_data import (
 
 
 __all__ = [
-    'CorsikaRunHeader',
-    'CorsikaTelescopeDefinition',
-    'CorsikaEventHeader',
-    'CorsikaArrayOffsets',
-    'CorsikaTelescopeData',
+    'CORSIKARunHeader',
+    'CORSIKATelescopeDefinition',
+    'CORSIKAEventHeader',
+    'CORSIKAArrayOffsets',
+    'CORSIKATelescopeData',
     'IACTPhotons',
     'IACTLayout',
     'IACTTriggerTime',
     'IACTPhotoElectrons',
-    'CorsikaEventEndBlock',
-    'CorsikaRunEndBlock',
-    'CorsikaLongitudinal',
-    'CorsikaInputCard',
+    'CORSIKAEventEndBlock',
+    'CORSIKARunEndBlock',
+    'CORSIKALongitudinal',
+    'CORSIKAInputCard',
 ]
 
 
-class CorsikaRunHeader(EventIOObject):
+class CORSIKARunHeader(EventIOObject):
     '''
     This object contains the corsika run header block
     '''
@@ -57,15 +57,15 @@ class CorsikaRunHeader(EventIOObject):
         return parse_corsika_run_header(block)
 
 
-class CorsikaTelescopeDefinition(EventIOObject):
+class CORSIKATelescopeDefinition(EventIOObject):
     '''
     This object contains the coordinates of the telescopes
     of the simulated array
     '''
     eventio_type = 1201
 
-    def __init__(self, eventio_file, header, first_byte):
-        super().__init__(eventio_file, header, first_byte)
+    def __init__(self, header, parent):
+        super().__init__(header, parent)
         self.n_telescopes, = read_ints(1, self)
 
     def __len__(self):
@@ -101,7 +101,7 @@ class CorsikaTelescopeDefinition(EventIOObject):
         return tel_pos
 
 
-class CorsikaEventHeader(EventIOObject):
+class CORSIKAEventHeader(EventIOObject):
     ''' This Object contains the CORSIKA event header block '''
     eventio_type = 1202
 
@@ -129,11 +129,11 @@ class CorsikaEventHeader(EventIOObject):
         return parse_corsika_event_header(block)
 
 
-class CorsikaArrayOffsets(EventIOObject):
+class CORSIKAArrayOffsets(EventIOObject):
     eventio_type = 1203
 
-    def __init__(self, eventio_file, header, first_byte):
-        super().__init__(eventio_file, header, first_byte)
+    def __init__(self, header, parent):
+        super().__init__(header, parent)
         self.n_arrays, = read_ints(1, self)
         self.time_offset, = read_from('f', self)
         self.n_reuses = self.n_arrays
@@ -174,7 +174,7 @@ class CorsikaArrayOffsets(EventIOObject):
         )
 
 
-class CorsikaTelescopeData(EventIOObject):
+class CORSIKATelescopeData(EventIOObject):
     '''
     A container class for the photon bunches.
     Usually contains one photon bunch object (IACTPhotons)
@@ -191,8 +191,8 @@ class IACTPhotons(EventIOObject):
     eventio_type = 1205
     columns = ('x', 'y', 'cx', 'cy', 'time', 'zem', 'photons', 'lambda')
 
-    def __init__(self, eventio_file, header, first_byte):
-        super().__init__(eventio_file, header, first_byte)
+    def __init__(self, header, parent):
+        super().__init__(header, parent)
         self.compact = bool(self.header.version // 1000 == 1)
 
         (
@@ -203,9 +203,8 @@ class IACTPhotons(EventIOObject):
         ) = read_from('hhfi', self)
 
     def __repr__(self):
-        return '{}(first={}, length={}, n_bunches={})'.format(
+        return '{}(length={}, n_bunches={})'.format(
             self.__class__.__name__,
-            self.first_byte,
             self.header.length,
             self.n_bunches,
         )
@@ -288,7 +287,7 @@ class IACTPhotoElectrons(EventIOObject):
     eventio_type = 1208
 
 
-class CorsikaEventEndBlock(EventIOObject):
+class CORSIKAEventEndBlock(EventIOObject):
     eventio_type = 1209
 
     def parse_data_field(self):
@@ -308,7 +307,7 @@ class CorsikaEventEndBlock(EventIOObject):
         return block
 
 
-class CorsikaRunEndBlock(EventIOObject):
+class CORSIKARunEndBlock(EventIOObject):
     ''' This Object contains the CORSIKA run end block '''
     eventio_type = 1210
 
@@ -334,12 +333,12 @@ class CorsikaRunEndBlock(EventIOObject):
         return block
 
 
-class CorsikaLongitudinal(EventIOObject):
+class CORSIKALongitudinal(EventIOObject):
     ''' This Object contains the CORSIKA longitudinal shower data block '''
     eventio_type = 1211
 
-    def __init__(self, eventio_file, header, first_byte):
-        super().__init__(eventio_file, header, first_byte)
+    def __init__(self, header, parent):
+        super().__init__(header, parent)
         self.longitudinal_data = self.parse_data_field()
 
     def __getitem__(self, idx):
@@ -366,7 +365,7 @@ class CorsikaLongitudinal(EventIOObject):
         return block
 
 
-class CorsikaInputCard(EventIOObject):
+class CORSIKAInputCard(EventIOObject):
     ''' This Object contains the CORSIKA steering card '''
     eventio_type = 1212
 

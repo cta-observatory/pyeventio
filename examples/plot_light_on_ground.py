@@ -16,23 +16,23 @@ def main():
 
     with IACTFile(args.inputfile) as f:
 
-        event = f[args.event]
-        photons = event.photon_bunches[0]
+        for event in f:
+            photons = event.photon_bunches[0]
 
-        fig, ax = plt.subplots()
-        ax.set_aspect(1)
-        ax.set_axis_bgcolor('k')
+            fig, ax = plt.subplots()
+            ax.set_aspect(1)
+            ax.set_facecolor('k')
 
-        ax.scatter(
-            x=photons['x'],
-            y=photons['y'],
-            c='w',
-            s=5,
-            alpha=0.1,
-            lw=0,
-        )
+            ax.scatter(
+                x=photons['x'],
+                y=photons['y'],
+                c='w',
+                s=10,
+                lw=0,
+            )
 
-        plt.show()
+            plt.show()
+
 
 if __name__ == '__main__':
     main()

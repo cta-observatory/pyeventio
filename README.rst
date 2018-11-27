@@ -118,39 +118,41 @@ This is how our test file looks like in the low level view:
 
 ::
 
-    In [1]: import eventio
+    In [3]: with EventIOFile('eventio/resources/one_shower.dat') as f: 
+       ...:     for obj in f: 
+       ...:         print(obj) 
+       ...:         if obj.header.only_subobjects: 
+       ...:             for subobj in obj: 
+       ...:                 print('   ', subobj)                                   
+    CORSIKARunHeader[1200](size=1096, only_subobjects=False, first_byte=16)
+    CORSIKAInputCard[1212](size=448, only_subobjects=False, first_byte=1128)
+    CORSIKATelescopeDefinition[1201](size=20, only_subobjects=False, first_byte=1592)
+    CORSIKAEventHeader[1202](size=1096, only_subobjects=False, first_byte=1628)
+    CORSIKAArrayOffsets[1203](size=16, only_subobjects=False, first_byte=2740)
+    CORSIKATelescopeData[1204](size=6136, only_subobjects=True, first_byte=2772)
+        IACTPhotons(length=6124, n_bunches=382)
+    CORSIKAEventEndBlock[1209](size=1096, only_subobjects=False, first_byte=8924)
+    CORSIKARunEndBlock[1210](size=16, only_subobjects=False, first_byte=10036)
 
-    In [2]: eventio.EventIOFile('eventio/resources/one_shower.dat')
-    Out[2]: 
-    EventIOFile(path=eventio/resources/one_shower.dat, objects=[
-      CorsikaRunHeader(first=0, length=1096)
-      CorsikaInputCard(first=1112, length=448)
-      CorsikaTelescopeDefinition(first=1576, length=20)
-      CorsikaEventHeader(first=1612, length=1096)
-      CorsikaArrayOffsets(first=2724, length=16)
-      CorsikaTelescopeData(first=2756, length=6136, subitems=1)
-      CorsikaEventEndBlock(first=8908, length=1096)
-      CorsikaRunEndBlock(first=10020, length=16)
-    ])
 
 And this is how a ``sim_telarray`` file looks like (sim\_telarray
 objects are not implemted yet):
 
-::
+:: 
 
-    In [3]: eventio.EventIOFile('gamma_test.simtel')
-    Out[3]: 
-    EventIOFile(path=../../CTA/ctapipe/ctapipe-extra/datasets/gamma_test.simtel, objects=[
-      UnknownObject[70](first=0, length=11960, subitems=131)
-      UnknownObject[70](first=11976, length=1744732, subitems=21526)
-      UnknownObject[70](first=1756724, length=838000, subitems=11186)
-      UnknownObject[2000](first=2594740, length=1876)
-        ...
-      UnknownObject[2010](first=50007852, length=1782080, subitems=19)
-      UnknownObject[2021](first=51789948, length=12)
-      UnknownObject[2026](first=51789976, length=3536)
-      UnknownObject[2010](first=51793528, length=1560656, subitems=9)
-    ])
+    In [4]: with EventIOFile('../../CTA/ctapipe-extra/ctapipe_resources/gamma_test.simtel.gz') as f: 
+       ...:     for obj in f: 
+       ...:         print(obj)                                                                                                                                     
+    EventIOObject[70](size=11960, only_subobjects=True, first_byte=16)
+    EventIOObject[70](size=1744732, only_subobjects=True, first_byte=11992)
+    EventIOObject[70](size=838000, only_subobjects=True, first_byte=1756740)
+    EventIOObject[2000](size=1876, only_subobjects=False, first_byte=2594756)
+    EventIOObject[2001](size=140, only_subobjects=False, first_byte=2596648)
+    EventIOObject[2001](size=140, only_subobjects=False, first_byte=2596804)
+    ...
+
+
+
 
 .. |Build Status| image:: https://travis-ci.org/fact-project/pyeventio.svg?branch=master
    :target: https://travis-ci.org/fact-project/pyeventio

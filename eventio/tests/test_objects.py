@@ -8,29 +8,20 @@ testfile = pkg_resources.resource_filename(
 
 
 def test_tell():
-    f = eventio.EventIOFile(testfile)
+    with eventio.EventIOFile(testfile) as f:
+        obj = next(f)
+        obj.seek(0)
 
-    obj = f[1]
-    obj.seek(0)
-
-    assert obj.tell() == 0
-    obj.read(4)
-    assert obj.tell() == 4
+        assert obj.tell() == 0
+        obj.read(4)
+        assert obj.tell() == 4
 
 
 def test_seek():
-    f = eventio.EventIOFile(testfile)
+    with eventio.EventIOFile(testfile) as f:
+        obj = next(f)
 
-    obj = f[1]
+        obj.seek(0)
+        pos = obj.seek(0, 2)
 
-    obj.seek(0)
-    pos = obj.seek(0, 2)
-
-    assert pos == obj.header.length
-
-
-def test_level():
-    f = eventio.EventIOFile(testfile)
-
-    assert f[0].header.level == 0
-    assert f[5][0].header.level == 1
+        assert pos == obj.header.length
