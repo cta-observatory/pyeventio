@@ -1,5 +1,34 @@
 ''' Methods to read in and parse the simtel_array EventIO object types '''
 from ..base import EventIOObject
+from ..tools import read_ints, read_eventio_string
+
+
+class History(EventIOObject):
+    eventio_type = 70
+
+
+class HistoryCommandLine(EventIOObject):
+    eventio_type = 71
+
+    def __init__(self, header, parent):
+        super().__init__(header, parent)
+        self.timestamp, = read_ints(1, self)
+
+    def parse_data_field(self):
+        self.seek(4)  # skip the int, we already read in init
+        return read_eventio_string(self)
+
+
+class HistoryConfig(EventIOObject):
+    eventio_type = 72
+
+    def __init__(self, header, parent):
+        super().__init__(header, parent)
+        self.timestamp, = read_ints(1, self)
+
+    def parse_data_field(self):
+        self.seek(4)  # skip the int, we already read in init
+        return read_eventio_string(self)
 
 
 class SimTelRunHeader(EventIOObject):

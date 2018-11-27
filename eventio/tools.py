@@ -1,6 +1,14 @@
 import struct
 
 
+def read_eventio_string(f):
+    '''Read a string from eventio file or object f
+    Eventio stores strings as a short
+    '''
+    length, = read_from('<h', f)
+    return f.read(length)
+
+
 def read_from(fmt, f):
     '''
     read the struct fmt specification from file f
