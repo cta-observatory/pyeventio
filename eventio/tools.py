@@ -34,9 +34,9 @@ def read_from_without_position_change(fmt, f):
     return result
 
 
-def get_scount(data):
+def read_utf8_like_signed_int(f):
     # this is mostly a verbatim copy from eventio.c lines 1082ff
-    u = get_count(data)
+    u = read_utf8_like_unsigned_int(f)
     # u values of 0,1,2,3,4,... here correspond to signed values of
     #   0,-1,1,-2,2,... We have to test the least significant bit:
     if (u & 1) == 1:  # Negative number;
@@ -45,8 +45,10 @@ def get_scount(data):
         return u >> 1
 
 
+# The dict below is used as a performance improvement in
+# read_utf8_like_unsigned_int().
 # position_of_most_significant_zero_in_byte
-# stored in a dict for increased execution speed of get_count
+# stored in a dict for increased execution speed.
 # (factor 8..10 faster, if building the dict can be ignored)
 # This whole setup part here takes <1ms on my machine
 POS_OF_MSB_ZERO_DICT = {}
@@ -64,9 +66,10 @@ for i in range(256):
             break
 
 
-def get_count(data):
+def read_utf8_like_unsigned_int(f):
     '''this returns a python integer'''
-    _byte = data.read(1)
+    # this is a reimplementation from eventio.c lines 797ff
+    _byte = f.read(1)
     start_byte = _byte[0]
     b = np.zeros(8, dtype='B')
 
@@ -78,7 +81,7 @@ def get_count(data):
     # copy the interesting part from a into b and return a view
     b[pos_of_msb_zero] = masked_start_byte
     b[pos_of_msb_zero + 1:] = np.frombuffer(
-        data.read(7 - pos_of_msb_zero),
+        f.read(7 - pos_of_msb_zero),
         dtype='B',
     )
 
