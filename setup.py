@@ -1,17 +1,14 @@
-from setuptools import setup
+from setuptools import setup, find_packages
 
 setup(
     name='eventio',
-    version='0.3.0',
+    version='0.4.0',
     description='Python read-only implementation of the EventIO file format',
     url='https://github.com/fact-project/pyeventio',
     author='Dominik Neise, Maximilian Noethe',
     author_email='neised@phys.ethz.ch',
     license='MIT',
-    packages=[
-        'eventio',
-        'eventio.iact',
-        ],
+    packages=find_packages(),
     package_data={'eventio': ['resources/*']},
     install_requires=[
         'numpy'
