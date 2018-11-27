@@ -1,4 +1,4 @@
 from .base import EventIOFile
-# from .iact import IACTFile
+from .iact import IACTFile
 
-__all__ = ['EventIOFile']
+__all__ = ['EventIOFile', 'IACTFile']

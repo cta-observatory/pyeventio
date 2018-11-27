@@ -15,3 +15,8 @@ class WrongSizeException(Exception):
     has the wrong size
     '''
     pass
+
+
+def check_type(obj, expected):
+    if not isinstance(obj, expected):
+        raise WrongTypeException(expected, obj.__class__)
