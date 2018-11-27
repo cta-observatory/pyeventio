@@ -26,5 +26,5 @@ def test_get_count():
         (bytes([0b1101_1111, 0b1100_1100, 0b1010_1010, 3, 4, 5, 6, 7, 8]), 0b0001_1111_1100_1100_1010_1010),
     ]
     for data, expected_result in testcases:
-        assert get_count(data) == expected_result
+        assert get_count(BytesIO(data)) == expected_result
 
