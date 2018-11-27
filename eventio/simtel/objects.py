@@ -39,35 +39,33 @@ class SimTelRunHeader(EventIOObject):
         runheader_dtype_part2
     )
 
-    def parse_data_field(self):
-        ''' '''
-        self.seek(0)
-        data = self.read()
+    def __init__(self, header, parent):
+        super().__init__(header, parent)
+        self.run_id = self.header.id
 
+    def parse_data_field(self):
+        '''See write_hess_runheader l. 184 io_hess.c '''
+        self.seek(0)
         dt1 = SimTelRunHeader.runheader_dtype_part1
 
         part1 = np.frombuffer(
-            data,
+            self.read(dt1.itemsize),
             dtype=dt1,
             count=1,
         )[0]
-        dt2 = SimTelRunHeader.runheader_dtype_part2(part1['ntel'])
+        dt2 = SimTelRunHeader.runheader_dtype_part2(part1['n_telescopes'])
         part2 = np.frombuffer(
-            data[dt1.itemsize:],
+            self.read(dt2.itemsize),
             dtype=dt2,
             count=1,
         )[0]
 
         # rest is two null-terminated strings
-        rest = data[dt1.itemsize + dt2.itemsize:].split(b'\x00')
-        target = rest[0]
-        observer = rest[1]
+        target = read_eventio_string(self)
+        observer = read_eventio_string(self)
 
-        result = dict()
-        for name in part1.dtype.names:
-            result[name] = part1[name]
-        for name in part2.dtype.names:
-            result[name] = part2[name]
+        result = dict(zip(part1.dtype.names, part1))
+        result.update(dict(zip(part2.dtype.names, part2)))
         result['target'] = target
         result['observer'] = observer
 
