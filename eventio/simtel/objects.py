@@ -1,7 +1,7 @@
 ''' Implementations of the simtel_array EventIO object types '''
 import numpy as np
 from ..base import EventIOObject
-from ..tools import read_ints, read_eventio_string, read_from
+from ..tools import read_ints, read_eventio_string, read_from, read_array
 
 
 class History(EventIOObject):
@@ -48,17 +48,9 @@ class SimTelRunHeader(EventIOObject):
         self.seek(0)
         dt1 = SimTelRunHeader.runheader_dtype_part1
 
-        part1 = np.frombuffer(
-            self.read(dt1.itemsize),
-            dtype=dt1,
-            count=1,
-        )[0]
+        part1 = read_array(self, dtype=dt1, count=1)[0]
         dt2 = SimTelRunHeader.runheader_dtype_part2(part1['n_telescopes'])
-        part2 = np.frombuffer(
-            self.read(dt2.itemsize),
-            dtype=dt2,
-            count=1,
-        )[0]
+        part2 = read_array(self, dt=dt2, count=1)[0]
 
         # rest is two null-terminated strings
         target = read_eventio_string(self)
@@ -79,7 +71,6 @@ class SimTelMCRunHeader(EventIOObject):
     def parse_data_field(self):
         ''' '''
         self.seek(0)
-        data = self.read()
 
         if self.header.version not in self.mc_runheader_dtype_map:
             raise IOError(
@@ -87,11 +78,7 @@ class SimTelMCRunHeader(EventIOObject):
             )
 
         header_type = self.mc_runheader_dtype_map[self.header.version]
-        return np.frombuffer(
-            data,
-            dtype=header_type,
-            count=1,
-        ).view(np.recarray)[0]
+        return read_array(self, dtype=header_type, count=1).view(np.recarray)[0]
 
 
 class SimTelCamSettings(EventIOObject):
@@ -104,8 +91,8 @@ class SimTelCamSettings(EventIOObject):
     def parse_data_field(self):
         n_pixels, = read_from('<i', self)
         focal_length, = read_from('<f', self)
-        pixel_x = np.frombuffer(self.read(n_pixels * 4), dtype='float32')
-        pixel_y = np.frombuffer(self.read(n_pixels * 4), dtype='float32')
+        pixel_x = read_array(self, count=n_pixels, dtype='float32')
+        pixel_y = read_array(self, count=n_pixels, dtype='float32')
 
         return {
             'telescope_id': self.telescope_id,
@@ -179,8 +166,7 @@ class SimTelTrackEvent(EventIOObject):
             dt.extend([('azimuth_raw', '<f4'), ('altitude_raw', '<f4')])
         if self.has_cor:
             dt.extend([('azimuth_cor', '<f4'), ('altitude_cor', '<f4')])
-        dt = np.dtype(dt)
-        return np.frombuffer(self.read(dt.itemsize), dtype=dt)[0]
+        return read_array(self, count=1, dtype=dt)[0]
 
     @staticmethod
     def id_to_telid(eventio_id):
