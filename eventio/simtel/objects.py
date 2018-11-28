@@ -10,6 +10,25 @@ from ..tools import (
 )
 
 
+class TelescopeObject(EventIOObject):
+    '''
+    BaseClass that reads telescope id from header.id and puts it in repr
+    '''
+
+    def __init__(self, header, parent):
+        super().__init__(header, parent)
+        self.telescope_id = header.id
+
+    def __repr__(self):
+        return '{}[{}](telescope_id={}, size={}, first_byte={})'.format(
+            self.__class__.__name__,
+            self.eventio_type,
+            self.telescope_id,
+            self.header.length,
+            self.header.data_field_first_byte
+        )
+
+
 class History(EventIOObject):
     eventio_type = 70
 
@@ -87,12 +106,8 @@ class SimTelMCRunHeader(EventIOObject):
         return read_array(self, dtype=header_type, count=1).view(np.recarray)[0]
 
 
-class SimTelCamSettings(EventIOObject):
+class SimTelCamSettings(TelescopeObject):
     eventio_type = 2002
-
-    def __init__(self, header, parent):
-        super().__init__(header, parent)
-        self.telescope_id = header.id
 
     def parse_data_field(self):
         n_pixels, = read_from('<i', self)
@@ -108,21 +123,12 @@ class SimTelCamSettings(EventIOObject):
             'pixel_y': pixel_y,
         }
 
-    def __repr__(self):
-        return '{}[{}](telescope_id={}, size={}, first_byte={})'.format(
-            self.__class__.__name__,
-            self.eventio_type,
-            self.telescope_id,
-            self.header.length,
-            self.header.data_field_first_byte
-        )
-
 
 class SimTelCamOrgan(EventIOObject):
     eventio_type = 2003
 
 
-class SimTelPixelset(EventIOObject):
+class SimTelPixelset(TelescopeObject):
     eventio_type = 2004
     from .pixelset import dt1, dt2, dt3, dt4
 
