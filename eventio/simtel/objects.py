@@ -6,9 +6,11 @@ from ..tools import (
     read_eventio_string,
     read_from,
     read_utf8_like_signed_int,
+    read_utf8_like_unsigned_int,
     read_array,
-    read_time
+    read_time,
 )
+from ..bits import bool_bit_from_pos
 
 
 class TelescopeObject(EventIOObject):
@@ -190,6 +192,7 @@ class SimTelPixelDisable(EventIOObject):
             'HV_disabled': HV_disabled,
         }
 
+
 class SimTelCamsoftset(EventIOObject):
     eventio_type = 2006
 
@@ -274,13 +277,12 @@ class SimTelCentEvent(EventIOObject):
 
         event_info = {}
         event_info['cpu_time'] = read_time(self)
-        event_info[']gps_time'] = read_time(self)
+        event_info['gps_time'] = read_time(self)
         event_info['trigger_pattern'], = read_from('<i', self)
         event_info['data_pattern'], = read_from('<i', self)
 
         if self.header.version >= 1:
             tels_trigger, = read_from('<h', self)
-            print(tels_trigger)
             event_info['n_triggered_telescopes'] = tels_trigger
 
             event_info['triggered_telescopes'] = np.frombuffer(
@@ -295,7 +297,21 @@ class SimTelCentEvent(EventIOObject):
                 self.read(tels_data * 2), dtype='<i2'
             )
 
-        # TODO: read telttrg_type_mask
+        if self.header.version >= 2:
+            event_info['teltrg_type_mask'] = [
+                read_utf8_like_unsigned_int(self)
+                for _ in range(tels_trigger)
+            ]
+            event_info['teltrg_time_by_type'] = []
+            for i, teltrg_type_mask in enumerate(event_info['teltrg_type_mask']):
+                event_info['teltrg_time_by_type'].append({})
+
+                # trigger times are only written if more than one trigger there
+                if teltrg_type_mask not in {0b001, 0b010, 0b100}:
+                    for trigger in range(3):
+                        if bool_bit_from_pos(teltrg_type_mask, trigger):
+                            t = read_from('<f', self)[0]
+                            event_info['teltrg_time_by_type'][i][trigger] = t
 
         return event_info
 

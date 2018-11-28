@@ -152,3 +152,17 @@ def test_2006_all():
             assert d['report_cur_period'] == 0
             assert d['monitor_HV_period'] == 0
             assert d['report_HV_period'] == 0
+
+
+def test_2009():
+    from eventio import EventIOFile
+    from eventio.simtel.objects import SimTelEvent, SimTelCentEvent
+
+    with EventIOFile(test_file) as f:
+        o = find_type(f, SimTelEvent)
+        s = find_type(o, SimTelCentEvent)
+
+        data = s.parse_data_field()
+        assert 'cpu_time' in data
+        assert 'gps_time' in data
+        assert 'teltrg_time_by_type' in data
