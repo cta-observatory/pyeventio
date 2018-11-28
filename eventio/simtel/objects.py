@@ -1,7 +1,32 @@
 ''' Implementations of the simtel_array EventIO object types '''
 import numpy as np
 from ..base import EventIOObject
-from ..tools import read_ints, read_eventio_string, read_from, read_array
+from ..tools import (
+    read_ints,
+    read_eventio_string,
+    read_from,
+    read_utf8_like_signed_int,
+    read_array
+)
+
+
+class TelescopeObject(EventIOObject):
+    '''
+    BaseClass that reads telescope id from header.id and puts it in repr
+    '''
+
+    def __init__(self, header, parent):
+        super().__init__(header, parent)
+        self.telescope_id = header.id
+
+    def __repr__(self):
+        return '{}[{}](telescope_id={}, size={}, first_byte={})'.format(
+            self.__class__.__name__,
+            self.eventio_type,
+            self.telescope_id,
+            self.header.length,
+            self.header.data_field_first_byte
+        )
 
 
 class History(EventIOObject):
@@ -81,12 +106,8 @@ class SimTelMCRunHeader(EventIOObject):
         return read_array(self, dtype=header_type, count=1).view(np.recarray)[0]
 
 
-class SimTelCamSettings(EventIOObject):
+class SimTelCamSettings(TelescopeObject):
     eventio_type = 2002
-
-    def __init__(self, header, parent):
-        super().__init__(header, parent)
-        self.telescope_id = header.id
 
     def parse_data_field(self):
         n_pixels, = read_from('<i', self)
@@ -102,22 +123,34 @@ class SimTelCamSettings(EventIOObject):
             'pixel_y': pixel_y,
         }
 
-    def __repr__(self):
-        return '{}[{}](telescope_id={}, size={}, first_byte={})'.format(
-            self.__class__.__name__,
-            self.eventio_type,
-            self.telescope_id,
-            self.header.length,
-            self.header.data_field_first_byte
-        )
-
 
 class SimTelCamOrgan(EventIOObject):
     eventio_type = 2003
 
 
-class SimTelPixelset(EventIOObject):
+class SimTelPixelset(TelescopeObject):
     eventio_type = 2004
+    from .pixelset import dt1, dt2, dt3, dt4
+
+    def parse_data_field(self):
+        ''' '''
+        self.seek(0)
+
+        p1 = read_array(self, dtype=SimTelPixelset.dt1, count=1)[0]
+
+        dt2 = SimTelPixelset.dt2(num_pixels=p1['num_pixels'])
+        p2 = read_array(self, dtype=dt2, count=1)[0]
+
+        dt3 = SimTelPixelset.dt3(num_drawers=p2['num_drawers'])
+        p3 = read_array(self, dtype=dt3, count=1)[0]
+
+        nrefshape = read_utf8_like_signed_int(self)
+        lrefshape = read_utf8_like_signed_int(self)
+
+        dt4 = SimTelPixelset.dt4(nrefshape, lrefshape)
+        p4 = read_array(self, dtype=dt4, count=1)[0]
+
+        return merge_structured_arrays_into_dict([p1, p2, p3, p4])
 
 
 class SimTelPixelDisable(EventIOObject):
@@ -350,3 +383,11 @@ class SimTelPixelList(EventIOObject):
 
 class SimTelCalibEvent(EventIOObject):
     eventio_type = 2028
+
+
+def merge_structured_arrays_into_dict(arrays):
+    result = dict()
+    for array in arrays:
+        for name in array.dtype.names:
+            result[name] = array[name]
+    return result
