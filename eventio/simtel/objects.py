@@ -1,7 +1,11 @@
 ''' Methods to read in and parse the simtel_array EventIO object types '''
 import numpy as np
 from ..base import EventIOObject
-from ..tools import read_ints, read_eventio_string
+from ..tools import (
+    read_ints,
+    read_eventio_string,
+    read_utf8_like_signed_int_from_bytes
+)
 
 
 class History(EventIOObject):
@@ -69,6 +73,37 @@ class SimTelCamOrgan(EventIOObject):
 
 class SimTelPixelset(EventIOObject):
     eventio_type = 2004
+    from .pixelset import dt1, dt2, dt3, dt4
+
+    def parse_data_field(self):
+        ''' '''
+        self.seek(0)
+        data = self.read()
+
+        # each block below consumes the amount of bytes from `data`
+        # which is needed by that block.
+        # in the end `data` should either be empty or contain only a few
+        # trailing zero-bytes (In my tests I saw one zero byte in the end)
+
+        p1 = np.frombuffer(data, dtype=SimTelPixelset.dt1, count=1)[0]
+        data = data[SimTelPixelset.dt1.itemsize:]
+
+        dt2 = SimTelPixelset.dt2(num_pixels=p1['num_pixels'])
+        p2 = np.frombuffer(data, dtype=dt2, count=1)[0]
+        data = data[dt2.itemsize:]
+
+        dt3 = SimTelPixelset.dt3(num_drawers=p2['num_drawers'])
+        p3 = np.frombuffer(data, dtype=dt3, count=1)[0]
+        data = data[dt3.itemsize:]
+
+        nrefshape, data = read_utf8_like_signed_int_from_bytes(data)
+        lrefshape, data = read_utf8_like_signed_int_from_bytes(data)
+
+        dt4 = SimTelPixelset.dt4(nrefshape, lrefshape)
+        p4 = np.frombuffer(data, dtype=dt4, count=1)
+        data = data[dt4.itemsize:]
+
+        return merge_structured_arrays_into_dict([p1, p2, p3, p4])
 
 
 class SimTelPixelDisable(EventIOObject):
@@ -165,3 +200,11 @@ class SimTelPixelList(EventIOObject):
 
 class SimTelCalibEvent(EventIOObject):
     eventio_type = 2028
+
+
+def merge_structured_arrays_into_dict(arrays):
+    result = dict()
+    for array in arrays:
+        for name in array.dtype.names:
+            result[name] = array[name]
+    return result
