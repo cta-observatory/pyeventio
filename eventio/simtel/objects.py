@@ -400,6 +400,18 @@ class SimTelMCShower(EventIOObject):
 class SimTelMCEvent(EventIOObject):
     eventio_type = 2021
 
+    def parse_data_field(self):
+        ''' '''
+        self.seek(0)
+        #assert_exact_version(self, supported_version=1)
+
+        return {
+            'event': self.header.id,
+            'shower_num': read_from('<i', self)[0],
+            'xcore': read_from('<f', self)[0],
+            'ycore': read_from('<f', self)[0],
+            # 'aweight': read_from('<f', self),  # only in version 2
+        }
 
 class SimTelTelMoni(EventIOObject):
     eventio_type = 2022
