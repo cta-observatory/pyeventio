@@ -127,6 +127,63 @@ class SimTelPixelDisable(EventIOObject):
 class SimTelCamsoftset(EventIOObject):
     eventio_type = 2006
 
+    def __init__(self, header, parent):
+        super().__init__(header, parent)
+        self.telescope_id = header.id
+
+    def parse_data_field(self):
+        ''' '''
+        self.seek(0)
+
+        if self.header.version != 0:
+            raise IOError(
+                (
+                    'Unsupported version of MCRunHeader: '
+                    '{} only supports version 0'
+                    'the given version is {}'
+                ).format(
+                    self.__class__.__name__,
+                    self.header.version
+                )
+            )
+
+        dyn_trig_mode, = read_from('<i', self)
+        dyn_trig_threshold, = read_from('<i', self)
+        dyn_HV_mode, = read_from('<i', self)
+        dyn_HV_threshold, = read_from('<i', self)
+        data_red_mode, = read_from('<i', self)
+        zero_sup_mode, = read_from('<i', self)
+        zero_sup_num_thr, = read_from('<i', self)
+        zero_sup_thresholds = read_array(self, 'i4', zero_sup_num_thr)
+        unbiased_scale, = read_from('<i', self)
+        dyn_ped_mode, = read_from('<i', self)
+        dyn_ped_events, = read_from('<i', self)
+        dyn_ped_period, = read_from('<i', self)
+        monitor_cur_period, = read_from('<i', self)
+        report_cur_period, = read_from('<i', self)
+        monitor_HV_period, = read_from('<i', self)
+        report_HV_period, = read_from('<i', self)
+
+        return {
+            'telescope_id': self.telescope_id,
+            'dyn_trig_mode': dyn_trig_mode,
+            'dyn_trig_threshold': dyn_trig_threshold,
+            'dyn_HV_mode': dyn_HV_mode,
+            'dyn_HV_threshold': dyn_HV_threshold,
+            'data_red_mode': data_red_mode,
+            'zero_sup_mode': zero_sup_mode,
+            'zero_sup_num_thr': zero_sup_num_thr,
+            'zero_sup_thresholds': zero_sup_thresholds,
+            'unbiased_scale': unbiased_scale,
+            'dyn_ped_mode': dyn_ped_mode,
+            'dyn_ped_events': dyn_ped_events,
+            'dyn_ped_period': dyn_ped_period,
+            'monitor_cur_period': monitor_cur_period,
+            'report_cur_period': report_cur_period,
+            'monitor_HV_period': monitor_HV_period,
+            'report_HV_period': report_HV_period,
+        }
+
 
 class SimTelPointingCor(EventIOObject):
     eventio_type = 2007
