@@ -222,7 +222,6 @@ def test_2021_all():
             }
             '''
 
-from pprint import pprint
 
 def test_2023_all():
     from eventio import EventIOFile
