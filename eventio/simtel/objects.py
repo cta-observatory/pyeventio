@@ -50,7 +50,7 @@ class SimTelRunHeader(EventIOObject):
 
         part1 = read_array(self, dtype=dt1, count=1)[0]
         dt2 = SimTelRunHeader.runheader_dtype_part2(part1['n_telescopes'])
-        part2 = read_array(self, dt=dt2, count=1)[0]
+        part2 = read_array(self, dtype=dt2, count=1)[0]
 
         # rest is two null-terminated strings
         target = read_eventio_string(self)
