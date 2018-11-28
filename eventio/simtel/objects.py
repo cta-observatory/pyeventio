@@ -254,8 +254,28 @@ class SimTelPointingCor(EventIOObject):
     eventio_type = 2007
 
 
-class SimTelTrackSet(EventIOObject):
+class SimTelTrackSet(TelescopeObject):
     eventio_type = 2008
+
+    def parse_data_field(self):
+        tracking_info = {}
+        tracking_info['drive_type_az'], = read_from('<h', self)
+        tracking_info['drive_type_alt'], = read_from('<h', self)
+        tracking_info['zeropoint_az'], = read_from('<f', self)
+        tracking_info['zeropoint_alt'], = read_from('<f', self)
+
+        tracking_info['sign_az'], = read_from('<f', self)
+        tracking_info['sign_alt'], = read_from('<f', self)
+        tracking_info['resolution_az'], = read_from('<f', self)
+        tracking_info['resolution_alt'], = read_from('<f', self)
+        tracking_info['range_low_az'], = read_from('<f', self)
+        tracking_info['range_low_alt'], = read_from('<f', self)
+        tracking_info['range_high_az'], = read_from('<f', self)
+        tracking_info['range_high_alt'], = read_from('<f', self)
+        tracking_info['park_pos_az'], = read_from('<f', self)
+        tracking_info['park_pos_alt'], = read_from('<f', self)
+
+        return tracking_info
 
 
 class SimTelCentEvent(EventIOObject):

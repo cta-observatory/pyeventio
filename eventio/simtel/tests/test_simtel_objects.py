@@ -103,7 +103,7 @@ def test_2005_all_objects():
             assert len(pixel_disable['trigger_disabled']) == 0
             assert len(pixel_disable['HV_disabled']) == 0
 
-            
+
 def test_pixelset():
     from eventio import EventIOFile
     from eventio.simtel.objects import SimTelPixelset
@@ -116,10 +116,20 @@ def test_pixelset():
 
         assert pixelset['num_pixels'] == 1855
 
+
+def test_2008():
+    from eventio import EventIOFile
+    from eventio.simtel.objects import SimTelTrackSet
+
+    with EventIOFile(test_file) as f:
+        o = find_type(f, SimTelTrackSet)
+        assert o.telescope_id == 1
+        o.parse_data_field()
+
+
 def test_2006_all():
     from eventio import EventIOFile
     from eventio.simtel.objects import SimTelCamsoftset
-
 
     with EventIOFile(test_file) as f:
         all_2006_obs = [
