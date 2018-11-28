@@ -105,6 +105,25 @@ class SimTelTrackEvent(EventIOObject):
         self.eventio_type = header.type
         super().__init__(header, parent)
         self.telescope_id = self.type_to_telid(header.type)
+        if not self.id_to_telid(header.id) == self.telescope_id:
+            raise ValueError('Telescope IDs in type and header do not match')
+
+        self.has_raw = bool(header.id & 0x100)
+        self.has_cor = bool(header.id & 0x200)
+
+    def parse_data_field(self):
+        dt = []
+        if self.has_raw:
+            dt.extend([('azimuth_raw', '<f4'), ('altitude_raw', '<f4')])
+        if self.has_cor:
+            dt.extend([('azimuth_cor', '<f4'), ('altitude_cor', '<f4')])
+        dt = np.dtype(dt)
+        return np.frombuffer(self.read(dt.itemsize), dtype=dt)[0]
+
+    @staticmethod
+    def id_to_telid(eventio_id):
+        '''See io_hess.c, l. 2519'''
+        return (eventio_id & 0xff) | ((eventio_id & 0x3f000000) >> 16)
 
     @staticmethod
     def type_to_telid(eventio_type):
