@@ -86,3 +86,37 @@ def read_utf8_like_unsigned_int(f):
     )
 
     return int(b.view('>u8')[0])
+
+
+
+def read_utf8_like_signed_int_from_bytes(f):
+    # this is mostly a verbatim copy from eventio.c lines 1082ff
+    u, rest = read_utf8_like_unsigned_int_from_bytes(f)
+    # u values of 0,1,2,3,4,... here correspond to signed values of
+    #   0,-1,1,-2,2,... We have to test the least significant bit:
+    if (u & 1) == 1:  # Negative number;
+        return -(u >> 1) - 1, rest
+    else:
+        return u >> 1, rest
+
+def read_utf8_like_unsigned_int_from_bytes(f):
+    '''this returns a python integer'''
+    # this is a reimplementation from eventio.c lines 797ff
+    start_byte, f = f[0:1], f[1:]
+    b = np.zeros(8, dtype='B')
+
+    pos_of_msb_zero = POS_OF_MSB_ZERO_DICT[start_byte]
+
+    # mask away some leading ones in a[0]
+    masked_start_byte = start_byte[0] & ((1 << (pos_of_msb_zero + 1)) - 1)
+
+    # copy the interesting part from a into b and return a view
+    b[pos_of_msb_zero] = masked_start_byte
+    b[pos_of_msb_zero + 1:] = np.frombuffer(
+        f,
+        dtype='B',
+        count=7 - pos_of_msb_zero,
+    )
+    rest = f[7 - pos_of_msb_zero:]
+
+    return int(b.view('>u8')[0]), rest
