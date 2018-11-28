@@ -285,33 +285,36 @@ class SimTelCentEvent(EventIOObject):
             tels_trigger, = read_from('<h', self)
             event_info['n_triggered_telescopes'] = tels_trigger
 
-            event_info['triggered_telescopes'] = np.frombuffer(
-                self.read(tels_trigger * 2), dtype='<i2',
+            event_info['triggered_telescopes'] = read_array(
+                self, count=tels_trigger, dtype='<i2',
             )
-            event_info['trigger_times'] = np.frombuffer(
-                self.read(tels_trigger * 4), dtype='<f4',
+            event_info['trigger_times'] = read_array(
+                self, count=tels_trigger, dtype='<f4',
             )
             tels_data, = read_from('<h', self)
             event_info['n_telescopes_with_data'] = tels_data
-            event_info['telescopes_with_data'] = np.frombuffer(
-                self.read(tels_data * 2), dtype='<i2'
+            event_info['telescopes_with_data'] = read_array(
+                self, count=tels_data, dtype='<i2'
             )
 
         if self.header.version >= 2:
-            event_info['teltrg_type_mask'] = [
-                read_utf8_like_unsigned_int(self)
-                for _ in range(tels_trigger)
-            ]
-            event_info['teltrg_time_by_type'] = []
-            for i, teltrg_type_mask in enumerate(event_info['teltrg_type_mask']):
-                event_info['teltrg_time_by_type'].append({})
+            # konrad saves the trigger mask as crazy int, but it uses only 4 bits
+            # so it should be indentical to a normal unsigned int with 1 byte
+            event_info['teltrg_type_mask'] = read_array(
+                self, count=tels_trigger, dtype='uint8'
+            )
+            assert np.all(event_info['teltrg_type_mask'] < 128), 'Unexpected trigger mask'
 
-                # trigger times are only written if more than one trigger there
-                if teltrg_type_mask not in {0b001, 0b010, 0b100}:
+            event_info['teltrg_time_by_type'] = {}
+            it = zip(event_info['triggered_telescopes'], event_info['teltrg_type_mask'])
+            for tel_id, mask in it:
+                # trigger times are only written if more than one trigger is there
+                if mask not in {0b001, 0b010, 0b100}:
+                    event_info['teltrg_time_by_type'][tel_id] = {}
                     for trigger in range(3):
-                        if bool_bit_from_pos(teltrg_type_mask, trigger):
+                        if bool_bit_from_pos(mask, trigger):
                             t = read_from('<f', self)[0]
-                            event_info['teltrg_time_by_type'][i][trigger] = t
+                            event_info['teltrg_time_by_type'][tel_id][trigger] = t
 
         return event_info
 
