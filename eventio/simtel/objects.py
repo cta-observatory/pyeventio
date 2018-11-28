@@ -6,8 +6,11 @@ from ..tools import (
     read_eventio_string,
     read_from,
     read_utf8_like_signed_int,
-    read_array
+    read_utf8_like_unsigned_int,
+    read_array,
+    read_time,
 )
+from ..bits import bool_bit_from_pos
 
 
 class TelescopeObject(EventIOObject):
@@ -198,6 +201,7 @@ class SimTelPixelDisable(EventIOObject):
             'HV_disabled': HV_disabled,
         }
 
+
 class SimTelCamsoftset(EventIOObject):
     eventio_type = 2006
 
@@ -294,6 +298,59 @@ class SimTelTrackSet(TelescopeObject):
 
 class SimTelCentEvent(EventIOObject):
     eventio_type = 2009
+
+    def __init__(self, header, parent):
+        super().__init__(header, parent)
+
+        if header.version > 2:
+            raise IOError('Unsupported CENTEVENT Version: {}'.format(header.version))
+
+        self.global_count = self.header.id
+
+    def parse_data_field(self):
+
+        event_info = {}
+        event_info['cpu_time'] = read_time(self)
+        event_info['gps_time'] = read_time(self)
+        event_info['trigger_pattern'], = read_from('<i', self)
+        event_info['data_pattern'], = read_from('<i', self)
+
+        if self.header.version >= 1:
+            tels_trigger, = read_from('<h', self)
+            event_info['n_triggered_telescopes'] = tels_trigger
+
+            event_info['triggered_telescopes'] = read_array(
+                self, count=tels_trigger, dtype='<i2',
+            )
+            event_info['trigger_times'] = read_array(
+                self, count=tels_trigger, dtype='<f4',
+            )
+            tels_data, = read_from('<h', self)
+            event_info['n_telescopes_with_data'] = tels_data
+            event_info['telescopes_with_data'] = read_array(
+                self, count=tels_data, dtype='<i2'
+            )
+
+        if self.header.version >= 2:
+            # konrad saves the trigger mask as crazy int, but it uses only 4 bits
+            # so it should be indentical to a normal unsigned int with 1 byte
+            event_info['teltrg_type_mask'] = read_array(
+                self, count=tels_trigger, dtype='uint8'
+            )
+            assert np.all(event_info['teltrg_type_mask'] < 128), 'Unexpected trigger mask'
+
+            event_info['teltrg_time_by_type'] = {}
+            it = zip(event_info['triggered_telescopes'], event_info['teltrg_type_mask'])
+            for tel_id, mask in it:
+                # trigger times are only written if more than one trigger is there
+                if mask not in {0b001, 0b010, 0b100}:
+                    event_info['teltrg_time_by_type'][tel_id] = {}
+                    for trigger in range(3):
+                        if bool_bit_from_pos(mask, trigger):
+                            t = read_from('<f', self)[0]
+                            event_info['teltrg_time_by_type'][tel_id][trigger] = t
+
+        return event_info
 
 
 class SimTelTrackEvent(EventIOObject):

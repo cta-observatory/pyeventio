@@ -197,6 +197,20 @@ def test_2008():
         assert tracking_info['range_high_alt'] == approx(2 * np.pi)
 
 
+def test_2009():
+    from eventio import EventIOFile
+    from eventio.simtel.objects import SimTelEvent, SimTelCentEvent
+
+    with EventIOFile(test_file) as f:
+        o = find_type(f, SimTelEvent)
+        s = find_type(o, SimTelCentEvent)
+
+        data = s.parse_data_field()
+        assert 'cpu_time' in data
+        assert 'gps_time' in data
+        assert 'teltrg_time_by_type' in data
+
+
 def test_2021_all():
     from eventio import EventIOFile
     from eventio.simtel.objects import SimTelMCEvent
