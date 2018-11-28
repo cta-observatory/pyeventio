@@ -203,3 +203,80 @@ def test_2021_all():
                 'ycore': 1743.0797119140625
             }
             '''
+
+def test_2022_all():
+    from eventio import EventIOFile
+    from eventio.simtel.objects import SimTelTelMoni
+
+    with EventIOFile(test_file) as f:
+        all_2022_obs = [
+            o for o in f
+            if o.header.type == SimTelTelMoni.eventio_type
+        ]
+
+        for i, o in enumerate(all_2022_obs):
+            d = o.parse_data_field()
+            bytes_not_consumed = o.read()
+            # assert parse_data_field() consumed nearly all data,
+            # and all bytes which are not consumed are zero
+            # DN: testing this manually resulted always in 1 byte not
+            #     being consumed.
+            assert len(bytes_not_consumed) < 4
+            for byte_ in bytes_not_consumed:
+                assert byte_ == 0
+
+            assert d['telescope_id'] == i + 1
+
+            # print(d)
+            # Looks reasonable
+            '''
+            {
+                'status_time': (1408549473, 35597000),
+                'trig_time': (1408549473, 35597000),
+                'ped_noise_time': (1408549473, 35597000),
+                'hv_temp_time': (1408549473, 35597000),
+                'dc_rate_time': (1408549473, 35597000),
+                'hv_thr_time': (1408549473, 35597000),
+                'set_daq_time': (1408549473, 35597000),
+                'status_bits': 4778,
+                'coinc_count': 0,
+                'event_count': 0,
+                'trigger_rate': 750.0,
+                'sector_rate': array([34.910618, 26.935232, 34.35181 , ..., 38.751358, 28.185534, 33.873787], dtype=float32),
+                'event_rate': 700.0,
+                'data_rate': 1.2999999523162842,
+                'mean_significant': 0.0,
+                'num_ped_slices': 30,
+                'pedestal': array([[2979.467 , 3009.359 , 3010.3691, ..., 2990.7085, 2929.3687, 2981.3044]], dtype=float32),
+                'noise': array([[5.477226, 5.477226, 5.477226, ..., 5.477226, 5.477226, 5.477226]], dtype=float32),
+                'num_drawer_temp': 0,
+                'num_camera_temp': 0,
+                'hv_v_mon': array([836, 814, 823, ..., 893, 858, 847], dtype=int16),
+                'hv_i_mon': array([118, 114, 116, ..., 126, 121, 119], dtype=int16),
+                'hv_stat': array([1, 1, 1, ..., 1, 1, 1], dtype=uint8),
+                'drawer_temp': array([], shape=(116, 0), dtype=int16),
+                'camera_temp': array([], dtype=int16),
+                'current': array([18, 19, 19, ..., 18, 18, 19], dtype=uint16),
+                'scaler': array([201, 201, 201, ..., 201, 201, 201], dtype=uint16),
+                'hv_dac': array([ 983,  958,  968, ..., 1051, 1009,  997], dtype=uint16),
+                'thresh_dac': array([
+                   6870, 6870, 6870, 6870, 6870, 6870, 6870, 6870, 6870, 6870, 6870,
+                   6870, 6870, 6870, 6870, 6870, 6870, 6870, 6870, 6870, 6870, 6870,
+                   6870, 6870, 6870, 6870, 6870, 6870, 6870, 6870, 6870, 6870, 6870,
+                   6870, 6870, 6870, 6870, 6870, 6870, 6870, 6870, 6870, 6870, 6870,
+                   6870, 6870, 6870, 6870, 6870, 6870, 6870, 6870, 6870, 6870, 6870,
+                   6870, 6870, 6870, 6870, 6870, 6870, 6870, 6870, 6870, 6870, 6870,
+                   6870, 6870, 6870, 6870, 6870, 6870, 6870, 6870, 6870, 6870, 6870,
+                   6870, 6870, 6870, 6870, 6870, 6870, 6870, 6870, 6870, 6870, 6870,
+                   6870, 6870, 6870, 6870, 6870, 6870, 6870, 6870, 6870, 6870, 6870,
+                   6870, 6870, 6870, 6870, 6870, 6870, 6870, 6870, 6870, 6870, 6870,
+                   6870, 6870, 6870, 6870, 6870, 6870], dtype=uint16),
+                'hv_set': array([1, 1, 1, ..., 1, 1, 1], dtype=uint8),
+                'trig_set': array([1, 1, 1, ..., 1, 1, 1], dtype=uint8),
+                'daq_conf': 1,
+                'daq_scaler_win': 0,
+                'daq_nd': 0,
+                'daq_acc': 0,
+                'daq_nl': 30
+            }
+            '''

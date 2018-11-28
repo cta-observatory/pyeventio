@@ -442,12 +442,6 @@ class SimTelTelMoni(EventIOObject):
         # nd = read_utf8_like_signed_int(self)
         # ng = read_utf8_like_signed_int(self)
 
-        part_parser_args = {
-            'num_sectors': ns,
-            'num_gains': ng,
-            'num_pixels': np,
-            'num_drawers': nd,
-        }
         result = {
             'telescope_id': telescope_id,
             'what': what,
@@ -455,7 +449,15 @@ class SimTelTelMoni(EventIOObject):
             'new_parts': new_parts,
             'monitor_id': monitor_id,
             'moni_time': moni_time,
-        }.update(part_parser_args)
+        }
+        part_parser_args = {
+            'num_sectors': ns,
+            'num_gains': ng,
+            'num_pixels': np,
+            'num_drawers': nd,
+        }
+        result.update(part_parser_args)
+
 
         part_parser_map = {
             0x00: self._nothing_changed_here,
@@ -468,7 +470,6 @@ class SimTelTelMoni(EventIOObject):
             0x40: self._DAQ_config_changed__what_and_0x40,
         }
 
-        result = {}
         for part_id in range(8):
             part_parser = part_parser_map[what & (1 << part_id)]
             result.update(part_parser(**part_parser_args))
