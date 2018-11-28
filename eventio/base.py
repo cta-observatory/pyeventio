@@ -194,7 +194,7 @@ class EventIOObject:
                 'Only EventIOObjects that contain just subobjects are iterable'
             )
 
-        if self._next_header_pos > self.header.length:
+        if self._next_header_pos >= self.header.length:
             raise StopIteration
 
         self.seek(self._next_header_pos)
