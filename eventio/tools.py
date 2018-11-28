@@ -41,6 +41,12 @@ def read_from_without_position_change(fmt, f):
     return result
 
 
+def read_time(f):
+    '''Read a time as combination of seconds and nanoseconds'''
+    sec, nano = read_from('<ii', f)
+    return sec, nano
+
+
 def read_utf8_like_signed_int(f):
     # this is mostly a verbatim copy from eventio.c lines 1082ff
     u = read_utf8_like_unsigned_int(f)
