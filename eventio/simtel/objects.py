@@ -28,6 +28,7 @@ class TelescopeObject(EventIOObject):
             self.header.data_field_first_byte
         )
 
+
 def assert_exact_version(self, supported_version):
     if self.header.version != supported_version:
         raise IOError(
@@ -41,6 +42,7 @@ def assert_exact_version(self, supported_version):
                 given_version=self.header.version,
             )
         )
+
 
 class History(EventIOObject):
     eventio_type = 70
@@ -432,6 +434,7 @@ class SimTelMCEvent(EventIOObject):
             'ycore': read_from('<f', self)[0],
             # 'aweight': read_from('<f', self),  # only in version 2
         }
+
 
 class SimTelTelMoni(EventIOObject):
     eventio_type = 2022
