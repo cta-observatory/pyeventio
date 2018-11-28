@@ -515,7 +515,7 @@ class SimTelTelMoni(EventIOObject):
     def _HV_and_temp_changed__what_and_0x08(
         self, num_pixels, num_drawers, **kwargs
     ):
-        hv_temp_time = read_time(self),
+        hv_temp_time = read_time(self)
         num_drawer_temp = read_from('<h', self)[0]
         num_camera_temp = read_from('<h', self)[0]
         return {
