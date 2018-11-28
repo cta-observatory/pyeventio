@@ -5,6 +5,7 @@ from ..tools import (
     read_ints,
     read_eventio_string,
     read_from,
+    read_time,
     read_utf8_like_signed_int,
     read_array
 )
@@ -483,7 +484,9 @@ class SimTelTelMoni(EventIOObject):
             'status_bits': read_from('<i', self)[0],
         }
 
-    def _counts_and_rates_changed__what_and_0x02(self, num_sectors, **kwargs):
+    def _counts_and_rates_changed__what_and_0x02(
+        self, num_sectors, **kwargs
+    ):
         return {
             'trig_time': read_time(self),
             'coinc_count': read_from('<l', self)[0],
@@ -495,7 +498,9 @@ class SimTelTelMoni(EventIOObject):
             'mean_significant': read_from('<f', self)[0],
         }
 
-    def _pedestal_and_noice_changed__what_and_0x04(self, num_gains, num_pixels, **kwargs):
+    def _pedestal_and_noice_changed__what_and_0x04(
+        self, num_gains, num_pixels, **kwargs
+    ):
         return {
             'ped_noise_time': read_time(self),
             'num_ped_slices': read_from('<h', self)[0],
@@ -507,7 +512,9 @@ class SimTelTelMoni(EventIOObject):
             ).reshape((num_gains, num_pixels)),
         }
 
-    def _HV_and_temp_changed__what_and_0x08(self, num_pixels, num_drawers, **kwargs):
+    def _HV_and_temp_changed__what_and_0x08(
+        self, num_pixels, num_drawers, **kwargs
+    ):
         hv_temp_time = read_time(self),
         num_drawer_temp = read_from('<h', self)[0]
         num_camera_temp = read_from('<h', self)[0]
@@ -524,14 +531,18 @@ class SimTelTelMoni(EventIOObject):
             'camera_temp': read_array(self, 'i2', num_camera_temp),
         }
 
-    def _pixel_scalers_DC_i_changed__what_and_0x10(self, num_pixels, **kwargs):
+    def _pixel_scalers_DC_i_changed__what_and_0x10(
+        self, num_pixels, **kwargs
+    ):
         return {
             'dc_rate_time': read_time(self),
             'current': read_array(self, 'u2', num_pixels),
             'scaler': read_array(self, 'u2', num_pixels),
         }
 
-    def _HV_thresholds_changed__what_and_0x20(self, num_pixels, num_drawers,  **kwargs):
+    def _HV_thresholds_changed__what_and_0x20(
+        self, num_pixels, num_drawers, **kwargs
+    ):
         return {
             'hv_thr_time': read_time(self),
             'hv_dac': read_array(self, 'u2', num_pixels),
@@ -540,7 +551,9 @@ class SimTelTelMoni(EventIOObject):
             'trig_set': read_array(self, 'B', num_pixels),
         }
 
-    def _DAQ_config_changed__what_and_0x40(self, **kwargs):
+    def _DAQ_config_changed__what_and_0x40(
+        self, **kwargs
+    ):
         return {
             'set_daq_time': read_time(self),
             'daq_conf': read_from('<H', self)[0],
