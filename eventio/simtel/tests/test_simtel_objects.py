@@ -103,7 +103,7 @@ def test_2005_all_objects():
             assert len(pixel_disable['trigger_disabled']) == 0
             assert len(pixel_disable['HV_disabled']) == 0
 
-            
+
 def test_pixelset():
     from eventio import EventIOFile
     from eventio.simtel.objects import SimTelPixelset
@@ -152,3 +152,54 @@ def test_2006_all():
             assert d['report_cur_period'] == 0
             assert d['monitor_HV_period'] == 0
             assert d['report_HV_period'] == 0
+
+
+def test_2007_all():
+    from eventio import EventIOFile
+    from eventio.simtel.objects import SimTelPointingCor
+
+
+    with EventIOFile(test_file) as f:
+        all_2007_obs = [
+            o for o in f
+            if o.header.type == SimTelPointingCor.eventio_type
+        ]
+
+        for i, o in enumerate(all_2007_obs):
+
+            d = o.parse_data_field()
+
+            # assert parse_data_field() consumed all data from o
+            assert len(o.read()) == 0
+
+            # now check the values
+            assert d['telescope_id'] == i + 1
+            assert d['function_type'] ==  0
+            assert d['num_param'] ==  0
+            assert len(d['pointing_param']) == 0
+
+
+def test_2021_all():
+    from eventio import EventIOFile
+    from eventio.simtel.objects import SimTelMCEvent
+
+    with EventIOFile(test_file) as f:
+        all_2021_obs = [
+            o for o in f
+            if o.header.type == SimTelMCEvent.eventio_type
+        ]
+
+        for i, o in enumerate(all_2021_obs):
+            d = o.parse_data_field()
+            # assert parse_data_field() consumed all data from o
+            assert len(o.read()) == 0
+
+            assert d['shower_num'] == d['event'] // 100
+            '''
+            {
+                'event': 11909,
+                'shower_num': 119,
+                'xcore': 1050.17626953125,
+                'ycore': 1743.0797119140625
+            }
+            '''
