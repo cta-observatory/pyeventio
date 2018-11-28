@@ -64,3 +64,42 @@ def test_track():
         pointing = s.parse_data_field()
         assert 'azimuth_raw' in pointing.dtype.names
         assert 'altitude_raw' in pointing.dtype.names
+
+
+
+def test_2006_all():
+    from eventio import EventIOFile
+    from eventio.simtel.objects import SimTelCamsoftset
+
+
+    with EventIOFile(test_file) as f:
+        all_2006_obs = [
+            o for o in f
+            if o.header.type == SimTelCamsoftset.eventio_type
+        ]
+
+        for i, o in enumerate(all_2006_obs):
+
+            d = o.parse_data_field()
+
+            # assert parse_data_field() consumed all data from o
+            assert len(o.read()) == 0
+
+            # now check the values
+            assert d['telescope_id'] == i + 1
+            assert d['dyn_trig_mode'] == 0
+            assert d['dyn_trig_threshold'] == 0
+            assert d['dyn_HV_mode'] == 0
+            assert d['dyn_HV_threshold'] == 0
+            assert d['data_red_mode'] == 0
+            assert d['zero_sup_mode'] == 0
+            assert d['zero_sup_num_thr'] == 0
+            assert len(d['zero_sup_thresholds']) == 0
+            assert d['unbiased_scale'] == 0
+            assert d['dyn_ped_mode'] == 0
+            assert d['dyn_ped_events'] == 0
+            assert d['dyn_ped_period'] == 0
+            assert d['monitor_cur_period'] == 0
+            assert d['report_cur_period'] == 0
+            assert d['monitor_HV_period'] == 0
+            assert d['report_HV_period'] == 0
