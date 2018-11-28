@@ -14,7 +14,7 @@ def test_read_string():
 
     assert read_eventio_string(buffer) == s
 
-def test_get_count():
+def test_read_utf8_like_unsigned_int():
     from eventio.tools import read_utf8_like_unsigned_int
     testcases = [
         # (input, output, tell_after_done)
