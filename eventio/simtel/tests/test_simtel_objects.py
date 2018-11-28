@@ -221,3 +221,34 @@ def test_2021_all():
                 'ycore': 1743.0797119140625
             }
             '''
+
+from pprint import pprint
+
+def test_2023_all():
+    from eventio import EventIOFile
+    from eventio.simtel.objects import SimTelLasCal
+
+    with EventIOFile(test_file) as f:
+        all_2023_obs = [
+            o for o in f
+            if o.header.type == SimTelLasCal.eventio_type
+        ]
+
+        for i, o in enumerate(all_2023_obs):
+            d = o.parse_data_field()
+            # assert parse_data_field() consumed all data from o
+            assert len(o.read()) == 0
+
+            assert d['telescope_id'] ==  i + 1
+            assert d['lascal_id'] == 2
+
+    '''
+    {
+    'telescope_id': 1,
+    'known': array([[ True,  True,  True, ...,  True,  True,  True]]),
+    'lascal_id': 2,
+    'max_int_frac': array([0.], dtype=float32),
+    'max_pixtm_frac': array([0.], dtype=float32),
+    'calib': array([[0.02838226, 0.02617863, 0.02520496, ..., 0.02812363, 0.02769747, 0.02691549]], dtype=float32),
+    'tm_calib': array([[-21.383808, -21.283247, -21.452444, ..., -22.023653, -21.650948, -21.601557]], dtype=float32)}
+    '''
