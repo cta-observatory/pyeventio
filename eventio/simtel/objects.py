@@ -138,8 +138,8 @@ class SimTelPixelset(EventIOObject):
         dt3 = SimTelPixelset.dt3(num_drawers=p2['num_drawers'])
         p3 = read_array(self, dtype=dt3, count=1)[0]
 
-        nrefshape, data = read_utf8_like_signed_int(self)
-        lrefshape, data = read_utf8_like_signed_int(self)
+        nrefshape = read_utf8_like_signed_int(self)
+        lrefshape = read_utf8_like_signed_int(self)
 
         dt4 = SimTelPixelset.dt4(nrefshape, lrefshape)
         p4 = read_array(self, dtype=dt4, count=1)[0]
