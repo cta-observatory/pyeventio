@@ -5,7 +5,8 @@ from ..tools import (
     read_ints,
     read_eventio_string,
     read_from,
-    read_utf8_like_signed_int_from_bytes
+    read_utf8_like_signed_int,
+    read_array
 )
 
 
@@ -53,17 +54,9 @@ class SimTelRunHeader(EventIOObject):
         self.seek(0)
         dt1 = SimTelRunHeader.runheader_dtype_part1
 
-        part1 = np.frombuffer(
-            self.read(dt1.itemsize),
-            dtype=dt1,
-            count=1,
-        )[0]
+        part1 = read_array(self, dtype=dt1, count=1)[0]
         dt2 = SimTelRunHeader.runheader_dtype_part2(part1['n_telescopes'])
-        part2 = np.frombuffer(
-            self.read(dt2.itemsize),
-            dtype=dt2,
-            count=1,
-        )[0]
+        part2 = read_array(self, dtype=dt2, count=1)[0]
 
         # rest is two null-terminated strings
         target = read_eventio_string(self)
@@ -84,7 +77,6 @@ class SimTelMCRunHeader(EventIOObject):
     def parse_data_field(self):
         ''' '''
         self.seek(0)
-        data = self.read()
 
         if self.header.version not in self.mc_runheader_dtype_map:
             raise IOError(
@@ -92,11 +84,7 @@ class SimTelMCRunHeader(EventIOObject):
             )
 
         header_type = self.mc_runheader_dtype_map[self.header.version]
-        return np.frombuffer(
-            data,
-            dtype=header_type,
-            count=1,
-        ).view(np.recarray)[0]
+        return read_array(self, dtype=header_type, count=1).view(np.recarray)[0]
 
 
 class SimTelCamSettings(EventIOObject):
@@ -109,8 +97,8 @@ class SimTelCamSettings(EventIOObject):
     def parse_data_field(self):
         n_pixels, = read_from('<i', self)
         focal_length, = read_from('<f', self)
-        pixel_x = np.frombuffer(self.read(n_pixels * 4), dtype='float32')
-        pixel_y = np.frombuffer(self.read(n_pixels * 4), dtype='float32')
+        pixel_x = read_array(self, count=n_pixels, dtype='float32')
+        pixel_y = read_array(self, count=n_pixels, dtype='float32')
 
         return {
             'telescope_id': self.telescope_id,
@@ -141,30 +129,20 @@ class SimTelPixelset(EventIOObject):
     def parse_data_field(self):
         ''' '''
         self.seek(0)
-        data = self.read()
 
-        # each block below consumes the amount of bytes from `data`
-        # which is needed by that block.
-        # in the end `data` should either be empty or contain only a few
-        # trailing zero-bytes (In my tests I saw one zero byte in the end)
-
-        p1 = np.frombuffer(data, dtype=SimTelPixelset.dt1, count=1)[0]
-        data = data[SimTelPixelset.dt1.itemsize:]
+        p1 = read_array(self, dtype=SimTelPixelset.dt1, count=1)[0]
 
         dt2 = SimTelPixelset.dt2(num_pixels=p1['num_pixels'])
-        p2 = np.frombuffer(data, dtype=dt2, count=1)[0]
-        data = data[dt2.itemsize:]
+        p2 = read_array(self, dtype=dt2, count=1)[0]
 
         dt3 = SimTelPixelset.dt3(num_drawers=p2['num_drawers'])
-        p3 = np.frombuffer(data, dtype=dt3, count=1)[0]
-        data = data[dt3.itemsize:]
+        p3 = read_array(self, dtype=dt3, count=1)[0]
 
-        nrefshape, data = read_utf8_like_signed_int_from_bytes(data)
-        lrefshape, data = read_utf8_like_signed_int_from_bytes(data)
+        nrefshape, data = read_utf8_like_signed_int(self)
+        lrefshape, data = read_utf8_like_signed_int(self)
 
         dt4 = SimTelPixelset.dt4(nrefshape, lrefshape)
-        p4 = np.frombuffer(data, dtype=dt4, count=1)
-        data = data[dt4.itemsize:]
+        p4 = read_array(self, dtype=dt4, count=1)[0]
 
         return merge_structured_arrays_into_dict([p1, p2, p3, p4])
 
@@ -215,8 +193,7 @@ class SimTelTrackEvent(EventIOObject):
             dt.extend([('azimuth_raw', '<f4'), ('altitude_raw', '<f4')])
         if self.has_cor:
             dt.extend([('azimuth_cor', '<f4'), ('altitude_cor', '<f4')])
-        dt = np.dtype(dt)
-        return np.frombuffer(self.read(dt.itemsize), dtype=dt)[0]
+        return read_array(self, count=1, dtype=dt)[0]
 
     @staticmethod
     def id_to_telid(eventio_id):
