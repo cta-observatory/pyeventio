@@ -28,6 +28,19 @@ class TelescopeObject(EventIOObject):
             self.header.data_field_first_byte
         )
 
+def assert_exact_version(self, supported_version):
+    if self.header.version != supported_version:
+        raise IOError(
+            (
+                'Unsupported version of {name}'
+                'only supports version {supported_version}'
+                'the given version is {given_version}'
+            ).format(
+                name=self.__class__.__name__,
+                supported_version=supported_version,
+                given_version=self.header.version,
+            )
+        )
 
 class History(EventIOObject):
     eventio_type = 70
@@ -164,13 +177,7 @@ class SimTelPixelDisable(EventIOObject):
         ''' '''
         self.seek(0)
 
-        if not self.header.version == 0:
-            raise IOError(
-                (
-                    'Unsupported version of {}: only version 0 is supported '
-                    'this is version {}'
-                ).format(self.__class__.__name__, self.header.version)
-            )
+        assert_exact_version(self, supported_version=0)
 
         num_trig_disabled, = read_from('<i', self)
         trigger_disabled = read_array(
@@ -199,18 +206,7 @@ class SimTelCamsoftset(EventIOObject):
     def parse_data_field(self):
         ''' '''
         self.seek(0)
-
-        if self.header.version != 0:
-            raise IOError(
-                (
-                    'Unsupported version of MCRunHeader: '
-                    '{} only supports version 0'
-                    'the given version is {}'
-                ).format(
-                    self.__class__.__name__,
-                    self.header.version
-                )
-            )
+        assert_exact_version(self, supported_version=0)
 
         dyn_trig_mode, = read_from('<i', self)
         dyn_trig_threshold, = read_from('<i', self)
@@ -250,8 +246,24 @@ class SimTelCamsoftset(EventIOObject):
         }
 
 
-class SimTelPointingCor(EventIOObject):
+class SimTelPointingCor(TelescopeObject):
     eventio_type = 2007
+
+    def parse_data_field(self):
+        ''' '''
+        self.seek(0)
+        assert_exact_version(self, supported_version=0)
+
+        function_type, = read_from('<i', self)
+        num_param, = read_from('<i', self)
+        pointing_param = read_array(self, 'f4', num_param)
+
+        return {
+            'telescope_id': self.telescope_id,
+            'function_type': function_type,
+            'num_param': num_param,
+            'pointing_param': pointing_param,
+        }
 
 
 class SimTelTrackSet(EventIOObject):
