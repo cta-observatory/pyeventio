@@ -156,6 +156,38 @@ class SimTelPixelset(TelescopeObject):
 class SimTelPixelDisable(EventIOObject):
     eventio_type = 2005
 
+    def __init__(self, header, parent):
+        super().__init__(header, parent)
+        self.telescope_id = header.id
+
+    def parse_data_field(self):
+        ''' '''
+        self.seek(0)
+
+        if not self.header.version == 0:
+            raise IOError(
+                (
+                    'Unsupported version of {}: only version 0 is supported '
+                    'this is version {}'
+                ).format(self.__class__.__name__, self.header.version)
+            )
+
+        num_trig_disabled, = read_from('<i', self)
+        trigger_disabled = read_array(
+            self,
+            count=num_trig_disabled,
+            dtype='i4'
+        )
+        num_HV_disabled, = read_from('<i', self)
+        HV_disabled = read_array(self, count=num_trig_disabled, dtype='i4')
+
+        return {
+            'telescope_id': self.telescope_id,
+            'num_trig_disabled': num_trig_disabled,
+            'trigger_disabled': trigger_disabled,
+            'num_HV_disabled': num_HV_disabled,
+            'HV_disabled': HV_disabled,
+        }
 
 class SimTelCamsoftset(EventIOObject):
     eventio_type = 2006
