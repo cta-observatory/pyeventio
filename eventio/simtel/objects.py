@@ -1,9 +1,10 @@
-''' Methods to read in and parse the simtel_array EventIO object types '''
+''' Implementations of the simtel_array EventIO object types '''
 import numpy as np
 from ..base import EventIOObject
 from ..tools import (
     read_ints,
     read_eventio_string,
+    read_from,
     read_utf8_like_signed_int_from_bytes
 )
 
@@ -38,6 +39,42 @@ class HistoryConfig(EventIOObject):
 
 class SimTelRunHeader(EventIOObject):
     eventio_type = 2000
+    from .runheader_dtypes import (
+        runheader_dtype_part1,
+        runheader_dtype_part2
+    )
+
+    def __init__(self, header, parent):
+        super().__init__(header, parent)
+        self.run_id = self.header.id
+
+    def parse_data_field(self):
+        '''See write_hess_runheader l. 184 io_hess.c '''
+        self.seek(0)
+        dt1 = SimTelRunHeader.runheader_dtype_part1
+
+        part1 = np.frombuffer(
+            self.read(dt1.itemsize),
+            dtype=dt1,
+            count=1,
+        )[0]
+        dt2 = SimTelRunHeader.runheader_dtype_part2(part1['n_telescopes'])
+        part2 = np.frombuffer(
+            self.read(dt2.itemsize),
+            dtype=dt2,
+            count=1,
+        )[0]
+
+        # rest is two null-terminated strings
+        target = read_eventio_string(self)
+        observer = read_eventio_string(self)
+
+        result = dict(zip(part1.dtype.names, part1))
+        result.update(dict(zip(part2.dtype.names, part2)))
+        result['target'] = target
+        result['observer'] = observer
+
+        return result
 
 
 class SimTelMCRunHeader(EventIOObject):
@@ -59,12 +96,38 @@ class SimTelMCRunHeader(EventIOObject):
             data,
             dtype=header_type,
             count=1,
-            offset=0,
         ).view(np.recarray)[0]
 
 
 class SimTelCamSettings(EventIOObject):
     eventio_type = 2002
+
+    def __init__(self, header, parent):
+        super().__init__(header, parent)
+        self.telescope_id = header.id
+
+    def parse_data_field(self):
+        n_pixels, = read_from('<i', self)
+        focal_length, = read_from('<f', self)
+        pixel_x = np.frombuffer(self.read(n_pixels * 4), dtype='float32')
+        pixel_y = np.frombuffer(self.read(n_pixels * 4), dtype='float32')
+
+        return {
+            'telescope_id': self.telescope_id,
+            'n_pixels': n_pixels,
+            'focal_length': focal_length,
+            'pixel_x': pixel_x,
+            'pixel_y': pixel_y,
+        }
+
+    def __repr__(self):
+        return '{}[{}](telescope_id={}, size={}, first_byte={})'.format(
+            self.__class__.__name__,
+            self.eventio_type,
+            self.telescope_id,
+            self.header.length,
+            self.header.data_field_first_byte
+        )
 
 
 class SimTelCamOrgan(EventIOObject):
@@ -127,11 +190,91 @@ class SimTelCentEvent(EventIOObject):
 
 
 class SimTelTrackEvent(EventIOObject):
-    eventio_type = 2100
+    '''Tracking information for a simtel telescope event
+    This has no clear type number, since
+    Konrad Bernlöhr decided to encode the telescope id into
+    the container type as 2100 + tel_id % 100 + 1000 * (tel_id // 100)
+
+    So a container with type 2105 belongs to tel_id 5, 3105 to 105
+    '''
+    eventio_type = None
+
+    def __init__(self, header, parent):
+        self.eventio_type = header.type
+        super().__init__(header, parent)
+        self.telescope_id = self.type_to_telid(header.type)
+        if not self.id_to_telid(header.id) == self.telescope_id:
+            raise ValueError('Telescope IDs in type and header do not match')
+
+        self.has_raw = bool(header.id & 0x100)
+        self.has_cor = bool(header.id & 0x200)
+
+    def parse_data_field(self):
+        dt = []
+        if self.has_raw:
+            dt.extend([('azimuth_raw', '<f4'), ('altitude_raw', '<f4')])
+        if self.has_cor:
+            dt.extend([('azimuth_cor', '<f4'), ('altitude_cor', '<f4')])
+        dt = np.dtype(dt)
+        return np.frombuffer(self.read(dt.itemsize), dtype=dt)[0]
+
+    @staticmethod
+    def id_to_telid(eventio_id):
+        '''See io_hess.c, l. 2519'''
+        return (eventio_id & 0xff) | ((eventio_id & 0x3f000000) >> 16)
+
+    @staticmethod
+    def type_to_telid(eventio_type):
+        base = eventio_type - 2100
+        return 100 * (base // 1000) + base % 1000
+
+    @staticmethod
+    def telid_to_type(telescope_id):
+        return 2100 + telescope_id % 100 + 1000 * (telescope_id // 100)
+
+    def __repr__(self):
+        return '{}[{}](telescope_id={}, size={}, first_byte={})'.format(
+            self.__class__.__name__,
+            self.eventio_type,
+            self.telescope_id,
+            self.header.length,
+            self.header.data_field_first_byte
+        )
 
 
 class SimTelTelEvent(EventIOObject):
-    eventio_type = 2200
+    '''A simtel telescope event
+    This has no clear type number, since
+    Konrad Bernlöhr decided to encode the telescope id into
+    the container type as 2200 + tel_id % 100 + 1000 * (tel_id // 100)
+
+    So a container with type 2205 belongs to tel_id 5, 3205 to 105
+    '''
+    eventio_type = None
+
+    def __init__(self, header, parent):
+        self.eventio_type = header.type
+        super().__init__(header, parent)
+        self.telescope_id = self.type_to_telid(header.type)
+        self.global_count = header.id
+
+    @staticmethod
+    def type_to_telid(eventio_type):
+        base = eventio_type - 2200
+        return 100 * (base // 1000) + base % 1000
+
+    @staticmethod
+    def telid_to_type(telescope_id):
+        return 2200 + telescope_id % 100 + 1000 * (telescope_id // 100)
+
+    def __repr__(self):
+        return '{}[{}](telescope_id={}, size={}, first_byte={})'.format(
+            self.__class__.__name__,
+            self.eventio_type,
+            self.telescope_id,
+            self.header.length,
+            self.header.data_field_first_byte
+        )
 
 
 class SimTelEvent(EventIOObject):
