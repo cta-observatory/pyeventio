@@ -660,6 +660,52 @@ class SimTelMCPeSum(EventIOObject):
     eventio_type = 2026
 
 
+    def parse_data_field(self):
+        self.seek(0)
+        assert_exact_version(self, supported_version=2)
+
+        event = self.header.id
+        shower_num = read_from('<i', self)[0]
+        num_tel = read_from('<i', self)[0]
+        num_pe = read_array(self, 'i4', num_tel)
+        num_pixels = read_array(self, 'i4', num_tel)
+
+        # NOTE:
+        # I don't see how we can speed this up easily since the length
+        # of this thing is not known upfront.
+
+        # pix_pe: a list (running over telescope_id)
+        #         of 2-tuples: (pixel_id, pe)
+        pix_pe = []
+        for n_pe, n_pixels in zip(num_pe, num_pixels):
+            if n_pe <= 0 or n_pixels <= 0:
+                continue
+            non_empty = read_from('<h', self)[0]
+            pixel_id = read_array(self, 'i2', non_empty)
+            pe = read_array(self, 'i4', non_empty)
+            pix_pe.append(pixel_id, pe)
+
+        photons = read_array(self, 'f4', num_tel)
+        photons_atm = read_array(self, 'f4', num_tel)
+        photons_atm_3_6 = read_array(self, 'f4', num_tel)
+        photons_atm_qe = read_array(self, 'f4', num_tel)
+        photons_atm_400 = read_array(self, 'f4', num_tel)
+
+        return {
+            'event': event,
+            'shower_num': shower_num,
+            'num_tel': num_tel,
+            'num_pe': num_pe,
+            'num_pixels': num_pixels,
+            'pix_pe': pix_pe,
+            'photons': photons,
+            'photons_atm': photons_atm,
+            'photons_atm_3_6': photons_atm_3_6,
+            'photons_atm_qe': photons_atm_qe,
+            'photons_atm_400': photons_atm_400,
+        }
+
+
 class SimTelPixelList(EventIOObject):
     eventio_type = 2027
 

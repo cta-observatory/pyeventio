@@ -313,3 +313,22 @@ def test_2022_all():
                 'daq_nl': 30
             }
             '''
+
+
+def test_2026_all():
+    from eventio import EventIOFile
+    from eventio.simtel.objects import SimTelMCPeSum
+
+    with EventIOFile(test_file) as f:
+        all_2026_obs = [
+            o for o in f
+            if o.header.type == SimTelMCPeSum.eventio_type
+        ]
+
+        for i, o in enumerate(all_2026_obs):
+            d = o.parse_data_field()
+            bytes_not_consumed = o.read()
+            # assert parse_data_field() consumed all data,
+            assert len(bytes_not_consumed) == 0
+
+            assert d['event'] // 100 == d['shower_num']
