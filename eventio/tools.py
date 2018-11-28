@@ -1,6 +1,13 @@
 import struct
 import numpy as np
 
+
+def read_array(f, dtype, count):
+    '''Read a numpy array with `dtype` of length `count` from file-like `f`'''
+    dt = np.dtype(dtype)
+    return np.frombuffer(f.read(count * dt.itemsize), count=count, dtype=dt)
+
+
 def read_eventio_string(f):
     '''Read a string from eventio file or object f
     Eventio stores strings as a short
