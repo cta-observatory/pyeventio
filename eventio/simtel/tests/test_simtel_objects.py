@@ -83,3 +83,23 @@ def test_2005():
         assert pixel_disable['num_HV_disabled'] == 0
         assert len(pixel_disable['trigger_disabled']) == 0
         assert len(pixel_disable['HV_disabled']) == 0
+
+def test_2005_all_objects():
+    from eventio import EventIOFile
+    from eventio.simtel.objects import SimTelPixelDisable
+
+    with EventIOFile(test_file) as f:
+        all_2005_obs = [
+            o for o in f
+            if o.header.type == SimTelPixelDisable.eventio_type
+        ]
+
+        for i, o in enumerate(all_2005_obs):
+            # first camera should be the LST
+            pixel_disable = o.parse_data_field()
+
+            assert pixel_disable['telescope_id'] == i + 1
+            assert pixel_disable['num_trig_disabled'] == 0
+            assert pixel_disable['num_HV_disabled'] == 0
+            assert len(pixel_disable['trigger_disabled']) == 0
+            assert len(pixel_disable['HV_disabled']) == 0
