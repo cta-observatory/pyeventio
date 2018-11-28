@@ -644,8 +644,37 @@ class SimTelTelMoni(EventIOObject):
         }
 
 
-class SimTelLasCal(EventIOObject):
+class SimTelLasCal(TelescopeObject):
     eventio_type = 2023
+
+    def parse_data_field(self):
+        ''' '''
+        self.seek(0)
+        assert_exact_version(self, supported_version=2)
+
+        num_pixels = read_from('<h', self)[0]
+        num_gains = read_from('<h', self)[0]
+        lascal_id = read_from('<i', self)[0]
+        calib = read_array(
+            self, 'f4', num_gains * num_pixels
+        ).reshape(num_gains, num_pixels)
+
+        tmp_ = read_array(self, 'f4', num_gains * 2).reshape(num_gains, 2)
+        max_int_frac = tmp_[:, 0]
+        max_pixtm_frac = tmp_[:, 1]
+
+        tm_calib = read_array(
+            self, 'f4', num_gains * num_pixels
+        ).reshape(num_gains, num_pixels)
+
+        return {
+            'telescope_id': self.telescope_id,
+            'lascal_id': lascal_id,
+            'calib': calib,
+            'max_int_frac': max_int_frac,
+            'max_pixtm_frac': max_pixtm_frac,
+            'tm_calib': tm_calib,
+        }
 
 
 class SimTelRunStat(EventIOObject):
