@@ -64,3 +64,22 @@ def test_track():
         pointing = s.parse_data_field()
         assert 'azimuth_raw' in pointing.dtype.names
         assert 'altitude_raw' in pointing.dtype.names
+
+
+def test_2005():
+    from eventio import EventIOFile
+    from eventio.simtel.objects import SimTelPixelDisable
+
+    with EventIOFile(test_file) as f:
+        obj = next(f)
+        while obj.header.type != SimTelPixelDisable.eventio_type:
+            obj = next(f)
+
+        # first camera should be the LST
+        pixel_disable = obj.parse_data_field()
+
+        assert pixel_disable['telescope_id'] == 1
+        assert pixel_disable['num_trig_disabled'] == 0
+        assert pixel_disable['num_HV_disabled'] == 0
+        assert len(pixel_disable['trigger_disabled']) == 0
+        assert len(pixel_disable['HV_disabled']) == 0

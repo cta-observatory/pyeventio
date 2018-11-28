@@ -148,7 +148,6 @@ class SimTelPixelDisable(EventIOObject):
         num_HV_disabled, = read_from('<i', self)
         HV_disabled = read_array(self, count=num_trig_disabled, dtype='i4')
 
-        print(self.read())
         return {
             'telescope_id': self.telescope_id,
             'num_trig_disabled': num_trig_disabled,
