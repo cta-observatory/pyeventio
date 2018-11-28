@@ -244,7 +244,6 @@ def test_2023_all():
     '''
     {
     'telescope_id': 1,
-    'known': array([[ True,  True,  True, ...,  True,  True,  True]]),
     'lascal_id': 2,
     'max_int_frac': array([0.], dtype=float32),
     'max_pixtm_frac': array([0.], dtype=float32),
