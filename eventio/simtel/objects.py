@@ -29,6 +29,7 @@ class TelescopeObject(EventIOObject):
             self.header.data_field_first_byte
         )
 
+
 def assert_exact_version(self, supported_version):
     if self.header.version != supported_version:
         raise IOError(
@@ -42,6 +43,7 @@ def assert_exact_version(self, supported_version):
                 given_version=self.header.version,
             )
         )
+
 
 class History(EventIOObject):
     eventio_type = 70
@@ -267,8 +269,28 @@ class SimTelPointingCor(TelescopeObject):
         }
 
 
-class SimTelTrackSet(EventIOObject):
+class SimTelTrackSet(TelescopeObject):
     eventio_type = 2008
+
+    def parse_data_field(self):
+        tracking_info = {}
+        tracking_info['drive_type_az'], = read_from('<h', self)
+        tracking_info['drive_type_alt'], = read_from('<h', self)
+        tracking_info['zeropoint_az'], = read_from('<f', self)
+        tracking_info['zeropoint_alt'], = read_from('<f', self)
+
+        tracking_info['sign_az'], = read_from('<f', self)
+        tracking_info['sign_alt'], = read_from('<f', self)
+        tracking_info['resolution_az'], = read_from('<f', self)
+        tracking_info['resolution_alt'], = read_from('<f', self)
+        tracking_info['range_low_az'], = read_from('<f', self)
+        tracking_info['range_low_alt'], = read_from('<f', self)
+        tracking_info['range_high_az'], = read_from('<f', self)
+        tracking_info['range_high_alt'], = read_from('<f', self)
+        tracking_info['park_pos_az'], = read_from('<f', self)
+        tracking_info['park_pos_alt'], = read_from('<f', self)
+
+        return tracking_info
 
 
 class SimTelCentEvent(EventIOObject):
@@ -413,6 +435,7 @@ class SimTelMCEvent(EventIOObject):
             'ycore': read_from('<f', self)[0],
             # 'aweight': read_from('<f', self),  # only in version 2
         }
+
 
 class SimTelTelMoni(EventIOObject):
     eventio_type = 2022

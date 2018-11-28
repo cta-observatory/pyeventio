@@ -1,4 +1,6 @@
 from pkg_resources import resource_filename
+from pytest import approx
+import numpy as np
 
 
 test_file = resource_filename('eventio', 'resources/gamma_test.simtel.gz')
@@ -65,6 +67,7 @@ def test_track():
         assert 'azimuth_raw' in pointing.dtype.names
         assert 'altitude_raw' in pointing.dtype.names
 
+
 def test_2005():
     from eventio import EventIOFile
     from eventio.simtel.objects import SimTelPixelDisable
@@ -82,6 +85,7 @@ def test_2005():
         assert pixel_disable['num_HV_disabled'] == 0
         assert len(pixel_disable['trigger_disabled']) == 0
         assert len(pixel_disable['HV_disabled']) == 0
+
 
 def test_2005_all_objects():
     from eventio import EventIOFile
@@ -116,10 +120,10 @@ def test_pixelset():
 
         assert pixelset['num_pixels'] == 1855
 
+
 def test_2006_all():
     from eventio import EventIOFile
     from eventio.simtel.objects import SimTelCamsoftset
-
 
     with EventIOFile(test_file) as f:
         all_2006_obs = [
@@ -158,7 +162,6 @@ def test_2007_all():
     from eventio import EventIOFile
     from eventio.simtel.objects import SimTelPointingCor
 
-
     with EventIOFile(test_file) as f:
         all_2007_obs = [
             o for o in f
@@ -174,9 +177,24 @@ def test_2007_all():
 
             # now check the values
             assert d['telescope_id'] == i + 1
-            assert d['function_type'] ==  0
-            assert d['num_param'] ==  0
+            assert d['function_type'] == 0
+            assert d['num_param'] == 0
             assert len(d['pointing_param']) == 0
+
+
+def test_2008():
+    from eventio import EventIOFile
+    from eventio.simtel.objects import SimTelTrackSet
+
+    with EventIOFile(test_file) as f:
+        o = find_type(f, SimTelTrackSet)
+        assert o.telescope_id == 1
+        tracking_info = o.parse_data_field()
+
+        assert tracking_info['range_low_az'] == 0.0
+        assert tracking_info['range_low_alt'] == 0.0
+        assert tracking_info['range_high_az'] == approx(2 * np.pi)
+        assert tracking_info['range_high_alt'] == approx(2 * np.pi)
 
 
 def test_2021_all():
@@ -203,6 +221,7 @@ def test_2021_all():
                 'ycore': 1743.0797119140625
             }
             '''
+
 
 def test_2022_all():
     from eventio import EventIOFile
