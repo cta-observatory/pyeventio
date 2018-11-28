@@ -193,6 +193,10 @@ class EventIOObject:
             raise ValueError(
                 'Only EventIOObjects that contain just subobjects are iterable'
             )
+
+        if self._next_header_pos > self.header.length:
+            raise StopIteration
+
         self.seek(self._next_header_pos)
         header = read_next_header(self, toplevel=False)
         self._next_header_pos = self.tell() + header.length
