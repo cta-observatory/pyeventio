@@ -5,9 +5,13 @@ from ..tools import (
     read_ints,
     read_eventio_string,
     read_from,
+    read_time,
     read_utf8_like_signed_int,
-    read_array
+    read_utf8_like_unsigned_int,
+    read_array,
+    read_time,
 )
+from ..bits import bool_bit_from_pos
 
 
 class TelescopeObject(EventIOObject):
@@ -198,6 +202,7 @@ class SimTelPixelDisable(EventIOObject):
             'HV_disabled': HV_disabled,
         }
 
+
 class SimTelCamsoftset(EventIOObject):
     eventio_type = 2006
 
@@ -294,6 +299,59 @@ class SimTelTrackSet(TelescopeObject):
 
 class SimTelCentEvent(EventIOObject):
     eventio_type = 2009
+
+    def __init__(self, header, parent):
+        super().__init__(header, parent)
+
+        if header.version > 2:
+            raise IOError('Unsupported CENTEVENT Version: {}'.format(header.version))
+
+        self.global_count = self.header.id
+
+    def parse_data_field(self):
+
+        event_info = {}
+        event_info['cpu_time'] = read_time(self)
+        event_info['gps_time'] = read_time(self)
+        event_info['trigger_pattern'], = read_from('<i', self)
+        event_info['data_pattern'], = read_from('<i', self)
+
+        if self.header.version >= 1:
+            tels_trigger, = read_from('<h', self)
+            event_info['n_triggered_telescopes'] = tels_trigger
+
+            event_info['triggered_telescopes'] = read_array(
+                self, count=tels_trigger, dtype='<i2',
+            )
+            event_info['trigger_times'] = read_array(
+                self, count=tels_trigger, dtype='<f4',
+            )
+            tels_data, = read_from('<h', self)
+            event_info['n_telescopes_with_data'] = tels_data
+            event_info['telescopes_with_data'] = read_array(
+                self, count=tels_data, dtype='<i2'
+            )
+
+        if self.header.version >= 2:
+            # konrad saves the trigger mask as crazy int, but it uses only 4 bits
+            # so it should be indentical to a normal unsigned int with 1 byte
+            event_info['teltrg_type_mask'] = read_array(
+                self, count=tels_trigger, dtype='uint8'
+            )
+            assert np.all(event_info['teltrg_type_mask'] < 128), 'Unexpected trigger mask'
+
+            event_info['teltrg_time_by_type'] = {}
+            it = zip(event_info['triggered_telescopes'], event_info['teltrg_type_mask'])
+            for tel_id, mask in it:
+                # trigger times are only written if more than one trigger is there
+                if mask not in {0b001, 0b010, 0b100}:
+                    event_info['teltrg_time_by_type'][tel_id] = {}
+                    for trigger in range(3):
+                        if bool_bit_from_pos(mask, trigger):
+                            t = read_from('<f', self)[0]
+                            event_info['teltrg_time_by_type'][tel_id][trigger] = t
+
+        return event_info
 
 
 class SimTelTrackEvent(EventIOObject):
@@ -425,7 +483,7 @@ class SimTelMCEvent(EventIOObject):
     def parse_data_field(self):
         ''' '''
         self.seek(0)
-        #assert_exact_version(self, supported_version=1)
+        assert_exact_version(self, supported_version=1)
 
         return {
             'event': self.header.id,
@@ -438,6 +496,152 @@ class SimTelMCEvent(EventIOObject):
 
 class SimTelTelMoni(EventIOObject):
     eventio_type = 2022
+
+    def parse_data_field(self):
+        self.seek(0)
+        assert_exact_version(self, supported_version=0)
+
+        telescope_id = (
+            (self.header.id & 0xff) |
+            ((self.header.id & 0x3f000000) >> 16)
+        )
+
+        # what: denotes what has changed (since last report?)
+        what = ((self.header.id & 0xffff00) >> 8) & 0xffff
+        known, = read_from('<h', self)   # C-code used |= instead of = here.
+        new_parts, = read_from('<h', self)
+        monitor_id, = read_from('<i', self)
+        moni_time = read_time(self)
+
+        #  Dimensions of various things
+        # version 0
+        ns, np, nd, ng = read_from('<hhhh', self)
+        # in version 1 this uses crazy 32bit ints
+        # ns = read_utf8_like_signed_int(self)
+        # np = read_utf8_like_signed_int(self)
+        # nd = read_utf8_like_signed_int(self)
+        # ng = read_utf8_like_signed_int(self)
+
+        result = {
+            'telescope_id': telescope_id,
+            'what': what,
+            'known': known,
+            'new_parts': new_parts,
+            'monitor_id': monitor_id,
+            'moni_time': moni_time,
+        }
+        part_parser_args = {
+            'num_sectors': ns,
+            'num_gains': ng,
+            'num_pixels': np,
+            'num_drawers': nd,
+        }
+        result.update(part_parser_args)
+
+        part_parser_map = {
+            0x00: self._nothing_changed_here,
+            0x01: self._status_only_changed__what_and_0x01,
+            0x02: self._counts_and_rates_changed__what_and_0x02,
+            0x04: self._pedestal_and_noice_changed__what_and_0x04,
+            0x08: self._HV_and_temp_changed__what_and_0x08,
+            0x10: self._pixel_scalers_DC_i_changed__what_and_0x10,
+            0x20: self._HV_thresholds_changed__what_and_0x20,
+            0x40: self._DAQ_config_changed__what_and_0x40,
+        }
+
+        for part_id in range(8):
+            part_parser = part_parser_map[what & (1 << part_id)]
+            result.update(part_parser(**part_parser_args))
+        return result
+
+    def _nothing_changed_here(self, **kwargs):
+        ''' dummy parser, invoked when this bit is not set '''
+        return {}
+
+    def _status_only_changed__what_and_0x01(self, **kwargs):
+        return {
+            'status_time': read_time(self),
+            'status_bits': read_from('<i', self)[0],
+        }
+
+    def _counts_and_rates_changed__what_and_0x02(
+        self, num_sectors, **kwargs
+    ):
+        return {
+            'trig_time': read_time(self),
+            'coinc_count': read_from('<l', self)[0],
+            'event_count': read_from('<l', self)[0],
+            'trigger_rate': read_from('<f', self)[0],
+            'sector_rate': read_array(self, 'f4', num_sectors),
+            'event_rate': read_from('<f', self)[0],
+            'data_rate': read_from('<f', self)[0],
+            'mean_significant': read_from('<f', self)[0],
+        }
+
+    def _pedestal_and_noice_changed__what_and_0x04(
+        self, num_gains, num_pixels, **kwargs
+    ):
+        return {
+            'ped_noise_time': read_time(self),
+            'num_ped_slices': read_from('<h', self)[0],
+            'pedestal': read_array(
+                self, 'f4', num_gains * num_pixels
+            ).reshape((num_gains, num_pixels)),
+            'noise': read_array(
+                self, 'f4', num_gains * num_pixels
+            ).reshape((num_gains, num_pixels)),
+        }
+
+    def _HV_and_temp_changed__what_and_0x08(
+        self, num_pixels, num_drawers, **kwargs
+    ):
+        hv_temp_time = read_time(self)
+        num_drawer_temp = read_from('<h', self)[0]
+        num_camera_temp = read_from('<h', self)[0]
+        return {
+            'hv_temp_time': hv_temp_time,
+            'num_drawer_temp': num_drawer_temp,
+            'num_camera_temp': num_camera_temp,
+            'hv_v_mon': read_array(self, 'i2', num_pixels),
+            'hv_i_mon': read_array(self, 'i2', num_pixels),
+            'hv_stat': read_array(self, 'B', num_pixels),
+            'drawer_temp': read_array(
+                self, 'i2', num_drawers * num_drawer_temp
+            ).reshape((num_drawers, num_drawer_temp)),
+            'camera_temp': read_array(self, 'i2', num_camera_temp),
+        }
+
+    def _pixel_scalers_DC_i_changed__what_and_0x10(
+        self, num_pixels, **kwargs
+    ):
+        return {
+            'dc_rate_time': read_time(self),
+            'current': read_array(self, 'u2', num_pixels),
+            'scaler': read_array(self, 'u2', num_pixels),
+        }
+
+    def _HV_thresholds_changed__what_and_0x20(
+        self, num_pixels, num_drawers, **kwargs
+    ):
+        return {
+            'hv_thr_time': read_time(self),
+            'hv_dac': read_array(self, 'u2', num_pixels),
+            'thresh_dac': read_array(self, 'u2', num_drawers),
+            'hv_set': read_array(self, 'B', num_pixels),
+            'trig_set': read_array(self, 'B', num_pixels),
+        }
+
+    def _DAQ_config_changed__what_and_0x40(
+        self, **kwargs
+    ):
+        return {
+            'set_daq_time': read_time(self),
+            'daq_conf': read_from('<H', self)[0],
+            'daq_scaler_win': read_from('<H', self)[0],
+            'daq_nd': read_from('<H', self)[0],
+            'daq_acc': read_from('<H', self)[0],
+            'daq_nl': read_from('<H', self)[0],
+        }
 
 
 class SimTelLasCal(TelescopeObject):
