@@ -455,10 +455,6 @@ class SimTelLasCal(TelescopeObject):
             self, 'f4', num_gains * num_pixels
         ).reshape(num_gains, num_pixels)
 
-        # FIXME: wasting time!
-        # no need to create this here, can be calulated on demand
-        known = calib != 0.
-
         tmp_ = read_array(self, 'f4', num_gains * 2).reshape(num_gains, 2)
         max_int_frac = tmp_[:, 0]
         max_pixtm_frac = tmp_[:, 1]
@@ -471,7 +467,6 @@ class SimTelLasCal(TelescopeObject):
             'telescope_id': self.telescope_id,
             'lascal_id': lascal_id,
             'calib': calib,
-            'known': known,
             'max_int_frac': max_int_frac,
             'max_pixtm_frac': max_pixtm_frac,
             'tm_calib': tm_calib,
