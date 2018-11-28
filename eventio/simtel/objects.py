@@ -426,7 +426,7 @@ class SimTelMCEvent(EventIOObject):
     def parse_data_field(self):
         ''' '''
         self.seek(0)
-        #assert_exact_version(self, supported_version=1)
+        assert_exact_version(self, supported_version=1)
 
         return {
             'event': self.header.id,
@@ -442,7 +442,7 @@ class SimTelTelMoni(EventIOObject):
 
     def parse_data_field(self):
         self.seek(0)
-        # assert_exact_version(self, supported_version=0)
+        assert_exact_version(self, supported_version=0)
 
         telescope_id = (
             (self.header.id & 0xff) |
@@ -480,7 +480,6 @@ class SimTelTelMoni(EventIOObject):
             'num_drawers': nd,
         }
         result.update(part_parser_args)
-
 
         part_parser_map = {
             0x00: self._nothing_changed_here,
