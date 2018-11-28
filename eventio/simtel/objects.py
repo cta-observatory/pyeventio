@@ -34,6 +34,42 @@ class HistoryConfig(EventIOObject):
 
 class SimTelRunHeader(EventIOObject):
     eventio_type = 2000
+    from .runheader_dtypes import (
+        runheader_dtype_part1,
+        runheader_dtype_part2
+    )
+
+    def __init__(self, header, parent):
+        super().__init__(header, parent)
+        self.run_id = self.header.id
+
+    def parse_data_field(self):
+        '''See write_hess_runheader l. 184 io_hess.c '''
+        self.seek(0)
+        dt1 = SimTelRunHeader.runheader_dtype_part1
+
+        part1 = np.frombuffer(
+            self.read(dt1.itemsize),
+            dtype=dt1,
+            count=1,
+        )[0]
+        dt2 = SimTelRunHeader.runheader_dtype_part2(part1['n_telescopes'])
+        part2 = np.frombuffer(
+            self.read(dt2.itemsize),
+            dtype=dt2,
+            count=1,
+        )[0]
+
+        # rest is two null-terminated strings
+        target = read_eventio_string(self)
+        observer = read_eventio_string(self)
+
+        result = dict(zip(part1.dtype.names, part1))
+        result.update(dict(zip(part2.dtype.names, part2)))
+        result['target'] = target
+        result['observer'] = observer
+
+        return result
 
 
 class SimTelMCRunHeader(EventIOObject):
@@ -55,7 +91,6 @@ class SimTelMCRunHeader(EventIOObject):
             data,
             dtype=header_type,
             count=1,
-            offset=0,
         ).view(np.recarray)[0]
 
 
