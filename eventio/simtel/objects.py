@@ -767,7 +767,6 @@ class SimTelMCRunStat(EventIOObject):
 class SimTelMCPeSum(EventIOObject):
     eventio_type = 2026
 
-
     def parse_data_field(self):
         self.seek(0)
         assert_exact_version(self, supported_version=2)
