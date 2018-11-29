@@ -295,6 +295,33 @@ def test_2009():
         assert 'teltrg_time_by_type' in data
 
 
+def test_2100():
+    from eventio import EventIOFile
+    from eventio.simtel.objects import SimTelEvent, SimTelTrackEvent
+
+    with EventIOFile(test_file) as f:
+
+        # search for first event
+        o = find_type(f, SimTelEvent)
+        s = find_type(o, SimTelTrackEvent)
+
+        pointing = s.parse_data_field()
+        assert 'azimuth_raw' in pointing.dtype.names
+        assert 'altitude_raw' in pointing.dtype.names
+
+
+def test_2200():
+    from eventio.simtel.objects import SimTelTelEvent
+
+    assert SimTelTelEvent.type_to_telid(3305) == 205
+    assert SimTelTelEvent.type_to_telid(3205) == 105
+    assert SimTelTelEvent.type_to_telid(2203) == 3
+
+@pytest.mark.xfail
+def test_2010():
+    assert False
+
+
 def test_2011():
     from eventio import EventIOFile
     from eventio.simtel.objects import SimTelTelEvent, SimTelEvent
@@ -384,37 +411,6 @@ def test_2011():
             'time_trgsect': array([27., 27.], dtype=float32)
         }
         '''
-
-
-def test_2100():
-    from eventio import EventIOFile
-    from eventio.simtel.objects import SimTelEvent, SimTelTrackEvent
-
-    with EventIOFile(test_file) as f:
-
-        # search for first event
-        o = find_type(f, SimTelEvent)
-        s = find_type(o, SimTelTrackEvent)
-
-        pointing = s.parse_data_field()
-        assert 'azimuth_raw' in pointing.dtype.names
-        assert 'altitude_raw' in pointing.dtype.names
-
-
-def test_2200():
-    from eventio.simtel.objects import SimTelTelEvent
-
-    assert SimTelTelEvent.type_to_telid(3305) == 205
-    assert SimTelTelEvent.type_to_telid(3205) == 105
-    assert SimTelTelEvent.type_to_telid(2203) == 3
-
-@pytest.mark.xfail
-def test_2010():
-    assert False
-
-@pytest.mark.xfail
-def test_2011():
-    assert False
 
 @pytest.mark.xfail
 def test_2012():
