@@ -512,9 +512,44 @@ def test_2013():
                 assert byte_ == 0
 
 
-@pytest.mark.xfail
 def test_2014():
-    assert False
+    from eventio import EventIOFile
+    from eventio.simtel.objects import SimTelTelEvent, SimTelEvent
+    # class under test
+    from eventio.simtel.objects import SimTelTelImage
+
+    expected_telescope_ids = [
+        38, 47, 11, 21, 24, 26, 61, 63, 118, 119, 17, 104, 124, 2, 4, 14,
+        15, 17, 19, 2, 3, 4, 10, 12, 25, 8, 16, 26, 28, 1, 3, 4, 9, 12,
+        25, 62, 110, 126, 9, 12, 22, 25, 27, 62
+    ]
+    print(expected_telescope_ids)
+
+    with EventIOFile(prod2_file) as f:
+        all_2014_obs = find_all_subcontainers(
+            f,
+            [SimTelEvent, SimTelTelEvent, SimTelTelImage]
+        )
+
+        assert all_2014_obs
+        print(
+            '{} objects of type 2014 found, parsing ... '
+            .format(
+                len(all_2014_obs)
+            )
+        )
+
+        # we cannot test all of the 50 objects ... the last is truncated
+        for object_index, o in enumerate(all_2014_obs):
+            d = o.parse_data_field()
+            # assert parse_data_field() consumed all data from o
+            bytes_not_consumed = o.read()
+            assert len(bytes_not_consumed) <= 2
+            for byte_ in bytes_not_consumed:
+                assert byte_ == 0
+
+            assert d['telescope_id'] == expected_telescope_ids[object_index]
+
 
 @pytest.mark.xfail
 def test_2015():
