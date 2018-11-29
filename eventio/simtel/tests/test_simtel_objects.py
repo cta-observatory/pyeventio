@@ -66,9 +66,24 @@ def test_71():
             assert isinstance(s, bytes)
 
 
-@pytest.mark.xfail
+
 def test_72():
-    assert False
+    from eventio import EventIOFile
+    from eventio.simtel.objects import History, HistoryConfig
+
+    with EventIOFile(test_file) as f:
+        all_history_configs = []
+        for o in f:
+            if isinstance(o, History):
+                for sub in o:
+                    if isinstance(sub, HistoryConfig):
+                        all_history_configs.append(sub)
+
+        for o in all_history_configs:
+            s = o.parse_data_field()
+            assert s
+            assert isinstance(s, bytes)
+
 
 @pytest.mark.xfail
 def test_2000():
