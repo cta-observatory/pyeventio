@@ -28,6 +28,25 @@ def test_run_heder():
         data['observer'] = b'bernlohr@lfc371.mpi-hd.mpg.de'
         data['target'] = b'Monte Carlo beach'
 
+def test_70():
+    assert False
+
+
+def test_71():
+    assert False
+
+
+def test_72():
+    assert False
+
+
+def test_2000():
+    assert False
+
+
+def test_2001():
+    assert False
+
 
 def test_2002():
     from eventio import EventIOFile
@@ -45,27 +64,21 @@ def test_2002():
         assert len(camera_data['pixel_y']) == 1855
 
 
-def test_telid():
-    from eventio.simtel.objects import SimTelTelEvent
-
-    assert SimTelTelEvent.type_to_telid(3305) == 205
-    assert SimTelTelEvent.type_to_telid(3205) == 105
-    assert SimTelTelEvent.type_to_telid(2203) == 3
+def test_2003():
+    assert False
 
 
-def test_track():
+def test_2004():
     from eventio import EventIOFile
-    from eventio.simtel.objects import SimTelEvent, SimTelTrackEvent
+    from eventio.simtel.objects import SimTelPixelset
 
     with EventIOFile(test_file) as f:
+        o = find_type(f, SimTelPixelset)
 
-        # search for first event
-        o = find_type(f, SimTelEvent)
-        s = find_type(o, SimTelTrackEvent)
+        assert o.telescope_id == 1
+        pixelset = o.parse_data_field()
 
-        pointing = s.parse_data_field()
-        assert 'azimuth_raw' in pointing.dtype.names
-        assert 'altitude_raw' in pointing.dtype.names
+        assert pixelset['num_pixels'] == 1855
 
 
 def test_2005():
@@ -108,20 +121,7 @@ def test_2005_all_objects():
             assert len(pixel_disable['HV_disabled']) == 0
 
 
-def test_pixelset():
-    from eventio import EventIOFile
-    from eventio.simtel.objects import SimTelPixelset
-
-    with EventIOFile(test_file) as f:
-        o = find_type(f, SimTelPixelset)
-
-        assert o.telescope_id == 1
-        pixelset = o.parse_data_field()
-
-        assert pixelset['num_pixels'] == 1855
-
-
-def test_2006_all():
+def test_2006():
     from eventio import EventIOFile
     from eventio.simtel.objects import SimTelCamsoftset
 
@@ -158,7 +158,7 @@ def test_2006_all():
             assert d['report_HV_period'] == 0
 
 
-def test_2007_all():
+def test_2007():
     from eventio import EventIOFile
     from eventio.simtel.objects import SimTelPointingCor
 
@@ -211,7 +211,74 @@ def test_2009():
         assert 'teltrg_time_by_type' in data
 
 
-def test_2021_all():
+def test_2100():
+    from eventio import EventIOFile
+    from eventio.simtel.objects import SimTelEvent, SimTelTrackEvent
+
+    with EventIOFile(test_file) as f:
+
+        # search for first event
+        o = find_type(f, SimTelEvent)
+        s = find_type(o, SimTelTrackEvent)
+
+        pointing = s.parse_data_field()
+        assert 'azimuth_raw' in pointing.dtype.names
+        assert 'altitude_raw' in pointing.dtype.names
+
+
+def test_2200():
+    from eventio.simtel.objects import SimTelTelEvent
+
+    assert SimTelTelEvent.type_to_telid(3305) == 205
+    assert SimTelTelEvent.type_to_telid(3205) == 105
+    assert SimTelTelEvent.type_to_telid(2203) == 3
+
+
+def test_2010():
+    assert False
+
+
+def test_2011():
+    assert False
+
+
+def test_2012():
+    assert False
+
+
+def test_2013():
+    assert False
+
+
+def test_2014():
+    assert False
+
+
+def test_2015():
+    assert False
+
+
+def test_2016():
+    assert False
+
+
+def test_2017():
+    assert False
+
+
+def test_2018():
+    assert False
+
+
+def test_2019():
+    assert False
+
+
+def test_2020():
+    assert False
+
+
+def test_2021():
     from eventio import EventIOFile
     from eventio.simtel.objects import SimTelMCEvent
 
@@ -237,7 +304,7 @@ def test_2021_all():
             '''
 
 
-def test_2022_all():
+def test_2022():
     from eventio import EventIOFile
     from eventio.simtel.objects import SimTelTelMoni
 
@@ -315,7 +382,7 @@ def test_2022_all():
             '''
 
 
-def test_2023_all():
+def test_2023():
     from eventio import EventIOFile
     from eventio.simtel.objects import SimTelLasCal
 
@@ -344,7 +411,15 @@ def test_2023_all():
     '''
 
 
-def test_2026_all():
+def test_2024():
+    assert False
+
+
+def test_2025():
+    assert False
+
+
+def test_2026():
     from eventio import EventIOFile
     from eventio.simtel.objects import SimTelMCPeSum
 
@@ -361,3 +436,12 @@ def test_2026_all():
             assert len(bytes_not_consumed) == 0
 
             assert d['event'] // 100 == d['shower_num']
+
+
+def test_2027():
+    assert False
+
+
+def test_2028():
+    assert False
+
