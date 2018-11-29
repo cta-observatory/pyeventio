@@ -181,8 +181,67 @@ class SimTelCamSettings(TelescopeObject):
         }
 
 
-class SimTelCamOrgan(EventIOObject):
+class SimTelCamOrgan(TelescopeObject):
     eventio_type = 2003
+
+    def parse_data_field(self):
+        self.seek(0)
+        assert_exact_version(self, supported_version=1)
+
+        num_pixels = read_from('<i', self)[0]
+        num_drawers = read_from('<i', self)[0]
+        num_gains = read_from('<i', self)[0]
+        num_sectors = read_from('<i', self)[0]
+
+        drawer = read_array(self, 'i2', num_pixels)
+        card = read_array(
+            self, 'i2', num_pixels * num_gains
+        ).reshape(num_pixels, num_gains)
+        chip = read_array(
+            self, 'i2', num_pixels * num_gains
+        ).reshape(num_pixels, num_gains)
+        channel = read_array(
+            self, 'i2', num_pixels * num_gains
+        ).reshape(num_pixels, num_gains)
+
+        sectors = []
+        for _ in range(num_pixels):
+            n = read_from('<h', self)[0]
+            sector = read_array(self, 'i2', n)
+            # FIXME:
+            # according to a comment in the c-sources
+            # there is might be an old bug here,
+            # which is trailing zeros.
+            # is an ascending list of numbes, so any zero
+            # after the first position indicates the end of sector.
+            #
+            # DN: maybe this bug was fixed long ago,
+            # so maybe we do not have to account for it here
+            # I will check for it in the tests.
+            sectors.append(sector)
+
+        sector_type = []
+        sector_threshold = []
+        sector_pixthresh = []
+        for i in range(num_sectors):
+            type_, thresh_, pix_thr_ = read_from('<Bff', self)
+            sector_type.append(type_)
+            sector_threshold.append(thresh_)
+            sector_pixthresh.append(pix_thr_)
+
+        return {
+            'telescope_id': self.telescope_id,
+            'drawer': drawer,
+            'card': card,
+            'chip': chip,
+            'channel': channel,
+            'sectors': sectors,
+            'sector_type': np.array(sector_type),
+            'sector_threshold': np.array(sector_threshold),
+            'sector_pixthresh': np.array(sector_pixthresh),
+        }
+
+
 
 
 class SimTelPixelset(TelescopeObject):

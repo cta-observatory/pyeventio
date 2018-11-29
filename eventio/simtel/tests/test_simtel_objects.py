@@ -147,9 +147,30 @@ def test_2002():
         assert len(camera_data['pixel_y']) == 1855
 
 
-@pytest.mark.xfail
 def test_2003():
-    assert False
+    from eventio import EventIOFile
+    from eventio.simtel.objects import SimTelCamOrgan
+
+    with EventIOFile(test_file) as f:
+        classes_under_test = collect_toplevel_of_type(f, SimTelCamOrgan)
+
+        for class_index, o in enumerate(classes_under_test):
+            d = o.parse_data_field()
+            assert d
+
+            bytes_not_consumed = o.read()
+            # DN: sometimes 1 sometimes 0 ...
+            assert len(bytes_not_consumed) <= 1
+            for byte_ in bytes_not_consumed:
+                assert byte_ == 0
+
+            assert d['telescope_id'] == class_index + 1
+            # print(d)
+            for pixel_id, sector in enumerate(d['sectors']):
+                # sector must never contain a zero, unless it is in the
+                # very first element
+                assert (sector[1:] == 0).sum() == 0
+                # print(pixel_id, sector)
 
 
 def test_2004():
