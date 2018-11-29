@@ -3,7 +3,7 @@ import pytest
 from pytest import approx
 import numpy as np
 
-from ...search_utils import (
+from eventio.search_utils import (
     find_type,
     collect_toplevel_of_type
 )
