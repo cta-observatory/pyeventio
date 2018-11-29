@@ -808,7 +808,6 @@ class SimTelPixelList(EventIOObject):
         pixel_list = read_array(self, 'i2', pixels)
         # in version 1 pixel_list is an array of crazy int
 
-        print('rest:', self.read())
         return {
             'code': code,
             'telescope': telescope,
