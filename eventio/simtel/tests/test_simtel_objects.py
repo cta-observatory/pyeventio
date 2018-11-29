@@ -3,6 +3,10 @@ import pytest
 from pytest import approx
 import numpy as np
 
+from ...search_utils import (
+    find_type,
+    collect_toplevel_of_type
+)
 
 test_file = resource_filename('eventio', 'resources/gamma_test.simtel.gz')
 
@@ -44,6 +48,7 @@ def find_all_subcontainers(f, structure, level=0):
             objects.extend(find_all_subcontainers(o, structure, level + 1))
     return objects
 
+test_file = resource_filename('eventio', 'resources/gamma_test.simtel.gz')
 
 def test_70():
     from eventio import EventIOFile
