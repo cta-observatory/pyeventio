@@ -477,7 +477,7 @@ def test_2013():
         )
 
         # we cannot test all of the 50 objects ... the last is truncated
-        for object_index, o in enumerate(all_2013_obs[:-1]):
+        for object_index, o in enumerate(all_2013_obs[:3]):
             d = o.parse_data_field()
             # assert parse_data_field() consumed all data from o
             bytes_not_consumed = o.read()
