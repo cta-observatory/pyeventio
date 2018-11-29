@@ -1,4 +1,5 @@
 from pkg_resources import resource_filename
+import pytest
 from pytest import approx
 import numpy as np
 
@@ -29,21 +30,37 @@ def test_run_heder():
         data['target'] = b'Monte Carlo beach'
 
 def test_70():
-    assert False
+    from eventio import EventIOFile
+    from eventio.simtel.objects import History
+
+    with EventIOFile(test_file) as f:
+        all_histories = [
+            o for o in f
+            if o.header.type == History.eventio_type
+        ]
+        for o in all_histories:
+            assert isinstance(o, History)
+
+            # make sure a History can be iterated and is never empty
+            body_reached = False
+            for x in o:
+                body_reached = True
+            assert body_reached
 
 
+@pytest.mark.xfail
 def test_71():
     assert False
 
-
+@pytest.mark.xfail
 def test_72():
     assert False
 
-
+@pytest.mark.xfail
 def test_2000():
     assert False
 
-
+@pytest.mark.xfail
 def test_2001():
     assert False
 
@@ -63,7 +80,7 @@ def test_2002():
         assert len(camera_data['pixel_x']) == 1855
         assert len(camera_data['pixel_y']) == 1855
 
-
+@pytest.mark.xfail
 def test_2003():
     assert False
 
@@ -233,47 +250,47 @@ def test_2200():
     assert SimTelTelEvent.type_to_telid(3205) == 105
     assert SimTelTelEvent.type_to_telid(2203) == 3
 
-
+@pytest.mark.xfail
 def test_2010():
     assert False
 
-
+@pytest.mark.xfail
 def test_2011():
     assert False
 
-
+@pytest.mark.xfail
 def test_2012():
     assert False
 
-
+@pytest.mark.xfail
 def test_2013():
     assert False
 
-
+@pytest.mark.xfail
 def test_2014():
     assert False
 
-
+@pytest.mark.xfail
 def test_2015():
     assert False
 
-
+@pytest.mark.xfail
 def test_2016():
     assert False
 
-
+@pytest.mark.xfail
 def test_2017():
     assert False
 
-
+@pytest.mark.xfail
 def test_2018():
     assert False
 
-
+@pytest.mark.xfail
 def test_2019():
     assert False
 
-
+@pytest.mark.xfail
 def test_2020():
     assert False
 
@@ -410,11 +427,11 @@ def test_2023():
     'tm_calib': array([[-21.383808, -21.283247, -21.452444, ..., -22.023653, -21.650948, -21.601557]], dtype=float32)}
     '''
 
-
+@pytest.mark.xfail
 def test_2024():
     assert False
 
-
+@pytest.mark.xfail
 def test_2025():
     assert False
 
@@ -437,11 +454,11 @@ def test_2026():
 
             assert d['event'] // 100 == d['shower_num']
 
-
+@pytest.mark.xfail
 def test_2027():
     assert False
 
-
+@pytest.mark.xfail
 def test_2028():
     assert False
 
