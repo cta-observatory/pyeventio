@@ -600,6 +600,63 @@ class SimTelTelImage(EventIOObject):
     eventio_type = 2014
 
 
+    def parse_data_field(self):
+        self.seek(0)
+        assert_exact_version(self, supported_version=5)
+
+        flags = self.header.id
+        no_idea = flags & 0xff
+        telescope_id = (flags & 0x3f000000) >> 16
+        cut_id = (flags & 0xff000) >> 12
+
+        pixels = read_from('<h', self)[0]
+        num_sat = read_from('<h', self)[0]
+
+        # from version 6 on
+        # pixels = read_utf8_like_signed_int(self)  # from version 6 on
+        # num_sat = read_utf8_like_signed_int(self)
+
+        if num_sat > 0:
+            clip_amp = read_from('<f', self)[0]
+
+        amplitude = read_from('<f', self)[0]
+        x = read_from('<f', self)[0]
+        y = read_from('<f', self)[0]
+        phi = read_from('<f', self)[0]
+        l = read_from('<f', self)[0]
+        w = read_from('<f', self)[0]
+        num_conc = read_from('<h', self)[0]
+        concentration = read_from('<f', self)[0]
+
+        if flags & 0x100:
+            x_err = read_from('<f', self)[0]
+            y_err = read_from('<f', self)[0]
+            phi_err = read_from('<f', self)[0]
+            l_err = read_from('<f', self)[0]
+            w_err = read_from('<f', self)[0]
+
+        if flags & 0x200:
+            skewness = read_from('<f', self)[0]
+            skewness_err = read_from('<f', self)[0]
+            kurtosis = read_from('<f', self)[0]
+            kurtosis_err = read_from('<f', self)[0]
+
+        if flags & 0x400:
+            num_hot = read_from('<h', self)[0]  # from v6 on this is crazy int
+            hot_amp = read_array(self, 'f4', num_hot)
+            hot_pixel = read_array(self, 'i4', num_hot) # from v6 on this is array of crazy int
+
+        if flags & 0x800:
+            tm_slope = read_from('<f', self)[0]
+            tm_residual = read_from('<f', self)[0]
+            tm_width1 = read_from('<f', self)[0]
+            tm_width2 = read_from('<f', self)[0]
+            tm_rise = read_from('<f', self)[0]
+
+        return True
+
+
+
 class SimTelShower(EventIOObject):
     eventio_type = 2015
 
