@@ -8,6 +8,7 @@ from ..tools import (
     read_utf8_like_signed_int,
     read_array,
     read_time,
+    read_vector_of_uint32_scount_differential
 )
 from ..bits import bool_bit_from_pos
 
@@ -530,6 +531,43 @@ class SimTelTelEvtHead(TelescopeObject):
 
 class SimTelTelADCSum(EventIOObject):
     eventio_type = 2012
+
+    def __init__(self, header, parent):
+        super().__init__(header, parent)
+        if self.header.version <= 1:
+            self.telescope_id = (header.id >> 25) & 0x1f
+        else:
+            self.telescope_id = (header.id >> 12) & 0xffff
+
+    def parse_data_field(self):
+        self.seek(0)
+        assert_exact_version(self, 3)
+
+        flags = self.header.id
+        raw = {'telescope_id': self.telescope_id}
+        raw['zero_sup_mode'] = flags & 0x1f
+        raw['data_red_mode'] = (flags >> 5) & 0x1f
+        raw['list_known'] = (flags >> 10) & 0x01
+        n_pixels = read_from('<i', self)[0]
+        n_gains = read_from('<h', self)[0]
+
+        if raw['data_red_mode'] == 2:
+            offset_hg8 = read_from('<h', self)[0]
+            scale_hg8 = read_from('<h', self)[0]
+            if scale_hg8 <= 0:
+                scale_hg8 = 1
+
+        if raw['zero_sup_mode'] == 0:
+            if ['data_red_mode'] == 0:
+                # before version 3, it was just uint16
+                raw['adc_sums'] = np.array([
+                    read_vector_of_uint32_scount_differential(self, n_pixels)
+                    for gain in range(n_gains)
+
+                ])
+
+        return raw
+
 
 
 class SimTelTelADCSamp(EventIOObject):
