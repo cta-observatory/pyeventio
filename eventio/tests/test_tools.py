@@ -1,5 +1,32 @@
 from io import BytesIO
 import struct
+import numpy as np
+
+
+def test_uint32_vector_differential():
+    from eventio.tools import read_vector_of_uint32_scount_differential
+    from eventio.tools import read_vector_of_uint32_scount_differential_optimized
+    num = 5
+    num <<= 1
+    b = BytesIO(num.to_bytes(1, 'little'))
+
+    assert read_vector_of_uint32_scount_differential(b, 1) == 5
+    b.seek(0)
+    assert read_vector_of_uint32_scount_differential_optimized(b, 1) == 5
+
+    values = (np.arange(10) - 5)**2
+    differential = np.append(values[0], np.diff(values))
+
+    b = np.empty(10, dtype='uint8')
+    mask = differential < 0
+    b[mask] = (-(differential[mask] + 1) << 1) | 1
+    b[~mask] = (differential[~mask] << 1)
+
+    b = BytesIO(b.tobytes())
+
+    assert np.all(values == read_vector_of_uint32_scount_differential(b, 10))
+    b.seek(0)
+    assert np.all(values == read_vector_of_uint32_scount_differential_optimized(b, 10))
 
 
 def test_read_string():
@@ -13,6 +40,7 @@ def test_read_string():
     buffer.seek(0)
 
     assert read_eventio_string(buffer) == s
+
 
 def test_read_utf8_like_unsigned_int():
     from eventio.tools import read_utf8_like_unsigned_int
