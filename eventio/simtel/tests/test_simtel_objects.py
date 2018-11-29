@@ -344,7 +344,6 @@ def test_2023_all():
     '''
 
 
-
 def test_2011_all():
     from eventio import EventIOFile
     from eventio.simtel.objects import SimTelTelEvent, SimTelEvent
@@ -437,3 +436,22 @@ def test_2011_all():
             'time_trgsect': array([27., 27.], dtype=float32)
         }
         '''
+
+
+def test_2026_all():
+    from eventio import EventIOFile
+    from eventio.simtel.objects import SimTelMCPeSum
+
+    with EventIOFile(test_file) as f:
+        all_2026_obs = [
+            o for o in f
+            if o.header.type == SimTelMCPeSum.eventio_type
+        ]
+
+        for i, o in enumerate(all_2026_obs):
+            d = o.parse_data_field()
+            bytes_not_consumed = o.read()
+            # assert parse_data_field() consumed all data,
+            assert len(bytes_not_consumed) == 0
+
+            assert d['event'] // 100 == d['shower_num']
