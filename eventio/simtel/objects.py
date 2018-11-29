@@ -535,6 +535,74 @@ class SimTelTelADCSum(EventIOObject):
 class SimTelTelADCSamp(EventIOObject):
     eventio_type = 2013
 
+    def __init__(self, header, parent):
+        super().__init__(header, parent)
+        flags_ = header.id
+        self._zero_sup_mode = flags_ & 0x1f
+        self._data_red_mode = (flags_ >> 5) & 0x1f
+        self._list_known = bool((flags_ >> 10) & 0x01)
+        if (
+            (self._zero_sup_mode != 0 and header.version < 3) or
+            self._data_red_mode != 0 or
+            self._list_known
+        ):
+            raise NotImplementedError
+
+        #!! WTF: raw->zero_sup_mode |= zero_sup_mode << 5;
+
+        self.telescope_id = (flags_ >> 12) & 0xffff
+
+    def parse_data_field(self):
+        self.seek(0)
+        assert_exact_version(self, supported_version=3)
+
+        num_pixels = read_from('<l', self)[0]
+        num_gains = read_from('<h', self)[0]
+        num_samples = read_from('<h', self)[0]
+
+    def _parse_in_zero_suppressed_mode(self):
+        list_size = read_utf8_like_signed_int(self)
+        pixel_list = np.zeros(
+            (list_size, 2),
+            dtype='i8'  # I guessed this
+        )
+        for i_list in range(list_size):
+            ipix1 = read_utf8_like_signed_int(self)
+            if ipix1 < 0:
+                ipix2 = -ipix1 - 1
+                ipix1 = ipix2
+            else:
+                ipix2 = read_utf8_like_signed_int(self)
+            pixel_list[i_list, 0] = ipix1
+            pixel_list[i_list, 1] = ipix2
+
+
+
+
+    def _parse_in_not_zero_suppressed_mode(
+        self,
+        num_gains,
+        num_pixels,
+        num_samples,
+    ):
+        adc_samples = np.zeros(
+            (num_gains, num_pixels, num_samples),
+            dtype='u2'
+        )
+        for i_gain in range(num_gains):
+            for i_pix in range(num_pixels):
+                adc_samples[i_gain, i_pix, :] = (
+                    self.get_adcsample_differential(num_samples)
+                )
+
+    def get_adcsample_differential(self, num_samples):
+        differential = np.zeros(num_samples, dtype='u2')
+        for sample_id in range(num_samples):
+            differential[sample_id] = read_utf8_like_signed_int(self)
+        return differential.cumsum()
+
+
+
 
 class SimTelTelImage(EventIOObject):
     eventio_type = 2014
