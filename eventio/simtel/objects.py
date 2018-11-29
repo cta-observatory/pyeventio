@@ -5,9 +5,7 @@ from ..tools import (
     read_ints,
     read_eventio_string,
     read_from,
-    read_time,
     read_utf8_like_signed_int,
-    read_utf8_like_unsigned_int,
     read_array,
     read_time,
 )
@@ -445,8 +443,48 @@ class SimTelEvent(EventIOObject):
     eventio_type = 2010
 
 
-class SimTelTelEvtHead(EventIOObject):
+class SimTelTelEvtHead(TelescopeObject):
     eventio_type = 2011
+
+    def parse_data_field(self):
+        event_head = {}
+        event_head['loc_count'], = read_from('<i', self)
+        event_head['glob_count'], = read_from('<i', self)
+        event_head['cpu_time'] = read_time(self)
+        event_head['gps_time'] = read_time(self)
+        t, = read_from('<h', self)
+        event_head['trg_source'] = t & 0xff
+        event_head['known_time_trgsect'] = 0
+
+        if t & 0x100:
+            if self.header.version <= 1:
+                num_list_trgsect, = read_from('<h', self)
+                event_head['list_trgsect'] = read_array(
+                    self, dtype='<i2', count=num_list_trgsect
+                )
+            else:
+                num_list_trgsect, = read_utf8_like_signed_int(self)
+                event_head['list_trgsect'] = np.array([
+                    read_utf8_like_signed_int(self) for _ in range(num_list_trgsect)
+                ])
+            if self.header.version >= 1 and (t & 0x400):
+                event_head['time_trgsect'] = read_array(
+                    self, dtype='<f4', count=num_list_trgsect
+                )
+
+        if t & 0x200:
+            if self.header.version <= 1:
+                event_head['num_phys_addr'] = read_from('<h', self)
+                event_head['phys_addr'] = read_array(
+                    self, dtype='<i2', count=event_head['num_phys_addr']
+                )
+            else:
+                event_head['num_phys_addr'] = read_utf8_like_signed_int(self)
+                event_head['phys_addr'] = np.array([
+                    read_utf8_like_signed_int(self)
+                    for _ in range(event_head['num_phys_addr'])
+                ])
+        return event_head
 
 
 class SimTelTelADCSum(EventIOObject):
