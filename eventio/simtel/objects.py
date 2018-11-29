@@ -447,6 +447,7 @@ class SimTelTelEvtHead(TelescopeObject):
     eventio_type = 2011
 
     def parse_data_field(self):
+        self.seek(0)
         event_head = {}
         event_head['loc_count'], = read_from('<i', self)
         event_head['glob_count'], = read_from('<i', self)
