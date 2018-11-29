@@ -454,7 +454,6 @@ class SimTelTelEvtHead(TelescopeObject):
         event_head['gps_time'] = read_time(self)
         t, = read_from('<h', self)
         event_head['trg_source'] = t & 0xff
-        event_head['known_time_trgsect'] = 0
 
         if t & 0x100:
             if self.header.version <= 1:
