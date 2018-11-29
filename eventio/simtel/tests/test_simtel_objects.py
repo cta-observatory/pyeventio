@@ -29,6 +29,26 @@ def test_run_heder():
         data['target'] = b'Monte Carlo beach'
 
 
+def test_70():
+    assert False
+
+
+def test_71():
+    assert False
+
+
+def test_72():
+    assert False
+
+
+def test_2000():
+    assert False
+
+
+def test_2001():
+    assert False
+
+
 def test_2002():
     from eventio import EventIOFile
     from eventio.simtel.objects import SimTelCamSettings
@@ -45,27 +65,21 @@ def test_2002():
         assert len(camera_data['pixel_y']) == 1855
 
 
-def test_telid():
-    from eventio.simtel.objects import SimTelTelEvent
-
-    assert SimTelTelEvent.type_to_telid(3305) == 205
-    assert SimTelTelEvent.type_to_telid(3205) == 105
-    assert SimTelTelEvent.type_to_telid(2203) == 3
+def test_2003():
+    assert False
 
 
-def test_track():
+def test_2004():
     from eventio import EventIOFile
-    from eventio.simtel.objects import SimTelEvent, SimTelTrackEvent
+    from eventio.simtel.objects import SimTelPixelset
 
     with EventIOFile(test_file) as f:
+        o = find_type(f, SimTelPixelset)
 
-        # search for first event
-        o = find_type(f, SimTelEvent)
-        s = find_type(o, SimTelTrackEvent)
+        assert o.telescope_id == 1
+        pixelset = o.parse_data_field()
 
-        pointing = s.parse_data_field()
-        assert 'azimuth_raw' in pointing.dtype.names
-        assert 'altitude_raw' in pointing.dtype.names
+        assert pixelset['num_pixels'] == 1855
 
 
 def test_2005():
@@ -108,20 +122,7 @@ def test_2005_all_objects():
             assert len(pixel_disable['HV_disabled']) == 0
 
 
-def test_pixelset():
-    from eventio import EventIOFile
-    from eventio.simtel.objects import SimTelPixelset
-
-    with EventIOFile(test_file) as f:
-        o = find_type(f, SimTelPixelset)
-
-        assert o.telescope_id == 1
-        pixelset = o.parse_data_field()
-
-        assert pixelset['num_pixels'] == 1855
-
-
-def test_2006_all():
+def test_2006():
     from eventio import EventIOFile
     from eventio.simtel.objects import SimTelCamsoftset
 
@@ -158,7 +159,7 @@ def test_2006_all():
             assert d['report_HV_period'] == 0
 
 
-def test_2007_all():
+def test_2007():
     from eventio import EventIOFile
     from eventio.simtel.objects import SimTelPointingCor
 
@@ -211,7 +212,165 @@ def test_2009():
         assert 'teltrg_time_by_type' in data
 
 
-def test_2021_all():
+def test_2011_all():
+    from eventio import EventIOFile
+    from eventio.simtel.objects import SimTelTelEvent, SimTelEvent
+    # class under test
+    from eventio.simtel.objects import SimTelTelEvtHead
+
+    with EventIOFile(test_file) as f:
+        all_2011_obs = []
+
+        # find class under test in the deep hierarchy jungle
+        # would be nice to find an easier way for this.
+        for o in f:
+            if isinstance(o, SimTelEvent):
+                for sub in o:
+                    if isinstance(sub, SimTelTelEvent):
+                        for subsub in sub:
+                            if isinstance(subsub, SimTelTelEvtHead):
+                                all_2011_obs.append(subsub)
+
+        for i, o in enumerate(all_2011_obs):
+            d = o.parse_data_field()
+            # assert parse_data_field() consumed all data from o
+            bytes_not_consumed = o.read()
+            assert len(bytes_not_consumed) <= 4
+            for byte_ in bytes_not_consumed:
+                assert byte_ == 0
+
+            # print(d)
+        # a few printed examples: only version 1!!
+        '''
+        {
+            'loc_count': 1,
+            'glob_count': 408,
+            'cpu_time': (1408549473, 35597000),
+            'gps_time': (0, 0),
+            '_t': 1281, # <-- 0x501
+             'trg_source': 1,
+            'list_trgsect': array([174, 175, 198, 199], dtype=int16),
+            'time_trgsect': array(
+                [37.537537, 37.537537, 37.537537, 37.537537],
+                dtype=float32
+            )
+        }
+        {
+            'loc_count': 1,
+            'glob_count': 408,
+            'cpu_time': (1408549473, 35597000),
+            'gps_time': (0, 0),
+            '_t': 1281,
+            'trg_source': 1,
+            'list_trgsect': array(
+                [316, 317, 318, 340, 341, 342], dtype=int16),
+            'time_trgsect': array(
+                [35.285286, 35.285286, 35.285286,
+                35.285286, 35.285286, 35.285286],
+                dtype=float32
+            )
+        }
+        {
+            'loc_count': 1,
+            'glob_count': 409,
+            'cpu_time': (1408549476, 147099000),
+            'gps_time': (0, 0),
+            '_t': 1281,
+            'trg_source': 1,
+            'list_trgsect': array(
+                [ 501,  742,  743,  744,  745,  748,  964,  974,  975,
+                  1955, 1956, 1960, 2019, 2023, 2024, 2028, 2083, 2087,
+                  2088, 2143, 2429, 2430, 2434, 2493, 2497, 2498, 2502,
+                  2557, 2561, 2562, 2617, 2622],
+                dtype=int16
+            ),
+            'time_trgsect': array(
+            [25.5, 27.5, 27.5, 28.5, 28. , 26.5, 30.5, 30.5, 32. , 28. , 28.5,
+            28.5, 28.5, 27. , 26.5, 27.5, 27.5, 27.5, 27.5, 30.5, 31. , 29. ,
+            29. , 29. , 27. , 27. , 27. , 27. , 27. , 27. , 31. , 31. ],
+            dtype=float32)
+        }
+        {
+            'loc_count': 1,
+            'glob_count': 409,
+            'cpu_time': (1408549476, 147099000),
+            'gps_time': (0, 0),
+            '_t': 1281,
+            'trg_source': 1,
+            'list_trgsect': array([2569, 2570], dtype=int16),
+            'time_trgsect': array([27., 27.], dtype=float32)
+        }
+        '''
+
+
+def test_2100():
+    from eventio import EventIOFile
+    from eventio.simtel.objects import SimTelEvent, SimTelTrackEvent
+
+    with EventIOFile(test_file) as f:
+
+        # search for first event
+        o = find_type(f, SimTelEvent)
+        s = find_type(o, SimTelTrackEvent)
+
+        pointing = s.parse_data_field()
+        assert 'azimuth_raw' in pointing.dtype.names
+        assert 'altitude_raw' in pointing.dtype.names
+
+
+def test_2200():
+    from eventio.simtel.objects import SimTelTelEvent
+
+    assert SimTelTelEvent.type_to_telid(3305) == 205
+    assert SimTelTelEvent.type_to_telid(3205) == 105
+    assert SimTelTelEvent.type_to_telid(2203) == 3
+
+
+def test_2010():
+    assert False
+
+
+def test_2011():
+    assert False
+
+
+def test_2012():
+    assert False
+
+
+def test_2013():
+    assert False
+
+
+def test_2014():
+    assert False
+
+
+def test_2015():
+    assert False
+
+
+def test_2016():
+    assert False
+
+
+def test_2017():
+    assert False
+
+
+def test_2018():
+    assert False
+
+
+def test_2019():
+    assert False
+
+
+def test_2020():
+    assert False
+
+
+def test_2021():
     from eventio import EventIOFile
     from eventio.simtel.objects import SimTelMCEvent
 
@@ -237,7 +396,7 @@ def test_2021_all():
             '''
 
 
-def test_2022_all():
+def test_2022():
     from eventio import EventIOFile
     from eventio.simtel.objects import SimTelTelMoni
 
@@ -315,7 +474,7 @@ def test_2022_all():
             '''
 
 
-def test_2023_all():
+def test_2023():
     from eventio import EventIOFile
     from eventio.simtel.objects import SimTelLasCal
 
@@ -330,7 +489,7 @@ def test_2023_all():
             # assert parse_data_field() consumed all data from o
             assert len(o.read()) == 0
 
-            assert d['telescope_id'] ==  i + 1
+            assert d['telescope_id'] == i + 1
             assert d['lascal_id'] == 2
 
     '''
@@ -364,3 +523,38 @@ def test_2027_all():
             assert len(bytes_not_consumed) == 0
 
             assert d
+
+
+def test_2024():
+    assert False
+
+
+def test_2025():
+    assert False
+
+
+def test_2026():
+    from eventio import EventIOFile
+    from eventio.simtel.objects import SimTelMCPeSum
+
+    with EventIOFile(test_file) as f:
+        all_2026_obs = [
+            o for o in f
+            if o.header.type == SimTelMCPeSum.eventio_type
+        ]
+
+        for i, o in enumerate(all_2026_obs):
+            d = o.parse_data_field()
+            bytes_not_consumed = o.read()
+            # assert parse_data_field() consumed all data,
+            assert len(bytes_not_consumed) == 0
+
+            assert d['event'] // 100 == d['shower_num']
+
+
+def test_2027():
+    assert False
+
+
+def test_2028():
+    assert False
