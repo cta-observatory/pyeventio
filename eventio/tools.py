@@ -112,17 +112,12 @@ def read_vector_of_uint32_scount_differential_optimized(f, count):
     val = np.int32(0)
     for i in range(count):
         v0, = f.read(1)
-        print(v0)
 
         if (v0 & 0x80) == 0:  # one byte
-            print(val, bin(v0), bin(v0 & 0x01))
             if (v0 & 1) == 0:  # positive
-                print('positive')
                 val += v0 >> 1
             else:  # negative
-                print('negative')
                 val -= (v0 >> 1) + 1
-            print(val)
         elif (v0 & 0xc0) == 0x80:  # two bytes
             v1, = f.read(1)
             if (v1 & 1) == 0:  # positive
@@ -180,6 +175,8 @@ def read_vector_of_uint32_scount_differential_optimized(f, count):
                     | ((v4 >> 1) + 1)
                 )
         output[i] = val
-        if count == 1:
-            return val
-        return output
+
+    if count == 1:
+        return val
+
+    return output

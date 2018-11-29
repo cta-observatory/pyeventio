@@ -1,5 +1,6 @@
 from io import BytesIO
 import struct
+import numpy as np
 
 
 def test_uint32_vector_differential():
@@ -12,6 +13,20 @@ def test_uint32_vector_differential():
     assert read_vector_of_uint32_scount_differential(b, 1) == 5
     b.seek(0)
     assert read_vector_of_uint32_scount_differential_optimized(b, 1) == 5
+
+    values = (np.arange(10) - 5)**2
+    differential = np.append(values[0], np.diff(values))
+
+    b = np.empty(10, dtype='uint8')
+    mask = differential < 0
+    b[mask] = (-(differential[mask] + 1) << 1) | 1
+    b[~mask] = (differential[~mask] << 1)
+
+    b = BytesIO(b.tobytes())
+
+    assert np.all(values == read_vector_of_uint32_scount_differential(b, 10))
+    b.seek(0)
+    assert np.all(values == read_vector_of_uint32_scount_differential_optimized(b, 10))
 
 
 def test_read_string():
