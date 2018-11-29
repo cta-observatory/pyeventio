@@ -5,9 +5,7 @@ from ..tools import (
     read_ints,
     read_eventio_string,
     read_from,
-    read_time,
     read_utf8_like_signed_int,
-    read_utf8_like_unsigned_int,
     read_array,
     read_time,
 )
@@ -35,7 +33,7 @@ class TelescopeObject(EventIOObject):
 
 def assert_exact_version(self, supported_version):
     if self.header.version != supported_version:
-        raise IOError(
+        raise NotImplementedError(
             (
                 'Unsupported version of {name}'
                 'only supports version {supported_version}'
@@ -43,6 +41,21 @@ def assert_exact_version(self, supported_version):
             ).format(
                 name=self.__class__.__name__,
                 supported_version=supported_version,
+                given_version=self.header.version,
+            )
+        )
+
+
+def assert_version_in(self, supported_versions):
+    if self.header.version not in supported_versions:
+        raise NotImplementedError(
+            (
+                'Unsupported version of {name} '
+                'supported versions are: {supported_versions} '
+                'the given version is: {given_version} '
+            ).format(
+                name=self.__class__.__name__,
+                supported_versions=supported_versions,
                 given_version=self.header.version,
             )
         )
@@ -445,8 +458,49 @@ class SimTelEvent(EventIOObject):
     eventio_type = 2010
 
 
-class SimTelTelEvtHead(EventIOObject):
+class SimTelTelEvtHead(TelescopeObject):
     eventio_type = 2011
+
+    def parse_data_field(self):
+        self.seek(0)
+        event_head = {}
+        event_head['loc_count'], = read_from('<i', self)
+        event_head['glob_count'], = read_from('<i', self)
+        event_head['cpu_time'] = read_time(self)
+        event_head['gps_time'] = read_time(self)
+        t, = read_from('<h', self)
+        event_head['trg_source'] = t & 0xff
+
+        if t & 0x100:
+            if self.header.version <= 1:
+                num_list_trgsect, = read_from('<h', self)
+                event_head['list_trgsect'] = read_array(
+                    self, dtype='<i2', count=num_list_trgsect
+                )
+            else:
+                num_list_trgsect, = read_utf8_like_signed_int(self)
+                event_head['list_trgsect'] = np.array([
+                    read_utf8_like_signed_int(self)
+                    for _ in range(num_list_trgsect)
+                ])
+            if self.header.version >= 1 and (t & 0x400):
+                event_head['time_trgsect'] = read_array(
+                    self, dtype='<f4', count=num_list_trgsect
+                )
+
+        if t & 0x200:
+            if self.header.version <= 1:
+                event_head['num_phys_addr'] = read_from('<h', self)
+                event_head['phys_addr'] = read_array(
+                    self, dtype='<i2', count=event_head['num_phys_addr']
+                )
+            else:
+                event_head['num_phys_addr'] = read_utf8_like_signed_int(self)
+                event_head['phys_addr'] = np.array([
+                    read_utf8_like_signed_int(self)
+                    for _ in range(event_head['num_phys_addr'])
+                ])
+        return event_head
 
 
 class SimTelTelADCSum(EventIOObject):
@@ -737,6 +791,29 @@ class SimTelMCPeSum(EventIOObject):
 
 class SimTelPixelList(EventIOObject):
     eventio_type = 2027
+
+    def parse_data_field(self):
+        self.seek(0)
+        # even in the prod3b version of Max N the objects
+        # of type 2027 seem to be of version 0 only.
+        # not sure if version 1 was ever produced.
+        assert_exact_version(self, supported_version=0)
+
+        code = self.header.id // 1_000_000
+        telescope = self.header.id % 1_000_000
+
+        pixels = read_from('<h', self)
+        # in version 1 pixels is a crazy int
+
+        pixel_list = read_array(self, 'i2', pixels)
+        # in version 1 pixel_list is an array of crazy int
+
+        return {
+            'code': code,
+            'telescope': telescope,
+            'pixels': pixels,
+            'pixel_list': pixel_list,
+        }
 
 
 class SimTelCalibEvent(EventIOObject):
