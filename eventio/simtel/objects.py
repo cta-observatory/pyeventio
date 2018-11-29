@@ -123,19 +123,44 @@ class SimTelRunHeader(EventIOObject):
 
 class SimTelMCRunHeader(EventIOObject):
     eventio_type = 2001
-    from .mc_runheader_dtypes import mc_runheader_dtype_map
 
     def parse_data_field(self):
         ''' '''
         self.seek(0)
+        assert_exact_version(self, 4)
 
-        if self.header.version not in self.mc_runheader_dtype_map:
-            raise IOError(
-                'Unsupported version of MCRunHeader: {}'.format(self.header.version)
-            )
-
-        header_type = self.mc_runheader_dtype_map[self.header.version]
-        return read_array(self, dtype=header_type, count=1).view(np.recarray)[0]
+        return {
+            'shower_prog_id': read_from('<i', self)[0],
+            'shower_prog_vers': read_from('<i', self)[0],
+            'shower_prog_start': read_from('<i', self)[0],
+            'detector_prog_id': read_from('<i', self)[0],
+            'detector_prog_vers': read_from('<i', self)[0],
+            'detector_prog_start': read_from('<i', self)[0],
+            'obsheight': read_from('<f', self)[0],
+            'num_showers': read_from('<i', self)[0],
+            'num_use': read_from('<i', self)[0],
+            'core_pos_mode': read_from('<i', self)[0],
+            'core_range': read_array(self, 'f4', 2),
+            'alt_range': read_array(self, 'f4', 2),
+            'az_range': read_array(self, 'f4', 2),
+            'diffuse': read_from('<i', self)[0],
+            'viewcone': read_array(self, 'f4', 2),
+            'E_range': read_array(self, 'f4', 2),
+            'spectral_index': read_from('<f', self)[0],
+            'B_total': read_from('<f', self)[0],
+            'B_inclination': read_from('<f', self)[0],
+            'B_declination': read_from('<f', self)[0],
+            'injection_height': read_from('<f', self)[0],
+            'atmosphere': read_from('<i', self)[0],
+            'corsika_iact_options': read_from('<i', self)[0],
+            'corsika_low_E_model': read_from('<i', self)[0],
+            'corsika_high_E_model': read_from('<i', self)[0],
+            'corsika_bunchsize': read_from('<f', self)[0],
+            'corsika_wlen_min': read_from('<f', self)[0],
+            'corsika_wlen_max': read_from('<f', self)[0],
+            'corsika_low_E_detail': read_from('<i', self)[0],
+            'corsika_high_E_detail': read_from('<i', self)[0],
+        }
 
 
 class SimTelCamSettings(TelescopeObject):
