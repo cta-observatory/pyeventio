@@ -729,10 +729,12 @@ class SimTelTelImage(EventIOObject):
             tel_image['kurtosis_err'] = read_from('<f', self)[0]
 
         if flags & 0x400:
-            num_hot = read_from('<h', self)[0]  # from v6 on this is crazy int
+            # from v6 on this is crazy int
+            num_hot = read_from('<h', self)[0]
             tel_image['num_hot'] = num_hot
             tel_image['hot_amp'] = read_array(self, 'f4', num_hot)
-            tel_image['hot_pixel'] = read_array(self, 'i2', num_hot) # from v6 on this is array of crazy int
+            # from v6 on this is array of crazy int
+            tel_image['hot_pixel'] = read_array(self, 'i2', num_hot)
 
         if flags & 0x800:
             tel_image['tm_slope'] = read_from('<f', self)[0]
@@ -744,9 +746,60 @@ class SimTelTelImage(EventIOObject):
         return tel_image
 
 
-
 class SimTelShower(EventIOObject):
     eventio_type = 2015
+
+    def parse_data_field(self):
+        self.seek(0)
+        assert_exact_version(self, supported_version=1)
+
+        shower = {}
+        result_bits = self.header.id
+        shower['result_bits'] = result_bits
+        shower['num_trg'] = read_from('<h', self)[0]
+        shower['num_read'] = read_from('<h', self)[0]
+        shower['num_img'] = read_from('<h', self)[0]
+        shower['img_pattern'] = read_from('<i', self)[0]
+
+        if result_bits & 0x01:
+            shower['Az'] = read_from('<f', self)[0]
+            shower['Alt'] = read_from('<f', self)[0]
+
+        if result_bits & 0x02:
+            shower['err_dir1'] = read_from('<f', self)[0]
+            shower['err_dir2'] = read_from('<f', self)[0]
+            shower['err_dir3'] = read_from('<f', self)[0]
+
+        if result_bits & 0x04:
+            shower['xc'] = read_from('<f', self)[0]
+            shower['yc'] = read_from('<f', self)[0]
+
+        if result_bits & 0x08:
+            shower['err_core1'] = read_from('<f', self)[0]
+            shower['err_core2'] = read_from('<f', self)[0]
+            shower['err_core3'] = read_from('<f', self)[0]
+
+        if result_bits & 0x10:
+            shower['mscl'] = read_from('<f', self)[0]
+            shower['mscw'] = read_from('<f', self)[0]
+
+        if result_bits & 0x20:
+            shower['err_mscl'] = read_from('<f', self)[0]
+            shower['err_mscw'] = read_from('<f', self)[0]
+
+        if result_bits & 0x40:
+            shower['energy'] = read_from('<f', self)[0]
+
+        if result_bits & 0x80:
+            shower['err_energy'] = read_from('<f', self)[0]
+
+        if result_bits & 0x0100:
+            shower['xmax'] = read_from('<f', self)[0]
+
+        if result_bits & 0x0200:
+            shower['err_xmax'] = read_from('<f', self)[0]
+
+        return shower
 
 
 class SimTelPixelTiming(EventIOObject):
