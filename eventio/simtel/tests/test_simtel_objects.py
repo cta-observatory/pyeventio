@@ -503,6 +503,28 @@ def test_2023():
     '''
 
 
+def test_2027_all():
+    # This test does not work with our gamma_test_file
+    # since it does not contain any object of type 2027
+    # :-(
+    from eventio import EventIOFile
+    from eventio.simtel.objects import SimTelPixelList
+
+    with EventIOFile(test_file) as f:
+        all_2027_obs = [
+            o for o in f
+            if o.header.type == SimTelPixelList.eventio_type
+        ]
+
+        for i, o in enumerate(all_2027_obs):
+            d = o.parse_data_field()
+            # assert parse_data_field() consumed all data,
+            bytes_not_consumed = o.read()
+            assert len(bytes_not_consumed) == 0
+
+            assert d
+
+
 def test_2024():
     assert False
 
@@ -536,4 +558,3 @@ def test_2027():
 
 def test_2028():
     assert False
-

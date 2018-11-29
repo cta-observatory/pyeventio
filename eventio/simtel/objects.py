@@ -792,6 +792,29 @@ class SimTelMCPeSum(EventIOObject):
 class SimTelPixelList(EventIOObject):
     eventio_type = 2027
 
+    def parse_data_field(self):
+        self.seek(0)
+        # even in the prod3b version of Max N the objects
+        # of type 2027 seem to be of version 0 only.
+        # not sure if version 1 was ever produced.
+        assert_exact_version(self, supported_version=0)
+
+        code = self.header.id // 1_000_000
+        telescope = self.header.id % 1_000_000
+
+        pixels = read_from('<h', self)
+        # in version 1 pixels is a crazy int
+
+        pixel_list = read_array(self, 'i2', pixels)
+        # in version 1 pixel_list is an array of crazy int
+
+        return {
+            'code': code,
+            'telescope': telescope,
+            'pixels': pixels,
+            'pixel_list': pixel_list,
+        }
+
 
 class SimTelCalibEvent(EventIOObject):
     eventio_type = 2028
