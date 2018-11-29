@@ -571,9 +571,21 @@ def test_2018():
 def test_2019():
     assert False
 
-@pytest.mark.xfail
+
 def test_2020():
-    assert False
+    from eventio import EventIOFile
+    from eventio.simtel.objects import SimTelMCShower
+
+    hessio_data = np.load(resource_filename(
+        'eventio', 'resources/gamma_test_mc_shower.npy'
+    ))
+    with EventIOFile(prod2_file) as f:
+        for d, o in zip(hessio_data, filter(lambda o: isinstance(o, SimTelMCShower), f)):
+            mc = o.parse_data_field()
+            assert mc['primary_id'] == 0
+            assert mc['energy'] == d[0]
+            assert mc['h_first_int'] == d[1]
+            assert mc['xmax'] == d[2]
 
 
 def test_2021():
@@ -581,10 +593,7 @@ def test_2021():
     from eventio.simtel.objects import SimTelMCEvent
 
     with EventIOFile(prod2_file) as f:
-        all_2021_obs = [
-            o for o in f
-            if o.header.type == SimTelMCEvent.eventio_type
-        ]
+        all_2021_obs = collect_toplevel_of_type(f, SimTelMCEvent)
 
         for i, o in enumerate(all_2021_obs):
             d = o.parse_data_field()

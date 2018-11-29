@@ -1,11 +1,12 @@
 ''' Implementations of the simtel_array EventIO object types '''
 import numpy as np
-from ..base import EventIOObject
+from ..base import EventIOObject, read_next_header
 from ..tools import (
     read_ints,
     read_eventio_string,
     read_from,
     read_utf8_like_signed_int,
+    read_utf8_like_unsigned_int,
     read_array,
     read_time,
     read_vector_of_uint32_scount_differential,
@@ -808,6 +809,59 @@ class SimTelPixelCalib(EventIOObject):
 
 class SimTelMCShower(EventIOObject):
     eventio_type = 2020
+
+    def parse_data_field(self):
+        self.seek(0)
+        assert_version_in(self, [0, 1, 2])
+        mc = {}
+        mc['shower'] = self.header.id
+        mc['primary_id'] = read_from('<i', self)[0]
+        mc['energy'] = read_from('<f', self)[0]
+        mc['azimuth'] = read_from('<f', self)[0]
+        mc['altitude'] = read_from('<f', self)[0]
+        if self.header.version >= 1:
+            mc['depth_start'] = read_from('<f', self)[0]
+        mc['h_first_int'] = read_from('<f', self)[0]
+        mc['xmax'] = read_from('<f', self)[0]
+        if self.header.version >= 1:
+            mc['hmax'] = read_from('<f', self)[0]
+            mc['emax'] = read_from('<f', self)[0]
+            mc['cmax'] = read_from('<f', self)[0]
+        else:
+            mc['hmax'] = mc['emax'] = mc['cmax'] = 0.0
+
+        mc['n_profiles'] = read_from('<h', self)[0]
+        mc['profiles'] = []
+        for i in range(mc['n_profiles']):
+            p = {}
+            p['id'] = read_from('<i', self)[0]
+            p['num_steps'] = read_from('<i', self)[0]
+            p['start'] = read_from('<f', self)[0]
+            p['end'] = read_from('<f', self)[0]
+            p['content'] = read_array(self, dtype='<f4', count=p['num_steps'])
+            mc['profiles'].append(p)
+
+        if self.header.version >= 2:
+            h = read_next_header(self, toplevel=False)
+            assert h.type == 1215
+            mc['mc_extra_params'] = MC_Extra_Params(h, self).parse_data_field()
+        return mc
+
+
+class MC_Extra_Params(EventIOObject):
+    eventio_type = 1215
+
+    def parse_data_field(self):
+        ep = {
+            'weight': read_from('<f', self),
+            'n_iparam': read_utf8_like_unsigned_int(self),
+            'n_fparam': read_utf8_like_unsigned_int(self),
+        }
+        if ep['n_iparam'] > 0:
+            ep['iparam'] = read_array(self, dtype='<i4', count=ep['n_iparam'])
+        if ep['n_fparam'] > 0:
+            ep['fparam'] = read_array(self, dtype='<f4', count=ep['n_iparam'])
+        return ep
 
 
 class SimTelMCEvent(EventIOObject):
