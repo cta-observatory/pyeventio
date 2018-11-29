@@ -47,6 +47,22 @@ def assert_exact_version(self, supported_version):
             )
         )
 
+def assert_version_in(self, supported_versions):
+    if self.header.version not in supported_versions:
+        raise IOError(
+            (
+                'Unsupported version of {name} '
+                'supported versions are: {supported_versions} '
+                'the given version is: {given_version} '
+            ).format(
+                name=self.__class__.__name__,
+                supported_versions=supported_versions,
+                given_version=self.header.version,
+            )
+        )
+
+
+
 
 class History(EventIOObject):
     eventio_type = 70
@@ -445,8 +461,89 @@ class SimTelEvent(EventIOObject):
     eventio_type = 2010
 
 
-class SimTelTelEvtHead(EventIOObject):
+class SimTelTelEvtHead(TelescopeObject):
     eventio_type = 2011
+
+    def parse_data_field(self):
+        self.seek(0)
+        assert_version_in(self, [1, 2])
+
+        return {
+            1: self._parse_version_1,
+            2: self._parse_version_2
+        }[self.header.version]()
+
+    def _parse_version_2(self):
+        loc_count = read_from('<i', self)[0]
+        glob_count = read_from('<i', self)[0]
+        cpu_time = read_time(self)
+        gps_time = read_time(self)
+        t = read_from('<h', self)[0]
+        trg_source = t & 0xff
+
+        result = {
+            'loc_count': loc_count,
+            'glob_count': glob_count,
+            'cpu_time': cpu_time,
+            'gps_time': gps_time,
+            '_t': hex(t),  # can be removed after initial playing around
+            'trg_source': trg_source,
+        }
+
+        if t & 0x100:
+            num_list_trgsect = read_utf8_like_signed_int(self)
+            list_trgsect = [
+                read_utf8_like_signed_int(self)
+                for i in range(num_list_trgsect)
+            ]
+            result['list_trgsect'] = list_trgsect
+
+            if t & 0x400:
+                time_trgsect = read_array(self, 'f4', num_list_trgsect)
+                result['time_trgsect'] = time_trgsect
+
+        if t & 0x200:
+            num_phys_addr = read_utf8_like_signed_int(self)
+            phys_addr = [
+                read_utf8_like_signed_int(self)
+                for i in range(num_phys_addr)
+            ]
+            result['phys_addr'] = phys_addr
+
+        return result
+
+    def _parse_version_1(self):
+        loc_count = read_from('<i', self)[0]
+        glob_count = read_from('<i', self)[0]
+        cpu_time = read_time(self)
+        gps_time = read_time(self)
+        t = read_from('<h', self)[0]
+        trg_source = t & 0xff
+
+        result = {
+            'loc_count': loc_count,
+            'glob_count': glob_count,
+            'cpu_time': cpu_time,
+            'gps_time': gps_time,
+            '_t': hex(t),  # can be removed after initial playing around
+            'trg_source': trg_source,
+        }
+
+        if t & 0x100:
+            num_list_trgsect = read_from('<h', self)[0]
+            list_trgsect = read_array(self, 'i2', num_list_trgsect)
+            result['list_trgsect'] = list_trgsect
+
+            if t & 0x400:
+                time_trgsect = read_array(self, 'f4', num_list_trgsect)
+                result['time_trgsect'] = time_trgsect
+
+        if t & 0x200:
+            num_phys_addr = read_from('<h', self)[0]
+            phys_addr = read_array(self, 'i2', num_phys_addr)
+            result['phys_addr'] = phys_addr
+
+        return result
 
 
 class SimTelTelADCSum(EventIOObject):

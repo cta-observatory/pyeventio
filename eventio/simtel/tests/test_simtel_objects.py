@@ -342,3 +342,98 @@ def test_2023_all():
     'calib': array([[0.02838226, 0.02617863, 0.02520496, ..., 0.02812363, 0.02769747, 0.02691549]], dtype=float32),
     'tm_calib': array([[-21.383808, -21.283247, -21.452444, ..., -22.023653, -21.650948, -21.601557]], dtype=float32)}
     '''
+
+
+
+def test_2011_all():
+    from eventio import EventIOFile
+    from eventio.simtel.objects import SimTelTelEvent, SimTelEvent
+    # class under test
+    from eventio.simtel.objects import SimTelTelEvtHead
+
+
+    with EventIOFile(test_file) as f:
+        all_2011_obs = []
+
+        # find class under test in the deep hierarchy jungle
+        # would be nice to find an easier way for this.
+        for o in f:
+            if isinstance(o, SimTelEvent):
+                for sub in o:
+                    if isinstance(sub, SimTelTelEvent):
+                        for subsub in sub:
+                            if isinstance(subsub, SimTelTelEvtHead):
+                                all_2011_obs.append(subsub)
+
+
+        for i, o in enumerate(all_2011_obs):
+            d = o.parse_data_field()
+            # assert parse_data_field() consumed all data from o
+            bytes_not_consumed = o.read()
+            assert len(bytes_not_consumed) <= 4
+            for byte_ in bytes_not_consumed:
+                assert byte_ == 0
+
+
+        # a few printed examples: only version 1!!
+        # print(d)
+        '''
+        {
+            'loc_count': 1,
+            'glob_count': 408,
+            'cpu_time': (1408549473, 35597000),
+            'gps_time': (0, 0),
+            '_t': 1281, # <-- 0x501
+             'trg_source': 1,
+            'list_trgsect': array([174, 175, 198, 199], dtype=int16),
+            'time_trgsect': array(
+                [37.537537, 37.537537, 37.537537, 37.537537],
+                dtype=float32
+            )
+        }
+        {
+            'loc_count': 1,
+            'glob_count': 408,
+            'cpu_time': (1408549473, 35597000),
+            'gps_time': (0, 0),
+            '_t': 1281,
+            'trg_source': 1,
+            'list_trgsect': array(
+                [316, 317, 318, 340, 341, 342], dtype=int16),
+            'time_trgsect': array(
+                [35.285286, 35.285286, 35.285286,
+                35.285286, 35.285286, 35.285286],
+                dtype=float32
+            )
+        }
+        {
+            'loc_count': 1,
+            'glob_count': 409,
+            'cpu_time': (1408549476, 147099000),
+            'gps_time': (0, 0),
+            '_t': 1281,
+            'trg_source': 1,
+            'list_trgsect': array(
+                [ 501,  742,  743,  744,  745,  748,  964,  974,  975,
+                  1955, 1956, 1960, 2019, 2023, 2024, 2028, 2083, 2087,
+                  2088, 2143, 2429, 2430, 2434, 2493, 2497, 2498, 2502,
+                  2557, 2561, 2562, 2617, 2622],
+                dtype=int16
+            ),
+            'time_trgsect': array(
+            [25.5, 27.5, 27.5, 28.5, 28. , 26.5, 30.5, 30.5, 32. , 28. , 28.5,
+            28.5, 28.5, 27. , 26.5, 27.5, 27.5, 27.5, 27.5, 30.5, 31. , 29. ,
+            29. , 29. , 27. , 27. , 27. , 27. , 27. , 27. , 31. , 31. ],
+            dtype=float32)
+        }
+        {
+            'loc_count': 1,
+            'glob_count': 409,
+            'cpu_time': (1408549476, 147099000),
+            'gps_time': (0, 0),
+            '_t': 1281,
+            'trg_source': 1,
+            'list_trgsect': array([2569, 2570], dtype=int16),
+            'time_trgsect': array([27., 27.], dtype=float32)
+        }
+        '''
