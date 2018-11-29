@@ -464,7 +464,8 @@ class SimTelTelEvtHead(TelescopeObject):
             else:
                 num_list_trgsect, = read_utf8_like_signed_int(self)
                 event_head['list_trgsect'] = np.array([
-                    read_utf8_like_signed_int(self) for _ in range(num_list_trgsect)
+                    read_utf8_like_signed_int(self)
+                    for _ in range(num_list_trgsect)
                 ])
             if self.header.version >= 1 and (t & 0x400):
                 event_head['time_trgsect'] = read_array(
