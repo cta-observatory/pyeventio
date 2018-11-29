@@ -658,6 +658,7 @@ class SimTelTelADCSamp(EventIOObject):
                             self, num_samples
                         )
                     )
+        return adc_samples
 
     def _parse_in_not_zero_suppressed_mode(
         self,
@@ -676,6 +677,7 @@ class SimTelTelADCSamp(EventIOObject):
                         self, num_samples
                     )
                 )
+        return adc_samples
 
 
 class SimTelTelImage(EventIOObject):
