@@ -66,7 +66,6 @@ def test_71():
             assert isinstance(s, bytes)
 
 
-
 def test_72():
     from eventio import EventIOFile
     from eventio.simtel.objects import History, HistoryConfig
@@ -88,6 +87,7 @@ def test_72():
 @pytest.mark.xfail
 def test_2000():
     assert False
+
 
 @pytest.mark.xfail
 def test_2001():
