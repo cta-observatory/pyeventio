@@ -18,17 +18,6 @@ def find_type(f, eventio_type):
     return o
 
 
-def test_run_heder():
-    from eventio import EventIOFile
-    from eventio.simtel import SimTelRunHeader
-
-    with EventIOFile(test_file) as f:
-        o = find_type(f, SimTelRunHeader)
-
-        data = o.parse_data_field()
-        data['observer'] = b'bernlohr@lfc371.mpi-hd.mpg.de'
-        data['target'] = b'Monte Carlo beach'
-
 def test_70():
     from eventio import EventIOFile
     from eventio.simtel.objects import History
@@ -105,6 +94,18 @@ def test_2000():
             assert len(bytes_not_consumed) == 2
             for byte_ in bytes_not_consumed:
                 assert byte_ == 0
+
+
+def test_2000_as_well():
+    from eventio import EventIOFile
+    from eventio.simtel import SimTelRunHeader
+
+    with EventIOFile(test_file) as f:
+        o = find_type(f, SimTelRunHeader)
+
+        data = o.parse_data_field()
+        data['observer'] = b'bernlohr@lfc371.mpi-hd.mpg.de'
+        data['target'] = b'Monte Carlo beach'
 
 
 @pytest.mark.xfail
