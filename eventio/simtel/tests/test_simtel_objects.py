@@ -8,9 +8,29 @@ from eventio.search_utils import (
     collect_toplevel_of_type
 )
 
-
 test_file = resource_filename('eventio', 'resources/gamma_test.simtel.gz')
+expected_adc_samples_event1_tel_id_38 = np.load(
+    resource_filename(
+        'eventio',
+        'resources/gamma_test.simtel_event1_tel_id_38_adc_samples.npy'
+    )
+)
 
+def find_all_subcontainers(f, structure, level=0):
+    '''
+    Find all subcontainers expected in structure.
+    So if you want all AdcSums, use
+    structure = [SimTelEvent, SimTelTelEvent, SimTelTelADCSum]
+    '''
+    objects = []
+    elem = structure[level]
+
+    for o in f:
+        if isinstance(o, structure[-1]):
+            objects.append(o)
+        elif isinstance(o, elem):
+            objects.extend(find_all_subcontainers(o, structure, level + 1))
+    return objects
 
 
 def test_70():
@@ -343,17 +363,10 @@ def test_2011():
     from eventio.simtel.objects import SimTelTelEvtHead
 
     with EventIOFile(test_file) as f:
-        all_2011_obs = []
-
-        # find class under test in the deep hierarchy jungle
-        # would be nice to find an easier way for this.
-        for o in f:
-            if isinstance(o, SimTelEvent):
-                for sub in o:
-                    if isinstance(sub, SimTelTelEvent):
-                        for subsub in sub:
-                            if isinstance(subsub, SimTelTelEvtHead):
-                                all_2011_obs.append(subsub)
+        all_2011_obs = find_all_subcontainers(
+            f,
+            [SimTelEvent, SimTelTelEvent, SimTelTelEvtHead]
+        )
 
         for i, o in enumerate(all_2011_obs):
             d = o.parse_data_field()
@@ -430,9 +443,49 @@ def test_2011():
 def test_2012():
     assert False
 
-@pytest.mark.xfail
+
 def test_2013():
-    assert False
+    from eventio import EventIOFile
+    from eventio.simtel.objects import SimTelTelEvent, SimTelEvent
+    # class under test
+    from eventio.simtel.objects import SimTelTelADCSamp
+
+    with EventIOFile(test_file) as f:
+        all_2013_obs = find_all_subcontainers(
+            f,
+            [SimTelEvent, SimTelTelEvent, SimTelTelADCSamp]
+        )[:3]  # <--- reduce number of containers to speed up test
+
+        assert all_2013_obs
+        print(
+            '{} objects of type 2013 found, parsing ... '
+            .format(
+                len(all_2013_obs)
+            )
+        )
+
+        event1_tel_38 = all_2013_obs[0]
+        assert event1_tel_38.telescope_id == 38
+
+        event1_tel_38_adc_samples = event1_tel_38.parse_data_field()
+        assert (
+            event1_tel_38_adc_samples.shape ==
+            expected_adc_samples_event1_tel_id_38.shape
+        )
+        assert (
+            event1_tel_38_adc_samples ==
+            expected_adc_samples_event1_tel_id_38
+        ).all()
+
+        # we cannot test all of the 50 objects ... the last is truncated
+        for object_index, o in enumerate(all_2013_obs):
+            d = o.parse_data_field()
+            # assert parse_data_field() consumed all data from o
+            bytes_not_consumed = o.read()
+            assert len(bytes_not_consumed) <= 3
+            for byte_ in bytes_not_consumed:
+                assert byte_ == 0
+
 
 @pytest.mark.xfail
 def test_2014():
