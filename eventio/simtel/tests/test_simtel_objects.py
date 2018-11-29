@@ -1,4 +1,5 @@
 from pkg_resources import resource_filename
+import pytest
 from pytest import approx
 import numpy as np
 
@@ -17,7 +18,90 @@ def find_type(f, eventio_type):
     return o
 
 
-def test_run_heder():
+def collect_toplevel_of_type(f, eventio_type):
+    classes_under_test = [
+        o for o in f
+        if isinstance(o, eventio_type)
+    ]
+    # make sure we found some
+    assert classes_under_test
+    return classes_under_test
+
+
+def test_70():
+    from eventio import EventIOFile
+    from eventio.simtel.objects import History
+
+    with EventIOFile(test_file) as f:
+        all_histories = [
+            o for o in f
+            if o.header.type == History.eventio_type
+        ]
+        for o in all_histories:
+            assert isinstance(o, History)
+
+            # make sure a History can be iterated and is never empty
+            body_reached = False
+            for x in o:
+                body_reached = True
+            assert body_reached
+
+
+def test_71():
+    from eventio import EventIOFile
+    from eventio.simtel.objects import History, HistoryCommandLine
+
+    with EventIOFile(test_file) as f:
+        all_history_cmd_lines = []
+        for o in f:
+            if isinstance(o, History):
+                for sub in o:
+                    if isinstance(sub, HistoryCommandLine):
+                        all_history_cmd_lines.append(sub)
+
+        for o in all_history_cmd_lines:
+            s = o.parse_data_field()
+            assert s
+            assert isinstance(s, bytes)
+
+
+def test_72():
+    from eventio import EventIOFile
+    from eventio.simtel.objects import History, HistoryConfig
+
+    with EventIOFile(test_file) as f:
+        all_history_configs = []
+        for o in f:
+            if isinstance(o, History):
+                for sub in o:
+                    if isinstance(sub, HistoryConfig):
+                        all_history_configs.append(sub)
+
+        for o in all_history_configs:
+            s = o.parse_data_field()
+            assert s
+            assert isinstance(s, bytes)
+
+
+def test_2000():
+    from eventio import EventIOFile
+    from eventio.simtel.objects import SimTelRunHeader
+
+    with EventIOFile(test_file) as f:
+        classes_under_test = collect_toplevel_of_type(f, SimTelRunHeader)
+
+        for o in classes_under_test:
+            d = o.parse_data_field()
+            assert d
+
+            bytes_not_consumed = o.read()
+            # DN: I do not know why two bytes, did not x-check
+            assert len(bytes_not_consumed) == 2
+            for byte_ in bytes_not_consumed:
+                assert byte_ == 0
+
+
+def test_2000_as_well():
     from eventio import EventIOFile
     from eventio.simtel import SimTelRunHeader
 
@@ -25,28 +109,26 @@ def test_run_heder():
         o = find_type(f, SimTelRunHeader)
 
         data = o.parse_data_field()
-        data['observer'] = b'bernlohr@lfc371.mpi-hd.mpg.de'
-        data['target'] = b'Monte Carlo beach'
-
-
-def test_70():
-    assert False
-
-
-def test_71():
-    assert False
-
-
-def test_72():
-    assert False
-
-
-def test_2000():
-    assert False
+        assert data['observer'] == b'bernlohr@lfc371.mpi-hd.mpg.de'
+        assert data['target'] == b'Monte Carlo beach'
 
 
 def test_2001():
-    assert False
+    from eventio import EventIOFile
+    from eventio.simtel.objects import SimTelMCRunHeader
+
+    with EventIOFile(test_file) as f:
+        classes_under_test = collect_toplevel_of_type(f, SimTelMCRunHeader)
+
+        for o in classes_under_test:
+            d = o.parse_data_field()
+            assert d
+
+            bytes_not_consumed = o.read()
+            # DN: I do not know why two bytes, did not x-check
+            assert len(bytes_not_consumed) == 0
+            for byte_ in bytes_not_consumed:
+                assert byte_ == 0
 
 
 def test_2002():
@@ -65,6 +147,7 @@ def test_2002():
         assert len(camera_data['pixel_y']) == 1855
 
 
+@pytest.mark.xfail
 def test_2003():
     assert False
 
@@ -212,7 +295,34 @@ def test_2009():
         assert 'teltrg_time_by_type' in data
 
 
-def test_2011_all():
+def test_2100():
+    from eventio import EventIOFile
+    from eventio.simtel.objects import SimTelEvent, SimTelTrackEvent
+
+    with EventIOFile(test_file) as f:
+
+        # search for first event
+        o = find_type(f, SimTelEvent)
+        s = find_type(o, SimTelTrackEvent)
+
+        pointing = s.parse_data_field()
+        assert 'azimuth_raw' in pointing.dtype.names
+        assert 'altitude_raw' in pointing.dtype.names
+
+
+def test_2200():
+    from eventio.simtel.objects import SimTelTelEvent
+
+    assert SimTelTelEvent.type_to_telid(3305) == 205
+    assert SimTelTelEvent.type_to_telid(3205) == 105
+    assert SimTelTelEvent.type_to_telid(2203) == 3
+
+@pytest.mark.xfail
+def test_2010():
+    assert False
+
+
+def test_2011():
     from eventio import EventIOFile
     from eventio.simtel.objects import SimTelTelEvent, SimTelEvent
     # class under test
@@ -302,70 +412,39 @@ def test_2011_all():
         }
         '''
 
-
-def test_2100():
-    from eventio import EventIOFile
-    from eventio.simtel.objects import SimTelEvent, SimTelTrackEvent
-
-    with EventIOFile(test_file) as f:
-
-        # search for first event
-        o = find_type(f, SimTelEvent)
-        s = find_type(o, SimTelTrackEvent)
-
-        pointing = s.parse_data_field()
-        assert 'azimuth_raw' in pointing.dtype.names
-        assert 'altitude_raw' in pointing.dtype.names
-
-
-def test_2200():
-    from eventio.simtel.objects import SimTelTelEvent
-
-    assert SimTelTelEvent.type_to_telid(3305) == 205
-    assert SimTelTelEvent.type_to_telid(3205) == 105
-    assert SimTelTelEvent.type_to_telid(2203) == 3
-
-
-def test_2010():
-    assert False
-
-
-def test_2011():
-    assert False
-
-
+@pytest.mark.xfail
 def test_2012():
     assert False
 
-
+@pytest.mark.xfail
 def test_2013():
     assert False
 
-
+@pytest.mark.xfail
 def test_2014():
     assert False
 
-
+@pytest.mark.xfail
 def test_2015():
     assert False
 
-
+@pytest.mark.xfail
 def test_2016():
     assert False
 
-
+@pytest.mark.xfail
 def test_2017():
     assert False
 
-
+@pytest.mark.xfail
 def test_2018():
     assert False
 
-
+@pytest.mark.xfail
 def test_2019():
     assert False
 
-
+@pytest.mark.xfail
 def test_2020():
     assert False
 
@@ -503,32 +582,11 @@ def test_2023():
     '''
 
 
-def test_2027_all():
-    # This test does not work with our gamma_test_file
-    # since it does not contain any object of type 2027
-    # :-(
-    from eventio import EventIOFile
-    from eventio.simtel.objects import SimTelPixelList
-
-    with EventIOFile(test_file) as f:
-        all_2027_obs = [
-            o for o in f
-            if o.header.type == SimTelPixelList.eventio_type
-        ]
-
-        for i, o in enumerate(all_2027_obs):
-            d = o.parse_data_field()
-            # assert parse_data_field() consumed all data,
-            bytes_not_consumed = o.read()
-            assert len(bytes_not_consumed) == 0
-
-            assert d
-
-
+@pytest.mark.xfail
 def test_2024():
     assert False
 
-
+@pytest.mark.xfail
 def test_2025():
     assert False
 
@@ -553,8 +611,27 @@ def test_2026():
 
 
 def test_2027():
-    assert False
+    # This test does not work with our gamma_test_file
+    # since it does not contain any object of type 2027
+    # :-(
+    from eventio import EventIOFile
+    from eventio.simtel.objects import SimTelPixelList
+
+    with EventIOFile(test_file) as f:
+        all_2027_obs = [
+            o for o in f
+            if o.header.type == SimTelPixelList.eventio_type
+        ]
+
+        for i, o in enumerate(all_2027_obs):
+            d = o.parse_data_field()
+            # assert parse_data_field() consumed all data,
+            bytes_not_consumed = o.read()
+            assert len(bytes_not_consumed) == 0
+
+            assert d
 
 
+@pytest.mark.xfail
 def test_2028():
     assert False
