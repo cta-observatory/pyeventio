@@ -169,18 +169,67 @@ class SimTelCamSettings(TelescopeObject):
     eventio_type = 2002
 
     def parse_data_field(self):
+        self.seek(0)
+        assert_version_in(self, [0, 1, 2, 3, 4])
         n_pixels, = read_from('<i', self)
-        focal_length, = read_from('<f', self)
-        pixel_x = read_array(self, count=n_pixels, dtype='float32')
-        pixel_y = read_array(self, count=n_pixels, dtype='float32')
 
-        return {
-            'telescope_id': self.telescope_id,
-            'n_pixels': n_pixels,
-            'focal_length': focal_length,
-            'pixel_x': pixel_x,
-            'pixel_y': pixel_y,
-        }
+        cam = {'n_pixels': n_pixels, 'telescope_id': self.telescope_id}
+        cam['focal_length'], = read_from('<f', self)
+        cam['pixel_x'] = read_array(self, count=n_pixels, dtype='float32')
+        cam['pixel_y'] = read_array(self, count=n_pixels, dtype='float32')
+
+        if self.header.version >= 4:
+            cam['curved_surface'] = read_utf8_like_signed_int(self)
+            cam['pixels_parallel'] = read_utf8_like_signed_int(self)
+
+            if cam['curved_surface']:
+                cam['pixel_z'] = read_array(self, dtype='<f4', count=n_pixels)
+            else:
+                cam['pixel_z'] = np.zeros(n_pixels, dtype='<f4')
+
+            if not cam['pixels_parallel']:
+                cam['nxpix'] = read_array(self, dtype='<f4', count=n_pixels)
+                cam['nypix'] = read_array(self, dtype='<f4', count=n_pixels)
+            else:
+                cam['nxpix'] = cam['nypix'] = np.zeros(n_pixels, dtype='f4')
+
+            cam['common_pixel_shape'] = read_utf8_like_signed_int(self)
+            if not cam['common_pixel_shape']:
+                cam['pixel_shape'] = np.array([
+                    read_utf8_like_signed_int(self) for _ in range(n_pixels)
+                ])
+                cam['pixel_area'] = read_array(self, dtype='<f4', count=n_pixels)
+                cam['pixel_size'] = read_array(self, dtype='<f4', count=n_pixels)
+            else:
+                cam['pixel_shape'] = np.repeat(read_utf8_like_signed_int(self), n_pixels)
+                cam['pixel_area'] = np.repeat(read_from('<f', self)[0], n_pixels)
+                cam['pixel_size'] = np.repeat(read_from('<f', self)[0], n_pixels)
+        else:
+            cam['curve_surface'] = 0
+            cam['pixels_parallel'] = 1
+            cam['common_pixel_shape'] = 0
+            cam['pixel_z'] = np.zeros(n_pixels, dtype='f4')
+            cam['nxpix'] = cam['nypix'] = np.zeros(n_pixels, dtype='f4')
+            cam['pixel_shape'] = np.full(n_pixels, -1, dtype='f4')
+            cam['pixel_area'] = read_array(self, dtype='<f4', count=n_pixels)
+            if self.header.version >= 1:
+                cam['pixel_size'] = read_array(self, dtype='<f4', count=n_pixels)
+            else:
+                cam['pixel_size'] = np.zeros(n_pixels, dtype='f4')
+
+        if self.header.version >= 2:
+            cam['n_mirrors'] = read_from('<i', self)[0]
+            cam['mirror_area'] = read_from('<f', self)[0]
+        else:
+            cam['n_mirrors'] = 0.0
+            cam['mirror_area'] = 0.0
+
+        if self.header.version >= 3:
+            cam['cam_rot'] = read_from('<f', self)[0]
+        else:
+            cam['cam_rot'] = 0.0
+
+        return cam
 
 
 class SimTelCamOrgan(TelescopeObject):
