@@ -18,6 +18,16 @@ def find_type(f, eventio_type):
     return o
 
 
+def collect_toplevel_of_type(f, eventio_type):
+    classes_under_test = [
+        o for o in f
+        if isinstance(o, eventio_type)
+    ]
+    # make sure we found some
+    assert classes_under_test
+    return classes_under_test
+
+
 def test_70():
     from eventio import EventIOFile
     from eventio.simtel.objects import History
@@ -78,12 +88,7 @@ def test_2000():
     from eventio.simtel.objects import SimTelRunHeader
 
     with EventIOFile(test_file) as f:
-        classes_under_test = [
-            o for o in f
-            if isinstance(o, SimTelRunHeader)
-        ]
-        # make sure we found some
-        assert classes_under_test
+        classes_under_test = collect_toplevel_of_type(f, SimTelRunHeader)
 
         for o in classes_under_test:
             d = o.parse_data_field()
@@ -108,9 +113,22 @@ def test_2000_as_well():
         data['target'] = b'Monte Carlo beach'
 
 
-@pytest.mark.xfail
 def test_2001():
-    assert False
+    from eventio import EventIOFile
+    from eventio.simtel.objects import SimTelMCRunHeader
+
+    with EventIOFile(test_file) as f:
+        classes_under_test = collect_toplevel_of_type(f, SimTelMCRunHeader)
+
+        for o in classes_under_test:
+            d = o.parse_data_field()
+            assert d
+
+            bytes_not_consumed = o.read()
+            # DN: I do not know why two bytes, did not x-check
+            assert len(bytes_not_consumed) == 0
+            for byte_ in bytes_not_consumed:
+                assert byte_ == 0
 
 
 def test_2002():
@@ -127,6 +145,7 @@ def test_2002():
         assert camera_data['focal_length'] == 28.0
         assert len(camera_data['pixel_x']) == 1855
         assert len(camera_data['pixel_y']) == 1855
+
 
 @pytest.mark.xfail
 def test_2003():
