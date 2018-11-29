@@ -8,7 +8,8 @@ from ..tools import (
     read_utf8_like_signed_int,
     read_array,
     read_time,
-    read_vector_of_uint32_scount_differential
+    read_vector_of_uint32_scount_differential,
+    read_vector_of_uint32_scount_differential_optimized,
 )
 from ..bits import bool_bit_from_pos
 
@@ -621,7 +622,6 @@ class SimTelTelADCSamp(EventIOObject):
             'num_gains': read_from('<h', self)[0],
             'num_samples': read_from('<h', self)[0],
         }
-
         if self._zero_sup_mode:
             return self._parse_in_zero_suppressed_mode(**args)
         else:
@@ -654,7 +654,7 @@ class SimTelTelADCSamp(EventIOObject):
             for pixel_range in pixel_ranges:
                 for i_pix in range(*pixel_range):
                     adc_samples[i_gain, i_pix, :] = (
-                        read_vector_of_uint32_scount_differential(
+                        read_vector_of_uint32_scount_differential_optimized(
                             self, num_samples
                         )
                     )
@@ -672,7 +672,7 @@ class SimTelTelADCSamp(EventIOObject):
         for i_gain in range(num_gains):
             for i_pix in range(num_pixels):
                 adc_samples[i_gain, i_pix, :] = (
-                    read_vector_of_uint32_scount_differential(
+                    read_vector_of_uint32_scount_differential_optimized(
                         self, num_samples
                     )
                 )
