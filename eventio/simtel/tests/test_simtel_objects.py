@@ -48,9 +48,23 @@ def test_70():
             assert body_reached
 
 
-@pytest.mark.xfail
 def test_71():
-    assert False
+    from eventio import EventIOFile
+    from eventio.simtel.objects import History, HistoryCommandLine
+
+    with EventIOFile(test_file) as f:
+        all_history_cmd_lines = []
+        for o in f:
+            if isinstance(o, History):
+                for sub in o:
+                    if isinstance(sub, HistoryCommandLine):
+                        all_history_cmd_lines.append(sub)
+
+        for o in all_history_cmd_lines:
+            s = o.parse_data_field()
+            assert s
+            assert isinstance(s, bytes)
+
 
 @pytest.mark.xfail
 def test_72():
