@@ -231,6 +231,7 @@ class SimTelCamOrgan(TelescopeObject):
 
         return {
             'telescope_id': self.telescope_id,
+            'num_drawers': num_drawers,
             'drawer': drawer,
             'card': card,
             'chip': chip,
