@@ -84,9 +84,27 @@ def test_72():
             assert isinstance(s, bytes)
 
 
-@pytest.mark.xfail
 def test_2000():
-    assert False
+    from eventio import EventIOFile
+    from eventio.simtel.objects import SimTelRunHeader
+
+    with EventIOFile(test_file) as f:
+        classes_under_test = [
+            o for o in f
+            if isinstance(o, SimTelRunHeader)
+        ]
+        # make sure we found some
+        assert classes_under_test
+
+        for o in classes_under_test:
+            d = o.parse_data_field()
+            assert d
+
+            bytes_not_consumed = o.read()
+            # DN: I do not know why two bytes, did not x-check
+            assert len(bytes_not_consumed) == 2
+            for byte_ in bytes_not_consumed:
+                assert byte_ == 0
 
 
 @pytest.mark.xfail
