@@ -11,27 +11,6 @@ from eventio.search_utils import (
 test_file = resource_filename('eventio', 'resources/gamma_test.simtel.gz')
 
 
-def find_type(f, eventio_type):
-    o = next(f)
-    while not isinstance(o, eventio_type):
-        o = next(f)
-
-    if not isinstance(o, eventio_type):
-        raise ValueError('Type {} not found'.format(eventio_type))
-
-    return o
-
-
-def collect_toplevel_of_type(f, eventio_type):
-    classes_under_test = [
-        o for o in f
-        if isinstance(o, eventio_type)
-    ]
-    # make sure we found some
-    assert classes_under_test
-    return classes_under_test
-
-
 def find_all_subcontainers(f, structure, level=0):
     '''
     Find all subcontainers expected in structure.
@@ -48,7 +27,6 @@ def find_all_subcontainers(f, structure, level=0):
             objects.extend(find_all_subcontainers(o, structure, level + 1))
     return objects
 
-test_file = resource_filename('eventio', 'resources/gamma_test.simtel.gz')
 
 def test_70():
     from eventio import EventIOFile
