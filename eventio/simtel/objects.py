@@ -35,7 +35,7 @@ class TelescopeObject(EventIOObject):
 
 def assert_exact_version(self, supported_version):
     if self.header.version != supported_version:
-        raise NotImplemented(
+        raise NotImplementedError(
             (
                 'Unsupported version of {name}'
                 'only supports version {supported_version}'
@@ -50,7 +50,7 @@ def assert_exact_version(self, supported_version):
 
 def assert_version_in(self, supported_versions):
     if self.header.version not in supported_versions:
-        raise NotImplemented(
+        raise NotImplementedError(
             (
                 'Unsupported version of {name} '
                 'supported versions are: {supported_versions} '
