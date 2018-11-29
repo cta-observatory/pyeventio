@@ -361,7 +361,7 @@ def test_2011():
                                 all_2011_obs.append(subsub)
 
         for i, o in enumerate(all_2011_obs):
-            d = o.parse_data_field()
+            o.parse_data_field()
             # assert parse_data_field() consumed all data from o
             bytes_not_consumed = o.read()
             assert len(bytes_not_consumed) <= 4
@@ -431,9 +431,22 @@ def test_2011():
         }
         '''
 
-@pytest.mark.xfail
+
 def test_2012():
-    assert False
+    from eventio import EventIOFile
+    from eventio.simtel.objects import SimTelTelEvent, SimTelEvent
+    # class under test
+    from eventio.simtel.objects import SimTelTelADCSum
+
+    with EventIOFile(test_file) as f:
+        # find class under test in the deep hierarchy jungle
+        # would be nice to find an easier way for this.
+        all_adc_sums = find_all_subcontainers(
+            f, [SimTelEvent, SimTelTelEvent, SimTelTelADCSum]
+        )
+
+        for o in all_adc_sums:
+            o.parse_data_field()
 
 @pytest.mark.xfail
 def test_2013():
