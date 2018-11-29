@@ -338,9 +338,17 @@ def test_2200():
     assert SimTelTelEvent.type_to_telid(3205) == 105
     assert SimTelTelEvent.type_to_telid(2203) == 3
 
-@pytest.mark.xfail
+
 def test_2010():
-    assert False
+    from eventio import EventIOFile
+    from eventio.simtel.objects import SimTelCentEvent
+    # class under test
+    from eventio.simtel.objects import SimTelEvent
+
+    with EventIOFile(test_file) as f:
+        events = collect_toplevel_of_type(f, SimTelEvent)
+        for event in events:
+            assert isinstance(next(event), SimTelCentEvent)
 
 
 def test_2011():
