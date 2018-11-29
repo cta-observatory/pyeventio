@@ -102,28 +102,37 @@ def read_utf8_like_unsigned_int(f):
 
 
 def read_vector_of_uint32_scount_differential(f, count):
+    return np.cumsum([read_utf8_like_signed_int(f) for _ in range(count)])
+
+
+def read_vector_of_uint32_scount_differential_optimized(f, count):
     '''Stupid, pure python copy of eventio.c:1457'''
     output = np.empty(count, dtype='uint32')
 
     val = np.int32(0)
     for i in range(count):
-        v0 = f.read(1)
+        v0, = f.read(1)
+        print(v0)
 
         if (v0 & 0x80) == 0:  # one byte
-            if (v0 & 0x01) == 0:  # positive
+            print(val, bin(v0), bin(v0 & 0x01))
+            if (v0 & 1) == 0:  # positive
+                print('positive')
                 val += v0 >> 1
             else:  # negative
+                print('negative')
                 val -= (v0 >> 1) + 1
+            print(val)
         elif (v0 & 0xc0) == 0x80:  # two bytes
-            v1 = f.read(1)
-            if (v1 & 0x01) == 0:  # positive
+            v1, = f.read(1)
+            if (v1 & 1) == 0:  # positive
                 val += ((v0 & 0x3f) << 7) | (v1 >> 1)
             else:  # negative
                 val -= ((v0 & 0x3f) << 7) | ((v1 >> 1) + 1)
         elif (v0 & 0xe0) == 0xc0:  # three bytes
             v1, v2 = f.read(2)
 
-            if (v2 & 0x01) == 0:
+            if (v2 & 1) == 0:
                 val += (
                     ((v0 & 0x1f) << 15)
                     | (v1 << 7)
@@ -137,7 +146,7 @@ def read_vector_of_uint32_scount_differential(f, count):
                 )
         elif (v0 & 0xf0) == 0xe0:  # four bytes
             v1, v2, v3 = f.read(3)
-            if (v3 & 0x01) == 0:
+            if (v3 & 1) == 0:
                 val += (
                     ((v0 & 0x0f) << 23)
                     | (v1 << 15)
@@ -154,7 +163,7 @@ def read_vector_of_uint32_scount_differential(f, count):
         elif (v0 & 0xf8) == 0xf0:
             v1, v2, v3, v4 = f.read(4)
             # The format would allow bits 32 and 33 being set but we ignore this here. */
-            if (v4 & 0x01) == 0:
+            if (v4 & 1) == 0:
                 val += (
                     ((v0 & 0x07) << 31)
                     | (v1 << 23)
@@ -171,4 +180,6 @@ def read_vector_of_uint32_scount_differential(f, count):
                     | ((v4 >> 1) + 1)
                 )
         output[i] = val
+        if count == 1:
+            return val
         return output

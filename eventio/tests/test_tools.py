@@ -2,6 +2,18 @@ from io import BytesIO
 import struct
 
 
+def test_uint32_vector_differential():
+    from eventio.tools import read_vector_of_uint32_scount_differential
+    from eventio.tools import read_vector_of_uint32_scount_differential_optimized
+    num = 5
+    num <<= 1
+    b = BytesIO(num.to_bytes(1, 'little'))
+
+    assert read_vector_of_uint32_scount_differential(b, 1) == 5
+    b.seek(0)
+    assert read_vector_of_uint32_scount_differential_optimized(b, 1) == 5
+
+
 def test_read_string():
     from eventio.tools import read_eventio_string
     s = b'Hello World'
@@ -13,6 +25,7 @@ def test_read_string():
     buffer.seek(0)
 
     assert read_eventio_string(buffer) == s
+
 
 def test_read_utf8_like_unsigned_int():
     from eventio.tools import read_utf8_like_unsigned_int
