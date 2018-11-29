@@ -9,7 +9,12 @@ from eventio.search_utils import (
 )
 
 test_file = resource_filename('eventio', 'resources/gamma_test.simtel.gz')
-
+expected_adc_samples_event1_tel_id_38 = np.load(
+    resource_filename(
+        'eventio',
+        'resources/gamma_test.simtel_event1_tel_id_38_adc_samples.npy'
+    )
+)
 
 def find_all_subcontainers(f, structure, level=0):
     '''
@@ -458,6 +463,19 @@ def test_2013():
                 len(all_2013_obs)
             )
         )
+
+        event1_tel_38 = all_2013_obs[0]
+        assert event1_tel_38.telescope_id == 38
+
+        event1_tel_38_adc_samples = event1_tel_38.parse_data_field()
+        assert (
+            event1_tel_38_adc_samples.shape ==
+            expected_adc_samples_event1_tel_id_38.shape
+        )
+        assert (
+            event1_tel_38_adc_samples ==
+            expected_adc_samples_event1_tel_id_38
+        ).all()
 
         # we cannot test all of the 50 objects ... the last is truncated
         for object_index, o in enumerate(all_2013_obs[:3]):
