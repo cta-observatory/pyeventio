@@ -52,6 +52,7 @@ class IACTFile(EventIOFile):
     For each Event:
       CORSIKAEventHeader
       CORSIKAArrayOffsets
+      CORSIKALongitudinal (optional)
       For each reuse:
         CORSIKATelescopeData
         For each Telescope:
@@ -95,6 +96,7 @@ class IACTFile(EventIOFile):
         '''
         Generator over the single array events
         '''
+        self._next_header_pos = self._first_event_byte
         obj = next(self)
 
         while not isinstance(obj, CORSIKARunEndBlock):
@@ -107,13 +109,15 @@ class IACTFile(EventIOFile):
             n_reuses = reuse_object.n_reuses
             array_offsets = reuse_object.parse_data_field()
             time_offset = reuse_object.time_offset
-            for reuse in range(n_reuses):
+
+            obj = next(self)
+            if isinstance(obj, CORSIKALongitudinal):
+                longitudinal = obj.parse_data_field()
                 obj = next(self)
-                if isinstance(obj, CORSIKALongitudinal):
-                    longitudinal = obj.parse_data_field()
-                    obj = next(self)
-                else:
-                    longitudinal = None
+            else:
+                longitudinal = None
+
+            for reuse in range(n_reuses):
 
                 check_type(obj, CORSIKATelescopeData)
                 telescope_data_obj = obj
@@ -140,9 +144,9 @@ class IACTFile(EventIOFile):
                     n_bunches=n_bunches,
                     longitudinal=longitudinal,
                 )
+                obj = next(self)
 
-            event_end = next(self)
-            check_type(event_end, CORSIKAEventEndBlock)
+            check_type(obj, CORSIKAEventEndBlock)
 
             obj = next(self)
 

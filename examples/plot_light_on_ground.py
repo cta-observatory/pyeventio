@@ -1,7 +1,6 @@
 import matplotlib.pyplot as plt
 from pkg_resources import resource_filename
 from argparse import ArgumentParser
-import numpy as np
 
 from eventio import IACTFile
 
