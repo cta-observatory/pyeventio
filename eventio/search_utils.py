@@ -34,3 +34,23 @@ def find_all_subobjects(f, structure, level=0):
         elif isinstance(o, elem):
             objects.extend(find_all_subobjects(o, structure, level + 1))
     return objects
+
+
+def yield_subobjects(f, eventio_type):
+    '''yield subobjects of type, regardless of structure'''
+    if isinstance(f, eventio_type):
+        yield f
+    else:
+        try:
+            for o in f:
+                for x in yield_subobjects(o, eventio_type):
+                    yield x
+        except ValueError as e:
+            pass
+
+
+def yield_n_subobjects(f, eventio_type, n=3):
+    for i, obj in enumerate(yield_subobjects(f, eventio_type)):
+        if i + 1 >= n:
+            break
+        yield obj

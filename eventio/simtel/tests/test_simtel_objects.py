@@ -2,11 +2,13 @@ from pkg_resources import resource_filename
 import pytest
 from pytest import approx
 import numpy as np
-
+from eventio import EventIOFile
 from eventio.search_utils import (
     find_type,
     collect_toplevel_of_type,
     find_all_subobjects,
+    yield_subobjects,
+    yield_n_subobjects,
 )
 
 prod2_file = resource_filename('eventio', 'resources/gamma_test.simtel.gz')
@@ -19,6 +21,8 @@ prod4b_astri_file = resource_filename(
     'resources/gamma_20deg_0deg_run103___cta-prod4-sst-astri_desert-2150m-Paranal-sst-astri.simtel.gz'
 )
 
+test_files = [EventIOFile(path) for path in [prod2_file, prod4b_astri_file, prod4b_sst1m_file]]
+
 expected_adc_samples_event1_tel_id_38 = np.load(
     resource_filename(
         'eventio',
@@ -27,18 +31,21 @@ expected_adc_samples_event1_tel_id_38 = np.load(
 )
 
 
-def test_70():
-    from eventio import EventIOFile
+def parse_and_assert_consumption(o, limit=0):
+    d = o.parse_data_field()
+    # assert parse_data_field() consumed all data from o
+    bytes_not_consumed = o.read()
+    assert len(bytes_not_consumed) <= limit
+    for byte_ in bytes_not_consumed:
+        assert byte_ == 0
+    return d
+
+
+def test_70_3_objects():
     from eventio.simtel.objects import History
 
     with EventIOFile(prod2_file) as f:
-        all_histories = [
-            o for o in f
-            if o.header.type == History.eventio_type
-        ]
-        for o in all_histories:
-            assert isinstance(o, History)
-
+        for i, o in enumerate(yield_n_subobjects(f, History, n=3)):
             # make sure a History can be iterated and is never empty
             body_reached = False
             for x in o:
@@ -46,197 +53,112 @@ def test_70():
             assert body_reached
 
 
-def test_71():
-    from eventio import EventIOFile
-    from eventio.simtel.objects import History, HistoryCommandLine
+def test_71_3_objects():
+    from eventio.simtel.objects import HistoryCommandLine
 
     with EventIOFile(prod2_file) as f:
-        all_history_cmd_lines = []
-        for o in f:
-            if isinstance(o, History):
-                for sub in o:
-                    if isinstance(sub, HistoryCommandLine):
-                        all_history_cmd_lines.append(sub)
+        for i, o in enumerate(yield_n_subobjects(f, HistoryCommandLine, n=3)):
+            d = parse_and_assert_consumption(o, limit=3)
 
-        for o in all_history_cmd_lines:
-            s = o.parse_data_field()
-            assert s
-            assert isinstance(s, bytes)
+            assert d
+            assert isinstance(d, bytes)
 
 
-def test_72():
-    from eventio import EventIOFile
-    from eventio.simtel.objects import History, HistoryConfig
+def test_72_3_objects():
+    from eventio.simtel.objects import HistoryConfig
 
     with EventIOFile(prod2_file) as f:
-        all_history_configs = []
-        for o in f:
-            if isinstance(o, History):
-                for sub in o:
-                    if isinstance(sub, HistoryConfig):
-                        all_history_configs.append(sub)
-
-        for o in all_history_configs:
-            s = o.parse_data_field()
-            assert s
-            assert isinstance(s, bytes)
+        for i, o in enumerate(yield_n_subobjects(f, HistoryConfig, n=3)):
+            d = parse_and_assert_consumption(o, limit=1)
+            assert d
+            assert isinstance(d, bytes)
 
 
-def test_2000():
-    from eventio import EventIOFile
+def test_2000_3_objects():
     from eventio.simtel.objects import SimTelRunHeader
 
     with EventIOFile(prod2_file) as f:
-        classes_under_test = collect_toplevel_of_type(f, SimTelRunHeader)
+        for i, o in enumerate(yield_n_subobjects(f, SimTelRunHeader, n=3)):
+            d = parse_and_assert_consumption(o, limit=2)
 
-        for o in classes_under_test:
-            d = o.parse_data_field()
-            assert d
-
-            bytes_not_consumed = o.read()
-            # DN: I do not know why two bytes, did not x-check
-            assert len(bytes_not_consumed) == 2
-            for byte_ in bytes_not_consumed:
-                assert byte_ == 0
+            assert d['observer'] == b'bernlohr@lfc371.mpi-hd.mpg.de'
+            assert d['target'] == b'Monte Carlo beach'
 
 
-def test_2000_as_well():
-    from eventio import EventIOFile
-    from eventio.simtel import SimTelRunHeader
-
-    with EventIOFile(prod2_file) as f:
-        o = find_type(f, SimTelRunHeader)
-
-        data = o.parse_data_field()
-        assert data['observer'] == b'bernlohr@lfc371.mpi-hd.mpg.de'
-        assert data['target'] == b'Monte Carlo beach'
-
-
-def test_2001():
-    from eventio import EventIOFile
+def test_2001_3_objects():
     from eventio.simtel.objects import SimTelMCRunHeader
 
     with EventIOFile(prod2_file) as f:
-        classes_under_test = collect_toplevel_of_type(f, SimTelMCRunHeader)
-
-        for o in classes_under_test:
-            d = o.parse_data_field()
-            assert d
-
-            bytes_not_consumed = o.read()
-            # DN: I do not know why two bytes, did not x-check
-            assert len(bytes_not_consumed) == 0
-            for byte_ in bytes_not_consumed:
-                assert byte_ == 0
+        for i, o in enumerate(yield_n_subobjects(f, SimTelMCRunHeader, n=3)):
+            parse_and_assert_consumption(o, limit=0)
 
 
-def test_2002_v3():
-    from eventio import EventIOFile
+def test_2002_v3_3_objects():
     from eventio.simtel.objects import SimTelCamSettings
 
     with EventIOFile(prod2_file) as f:
-        obj = find_type(f, SimTelCamSettings)
+        for i, o in enumerate(yield_n_subobjects(f, SimTelCamSettings, n=3)):
+            camera_data = parse_and_assert_consumption(o, limit=0)
 
-        assert obj.header.version == 3
+            assert o.header.version == 3
 
-        # values from pyhessio
-        camera_data = obj.parse_data_field()
-        assert camera_data['telescope_id'] == 1
-        assert camera_data['n_pixels'] == 1855
-        assert camera_data['focal_length'] == np.float32(28.0)
-        assert len(camera_data['pixel_x']) == 1855
-        assert len(camera_data['pixel_y']) == 1855
-        assert camera_data['pixel_x'][1] == np.float32(0.05)
-        assert camera_data['pixel_x'][2] == np.float32(0.025)
-        assert np.all(camera_data['pixel_shape'] == -1)
-        assert camera_data['n_mirrors'] == 198
-        assert camera_data['cam_rot'] == 0.1901187151670456
+            if i == 0:
+                # values from pyhessio for 1st object only
+                assert camera_data['telescope_id'] == 1
+                assert camera_data['n_pixels'] == 1855
+                assert camera_data['focal_length'] == np.float32(28.0)
+                assert len(camera_data['pixel_x']) == 1855
+                assert len(camera_data['pixel_y']) == 1855
+                assert camera_data['pixel_x'][1] == np.float32(0.05)
+                assert camera_data['pixel_x'][2] == np.float32(0.025)
+                assert np.all(camera_data['pixel_shape'] == -1)
+                assert camera_data['n_mirrors'] == 198
+                assert camera_data['cam_rot'] == 0.1901187151670456
 
 
-def test_2002_v5():
-    from eventio import EventIOFile
+def test_2002_v5_3_objects():
     from eventio.simtel.objects import SimTelCamSettings
 
     with EventIOFile(prod4b_astri_file) as f:
-        obj = find_type(f, SimTelCamSettings)
+        for i, o in enumerate(yield_n_subobjects(f, SimTelCamSettings, n=3)):
+            cam_data = parse_and_assert_consumption(o, limit=0)
 
-        assert obj.header.version == 5
-        cam_data = obj.parse_data_field()
-        assert cam_data['n_pixels'] == 2368  # astri
-        assert 'effective_focal_length' in cam_data
+            assert o.header.version == 5
+            assert cam_data['n_pixels'] == 2368  # astri
+            assert 'effective_focal_length' in cam_data
 
 
-def test_2003():
-    from eventio import EventIOFile
+def test_2003_3_objects():
     from eventio.simtel.objects import SimTelCamOrgan
 
     with EventIOFile(prod2_file) as f:
-        classes_under_test = collect_toplevel_of_type(f, SimTelCamOrgan)
+        for i, o in enumerate(yield_n_subobjects(f, SimTelCamOrgan, n=3)):
+            cam_organ = parse_and_assert_consumption(o, limit=1)
+            assert cam_organ['telescope_id'] == i + 1
 
-        for class_index, o in enumerate(classes_under_test):
-            d = o.parse_data_field()
-            assert d
-
-            bytes_not_consumed = o.read()
-            # DN: sometimes 1 sometimes 0 ...
-            assert len(bytes_not_consumed) <= 1
-            for byte_ in bytes_not_consumed:
-                assert byte_ == 0
-
-            assert d['telescope_id'] == class_index + 1
-            # print(d)
-            for pixel_id, sector in enumerate(d['sectors']):
+            for sector in cam_organ['sectors']:
                 # sector must never contain a zero, unless it is in the
                 # very first element
                 assert (sector[1:] == 0).sum() == 0
                 # print(pixel_id, sector)
 
 
-def test_2004():
-    from eventio import EventIOFile
+def test_2004_3_objects():
     from eventio.simtel.objects import SimTelPixelset
 
     with EventIOFile(prod2_file) as f:
-        o = find_type(f, SimTelPixelset)
-
-        assert o.telescope_id == 1
-        pixelset = o.parse_data_field()
-
-        assert pixelset['num_pixels'] == 1855
+        for i, o in enumerate(yield_n_subobjects(f, SimTelPixelset, n=3)):
+            assert o.telescope_id == i + 1
+            pixelset = parse_and_assert_consumption(o, limit=1)
+            assert pixelset['num_pixels'] == 1855
 
 
-def test_2005():
-    from eventio import EventIOFile
+def test_2005_3_objects():
     from eventio.simtel.objects import SimTelPixelDisable
 
     with EventIOFile(prod2_file) as f:
-        obj = next(f)
-        while obj.header.type != SimTelPixelDisable.eventio_type:
-            obj = next(f)
-
-        # first camera should be the LST
-        pixel_disable = obj.parse_data_field()
-
-        assert pixel_disable['telescope_id'] == 1
-        assert pixel_disable['num_trig_disabled'] == 0
-        assert pixel_disable['num_HV_disabled'] == 0
-        assert len(pixel_disable['trigger_disabled']) == 0
-        assert len(pixel_disable['HV_disabled']) == 0
-
-
-def test_2005_all_objects():
-    from eventio import EventIOFile
-    from eventio.simtel.objects import SimTelPixelDisable
-
-    with EventIOFile(prod2_file) as f:
-        all_2005_obs = [
-            o for o in f
-            if o.header.type == SimTelPixelDisable.eventio_type
-        ]
-
-        for i, o in enumerate(all_2005_obs):
-            # first camera should be the LST
-            pixel_disable = o.parse_data_field()
+        for i, o in enumerate(yield_n_subobjects(f, SimTelPixelDisable, n=3)):
+            pixel_disable = parse_and_assert_consumption(o, limit=0)
 
             assert pixel_disable['telescope_id'] == i + 1
             assert pixel_disable['num_trig_disabled'] == 0
@@ -245,24 +167,13 @@ def test_2005_all_objects():
             assert len(pixel_disable['HV_disabled']) == 0
 
 
-def test_2006():
-    from eventio import EventIOFile
+def test_2006_3_objects():
     from eventio.simtel.objects import SimTelCamsoftset
 
     with EventIOFile(prod2_file) as f:
-        all_2006_obs = [
-            o for o in f
-            if o.header.type == SimTelCamsoftset.eventio_type
-        ]
+        for i, o in enumerate(yield_n_subobjects(f, SimTelCamsoftset, n=3)):
+            d = parse_and_assert_consumption(o, limit=0)
 
-        for i, o in enumerate(all_2006_obs):
-
-            d = o.parse_data_field()
-
-            # assert parse_data_field() consumed all data from o
-            assert len(o.read()) == 0
-
-            # now check the values
             assert d['telescope_id'] == i + 1
             assert d['dyn_trig_mode'] == 0
             assert d['dyn_trig_threshold'] == 0
@@ -282,38 +193,26 @@ def test_2006():
             assert d['report_HV_period'] == 0
 
 
-def test_2007():
-    from eventio import EventIOFile
+def test_2007_3_objects():
     from eventio.simtel.objects import SimTelPointingCor
 
     with EventIOFile(prod2_file) as f:
-        all_2007_obs = [
-            o for o in f
-            if o.header.type == SimTelPointingCor.eventio_type
-        ]
+        for i, o in enumerate(yield_n_subobjects(f, SimTelPointingCor, n=3)):
+            d = parse_and_assert_consumption(o, limit=0)
 
-        for i, o in enumerate(all_2007_obs):
-
-            d = o.parse_data_field()
-
-            # assert parse_data_field() consumed all data from o
-            assert len(o.read()) == 0
-
-            # now check the values
             assert d['telescope_id'] == i + 1
             assert d['function_type'] == 0
             assert d['num_param'] == 0
             assert len(d['pointing_param']) == 0
 
 
-def test_2008():
-    from eventio import EventIOFile
+def test_2008_3_objects():
     from eventio.simtel.objects import SimTelTrackSet
 
     with EventIOFile(prod2_file) as f:
-        o = find_type(f, SimTelTrackSet)
-        assert o.telescope_id == 1
-        tracking_info = o.parse_data_field()
+        for i, o in enumerate(yield_n_subobjects(f, SimTelTrackSet, n=3)):
+            assert o.telescope_id == i + 1
+            tracking_info = parse_and_assert_consumption(o, limit=0)
 
         assert tracking_info['range_low_az'] == 0.0
         assert tracking_info['range_low_alt'] == 0.0
@@ -321,33 +220,26 @@ def test_2008():
         assert tracking_info['range_high_alt'] == approx(2 * np.pi)
 
 
-def test_2009():
-    from eventio import EventIOFile
-    from eventio.simtel.objects import SimTelEvent, SimTelCentEvent
+def test_2009_3_objects():
+    from eventio.simtel.objects import SimTelCentEvent
 
     with EventIOFile(prod2_file) as f:
-        o = find_type(f, SimTelEvent)
-        s = find_type(o, SimTelCentEvent)
-
-        data = s.parse_data_field()
-        assert 'cpu_time' in data
-        assert 'gps_time' in data
-        assert 'teltrg_time_by_type' in data
+        for i, o in enumerate(yield_n_subobjects(f, SimTelCentEvent, n=3)):
+            data = parse_and_assert_consumption(o, limit=2)
+            assert 'cpu_time' in data
+            assert 'gps_time' in data
+            assert 'teltrg_time_by_type' in data
 
 
-def test_2100():
-    from eventio import EventIOFile
-    from eventio.simtel.objects import SimTelEvent, SimTelTrackEvent
+def test_2100_3_objects():
+    from eventio.simtel.objects import SimTelTrackEvent
 
     with EventIOFile(prod2_file) as f:
+        for i, o in enumerate(yield_n_subobjects(f, SimTelTrackEvent, n=3)):
+            pointing = parse_and_assert_consumption(o, limit=0)
 
-        # search for first event
-        o = find_type(f, SimTelEvent)
-        s = find_type(o, SimTelTrackEvent)
-
-        pointing = s.parse_data_field()
-        assert 'azimuth_raw' in pointing.dtype.names
-        assert 'altitude_raw' in pointing.dtype.names
+            assert 'azimuth_raw' in pointing.dtype.names
+            assert 'altitude_raw' in pointing.dtype.names
 
 
 def test_2200():
@@ -359,7 +251,6 @@ def test_2200():
 
 
 def test_2010():
-    from eventio import EventIOFile
     from eventio.simtel.objects import SimTelCentEvent
     # class under test
     from eventio.simtel.objects import SimTelEvent
@@ -370,25 +261,14 @@ def test_2010():
             assert isinstance(next(event), SimTelCentEvent)
 
 
-def test_2011():
-    from eventio import EventIOFile
+def test_2011_3_objects():
     from eventio.simtel.objects import SimTelTelEvent, SimTelEvent
     # class under test
     from eventio.simtel.objects import SimTelTelEvtHead
 
     with EventIOFile(prod2_file) as f:
-        all_2011_obs = find_all_subobjects(
-            f,
-            [SimTelEvent, SimTelTelEvent, SimTelTelEvtHead]
-        )
-
-        for i, o in enumerate(all_2011_obs):
-            o.parse_data_field()
-            # assert parse_data_field() consumed all data from o
-            bytes_not_consumed = o.read()
-            assert len(bytes_not_consumed) <= 4
-            for byte_ in bytes_not_consumed:
-                assert byte_ == 0
+        for i, o in enumerate(yield_n_subobjects(f, SimTelTelEvtHead, n=3)):
+            data = parse_and_assert_consumption(o, limit=2)
 
             # print(d)
         # a few printed examples: only version 1!!
@@ -454,70 +334,29 @@ def test_2011():
         '''
 
 
-def test_2012():
-    from eventio import EventIOFile
-    from eventio.simtel.objects import SimTelTelEvent, SimTelEvent
-    # class under test
+def test_2012_3_objects():
     from eventio.simtel.objects import SimTelTelADCSum
 
     with EventIOFile(prod4b_astri_file) as f:
-        # find class under test in the deep hierarchy jungle
-        # would be nice to find an easier way for this.
-        all_adc_sums = find_all_subobjects(
-            f, [SimTelEvent, SimTelTelEvent, SimTelTelADCSum]
-        )
-
-        for o in all_adc_sums:
-            o.parse_data_field()
+        for i, o in enumerate(yield_n_subobjects(f, SimTelTelADCSum, n=3)):
+            parse_and_assert_consumption(o, limit=3)
 
 
-def test_2013():
-    from eventio import EventIOFile
-    from eventio.simtel.objects import SimTelTelEvent, SimTelEvent
-    # class under test
+def test_2013_3_objects():
     from eventio.simtel.objects import SimTelTelADCSamp
 
     with EventIOFile(prod2_file) as f:
-        all_2013_obs = find_all_subobjects(
-            f,
-            [SimTelEvent, SimTelTelEvent, SimTelTelADCSamp]
-        )[:3]  # <--- reduce number of containers to speed up test
+        for i, o in enumerate(yield_n_subobjects(f, SimTelTelADCSamp, n=3)):
+            d = parse_and_assert_consumption(o, limit=3)
 
-        assert all_2013_obs
-        print(
-            '{} objects of type 2013 found, parsing ... '
-            .format(
-                len(all_2013_obs)
-            )
-        )
-
-        event1_tel_38 = all_2013_obs[0]
-        assert event1_tel_38.telescope_id == 38
-
-        event1_tel_38_adc_samples = event1_tel_38.parse_data_field()
-        assert (
-            event1_tel_38_adc_samples.shape ==
-            expected_adc_samples_event1_tel_id_38.shape
-        )
-        assert (
-            event1_tel_38_adc_samples ==
-            expected_adc_samples_event1_tel_id_38
-        ).all()
-
-        # we cannot test all of the 50 objects ... the last is truncated
-        for object_index, o in enumerate(all_2013_obs):
-            d = o.parse_data_field()
-            # assert parse_data_field() consumed all data from o
-            bytes_not_consumed = o.read()
-            assert len(bytes_not_consumed) <= 3
-            for byte_ in bytes_not_consumed:
-                assert byte_ == 0
+            if i == 0:
+                assert o.telescope_id == 38
+                assert d.shape == expected_adc_samples_event1_tel_id_38.shape
+                assert (d == expected_adc_samples_event1_tel_id_38).all()
 
 
-def test_2014():
-    from eventio import EventIOFile
-    from eventio.simtel.objects import SimTelTelEvent, SimTelEvent
-    # class under test
+
+def test_2014_3_objects():
     from eventio.simtel.objects import SimTelTelImage
 
     expected_telescope_ids = [
@@ -525,38 +364,20 @@ def test_2014():
         15, 17, 19, 2, 3, 4, 10, 12, 25, 8, 16, 26, 28, 1, 3, 4, 9, 12,
         25, 62, 110, 126, 9, 12, 22, 25, 27, 62
     ]
-    print(expected_telescope_ids)
 
     with EventIOFile(prod2_file) as f:
-        all_2014_obs = find_all_subobjects(
-            f,
-            [SimTelEvent, SimTelTelEvent, SimTelTelImage]
-        )
+        for i, o in enumerate(yield_n_subobjects(f, SimTelTelImage, n=3)):
+            d = parse_and_assert_consumption(o, limit=2)
 
-        assert all_2014_obs
-        print(
-            '{} objects of type 2014 found, parsing ... '
-            .format(
-                len(all_2014_obs)
-            )
-        )
-
-        # we cannot test all of the 50 objects ... the last is truncated
-        for object_index, o in enumerate(all_2014_obs):
-            d = o.parse_data_field()
-            # assert parse_data_field() consumed all data from o
-            bytes_not_consumed = o.read()
-            assert len(bytes_not_consumed) <= 2
-            for byte_ in bytes_not_consumed:
-                assert byte_ == 0
-
-            assert d['telescope_id'] == expected_telescope_ids[object_index]
+            assert d['telescope_id'] == expected_telescope_ids[i]
 
 
-@pytest.mark.xfail
-def test_2015():
-    # no 2015 in gamma_test
-    assert False
+def test_2015_3_objects():
+    from eventio.simtel.objects import SimTelShower
+    for file_ in test_files:
+        for obj in yield_n_subobjects(file_, SimTelShower, n=3):
+            parse_and_assert_consumption(obj, limit=2)
+
 
 @pytest.mark.xfail
 def test_2016():
@@ -576,7 +397,6 @@ def test_2019():
 
 
 def test_2020():
-    from eventio import EventIOFile
     from eventio.simtel.objects import SimTelMCShower
 
     hessio_data = np.load(resource_filename(
@@ -592,7 +412,6 @@ def test_2020():
 
 
 def test_2021():
-    from eventio import EventIOFile
     from eventio.simtel.objects import SimTelMCEvent
 
     with EventIOFile(prod2_file) as f:
@@ -615,7 +434,6 @@ def test_2021():
 
 
 def test_2022():
-    from eventio import EventIOFile
     from eventio.simtel.objects import SimTelTelMoni
 
     with EventIOFile(prod2_file) as f:
@@ -693,7 +511,6 @@ def test_2022():
 
 
 def test_2023():
-    from eventio import EventIOFile
     from eventio.simtel.objects import SimTelLasCal
 
     with EventIOFile(prod2_file) as f:
@@ -731,7 +548,6 @@ def test_2025():
 
 
 def test_2026():
-    from eventio import EventIOFile
     from eventio.simtel.objects import SimTelMCPeSum
 
     with EventIOFile(prod2_file) as f:
@@ -753,7 +569,6 @@ def test_2027():
     # This test does not work with our gamma_prod2_file
     # since it does not contain any object of type 2027
     # :-(
-    from eventio import EventIOFile
     from eventio.simtel.objects import SimTelPixelList
 
     with EventIOFile(prod2_file) as f:
