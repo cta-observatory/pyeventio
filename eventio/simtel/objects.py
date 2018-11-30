@@ -171,11 +171,14 @@ class SimTelCamSettings(TelescopeObject):
 
     def parse_data_field(self):
         self.seek(0)
-        assert_version_in(self, [0, 1, 2, 3, 4])
+        assert_version_in(self, [0, 1, 2, 3, 4, 5])
         n_pixels, = read_from('<i', self)
 
         cam = {'n_pixels': n_pixels, 'telescope_id': self.telescope_id}
         cam['focal_length'], = read_from('<f', self)
+        if self.header.version > 4:
+            cam['effective_focal_length'], = read_from('<f', self)
+
         cam['pixel_x'] = read_array(self, count=n_pixels, dtype='float32')
         cam['pixel_y'] = read_array(self, count=n_pixels, dtype='float32')
 
@@ -643,6 +646,48 @@ class SimTelTelEvtHead(TelescopeObject):
 class SimTelTelADCSum(EventIOObject):
     eventio_type = 2012
 
+    def __init__(self, header, parent):
+        super().__init__(header, parent)
+        if self.header.version <= 1:
+            self.telescope_id = (header.id >> 25) & 0x1f
+        else:
+            self.telescope_id = (header.id >> 12) & 0xffff
+
+    def parse_data_field(self):
+        self.seek(0)
+        assert_exact_version(self, 3)
+
+        flags = self.header.id
+        raw = {'telescope_id': self.telescope_id}
+        raw['zero_sup_mode'] = flags & 0x1f
+        raw['data_red_mode'] = (flags >> 5) & 0x1f
+        raw['list_known'] = (flags >> 10) & 0x01
+        n_pixels = read_from('<i', self)[0]
+        n_gains = read_from('<h', self)[0]
+
+        if raw['data_red_mode'] == 2:
+            offset_hg8 = read_from('<h', self)[0]
+            scale_hg8 = read_from('<h', self)[0]
+            if scale_hg8 <= 0:
+                scale_hg8 = 1
+
+        if raw['zero_sup_mode'] == 0.:
+            if raw['data_red_mode'] == 0:
+                # before version 3, it was just uint16
+                raw['adc_sums'] = np.array([
+                    read_vector_of_uint32_scount_differential(self, n_pixels)
+                    for gain in range(n_gains)
+
+                ])
+        if 'adc_sums' not in raw:
+            raise NotImplementedError(
+                'Currently no support for data_red_mode {} or zero_sup_mode{}'.format(
+                    raw['data_red_mode'], raw['zero_sup_mode'],
+                )
+            )
+
+        return raw
+
 
 class SimTelTelADCSamp(EventIOObject):
     eventio_type = 2013
@@ -654,9 +699,9 @@ class SimTelTelADCSamp(EventIOObject):
         self._data_red_mode = (flags_ >> 5) & 0x1f
         self._list_known = bool((flags_ >> 10) & 0x01)
         if (
-            (self._zero_sup_mode != 0 and header.version < 3) or
-            self._data_red_mode != 0 or
-            self._list_known
+            (self._zero_sup_mode != 0 and header.version < 3)
+            or self._data_red_mode != 0
+            or self._list_known
         ):
             raise NotImplementedError
 
