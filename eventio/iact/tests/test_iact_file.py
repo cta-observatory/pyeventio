@@ -2,7 +2,7 @@ import eventio
 import pkg_resources
 from os import path
 
-from pytest import approx, raises
+from pytest import approx, raises, importorskip
 
 
 testfile = pkg_resources.resource_filename(
@@ -78,6 +78,8 @@ def test_iterating():
 
 
 def test_iterating_zstd():
+    importorskip('zstandard')
+
     with eventio.IACTFile(testfile_zstd) as f:
         for i, event in enumerate(f):
             assert isinstance(event, eventio.iact.CORSIKAEvent)
@@ -86,6 +88,7 @@ def test_iterating_zstd():
 
 
 def test_iter():
+    importorskip('zstandard')
     with eventio.IACTFile(testfile_zstd) as f:
         it = iter(f)
         for i in range(10):
@@ -98,11 +101,14 @@ def test_next_iter():
         second = next(iter(f))
         assert first.header.event_id == second.header.event_id
 
+
+def test_next_iter_zstd():
+    importorskip('zstandard')
     # zstd does not support backwards seeking
     with raises(ValueError):
         with eventio.IACTFile(testfile_zstd) as f:
-            first = next(iter(f))
-            second = next(iter(f))
+            next(iter(f))
+            next(iter(f))
 
 
 def test_bunches():
