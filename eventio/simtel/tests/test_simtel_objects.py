@@ -5,7 +5,8 @@ import numpy as np
 
 from eventio.search_utils import (
     find_type,
-    collect_toplevel_of_type
+    collect_toplevel_of_type,
+    find_all_subobjects,
 )
 
 prod2_file = resource_filename('eventio', 'resources/gamma_test.simtel.gz')
@@ -24,23 +25,6 @@ expected_adc_samples_event1_tel_id_38 = np.load(
         'resources/gamma_test.simtel_event1_tel_id_38_adc_samples.npy'
     )
 )
-
-
-def find_all_subcontainers(f, structure, level=0):
-    '''
-    Find all subcontainers expected in structure.
-    So if you want all AdcSums, use
-    structure = [SimTelEvent, SimTelTelEvent, SimTelTelADCSum]
-    '''
-    objects = []
-    elem = structure[level]
-
-    for o in f:
-        if isinstance(o, structure[-1]):
-            objects.append(o)
-        elif isinstance(o, elem):
-            objects.extend(find_all_subcontainers(o, structure, level + 1))
-    return objects
 
 
 def test_70():
@@ -169,16 +153,17 @@ def test_2002_v3():
         assert camera_data['cam_rot'] == 0.1901187151670456
 
 
-@pytest.mark.xfail
 def test_2002_v5():
     from eventio import EventIOFile
     from eventio.simtel.objects import SimTelCamSettings
 
-    with EventIOFile(prod2_file) as f:
+    with EventIOFile(prod4b_astri_file) as f:
         obj = find_type(f, SimTelCamSettings)
 
         assert obj.header.version == 5
-        obj.parse_data_field()
+        cam_data = obj.parse_data_field()
+        assert cam_data['n_pixels'] == 2368  # astri
+        assert 'effective_focal_length' in cam_data
 
 
 def test_2003():
@@ -392,7 +377,7 @@ def test_2011():
     from eventio.simtel.objects import SimTelTelEvtHead
 
     with EventIOFile(prod2_file) as f:
-        all_2011_obs = find_all_subcontainers(
+        all_2011_obs = find_all_subobjects(
             f,
             [SimTelEvent, SimTelTelEvent, SimTelTelEvtHead]
         )
@@ -478,7 +463,7 @@ def test_2012():
     with EventIOFile(prod4b_astri_file) as f:
         # find class under test in the deep hierarchy jungle
         # would be nice to find an easier way for this.
-        all_adc_sums = find_all_subcontainers(
+        all_adc_sums = find_all_subobjects(
             f, [SimTelEvent, SimTelTelEvent, SimTelTelADCSum]
         )
 
@@ -493,7 +478,7 @@ def test_2013():
     from eventio.simtel.objects import SimTelTelADCSamp
 
     with EventIOFile(prod2_file) as f:
-        all_2013_obs = find_all_subcontainers(
+        all_2013_obs = find_all_subobjects(
             f,
             [SimTelEvent, SimTelTelEvent, SimTelTelADCSamp]
         )[:3]  # <--- reduce number of containers to speed up test
@@ -543,7 +528,7 @@ def test_2014():
     print(expected_telescope_ids)
 
     with EventIOFile(prod2_file) as f:
-        all_2014_obs = find_all_subcontainers(
+        all_2014_obs = find_all_subobjects(
             f,
             [SimTelEvent, SimTelTelEvent, SimTelTelImage]
         )

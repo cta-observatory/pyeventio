@@ -679,9 +679,14 @@ class SimTelTelADCSum(EventIOObject):
                     for gain in range(n_gains)
 
                 ])
+        if 'adc_sums' not in raw:
+            raise NotImplementedError(
+                'Currently no support for data_red_mode {} or zero_sup_mode{}'.format(
+                    raw['data_red_mode'], raw['zero_sup_mode'],
+                )
+            )
 
         return raw
-
 
 
 class SimTelTelADCSamp(EventIOObject):
@@ -694,9 +699,9 @@ class SimTelTelADCSamp(EventIOObject):
         self._data_red_mode = (flags_ >> 5) & 0x1f
         self._list_known = bool((flags_ >> 10) & 0x01)
         if (
-            (self._zero_sup_mode != 0 and header.version < 3) or
-            self._data_red_mode != 0 or
-            self._list_known
+            (self._zero_sup_mode != 0 and header.version < 3)
+            or self._data_red_mode != 0
+            or self._list_known
         ):
             raise NotImplementedError
 
