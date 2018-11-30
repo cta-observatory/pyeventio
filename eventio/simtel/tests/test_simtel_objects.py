@@ -568,9 +568,24 @@ def test_2027_3_objects():
 
     with EventIOFile(prod2_file) as f:
         for i, o in enumerate(yield_n_and_assert(f, SimTelPixelList, n=3)):
-            d = parse_and_assert_consumption(o, limit=0)
+            d = parse_and_assert_consumption(o, limit=2)
             assert d
 
+    # does this look reasonable?
+    '''
+    {
+        'code': 0, 'telescope': 38, 'pixels': 2,
+        'pixel_list': array([670, 764], dtype=int16)
+    }
+    {
+        'code': 1, 'telescope': 38, 'pixels': 2,
+        'pixel_list': array([671, 718], dtype=int16)
+    }
+    {
+        'code': 0, 'telescope': 47, 'pixels': 3,
+        'pixel_list': array([  68, 1242, 1338], dtype=int16)
+    }
+    '''
 
 @pytest.mark.xfail
 def test_2028():

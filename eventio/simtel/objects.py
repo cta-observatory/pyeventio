@@ -1232,7 +1232,7 @@ class SimTelPixelList(EventIOObject):
         code = self.header.id // 1_000_000
         telescope = self.header.id % 1_000_000
 
-        pixels = read_from('<h', self)
+        pixels = read_from('<h', self)[0]
         # in version 1 pixels is a crazy int
 
         pixel_list = read_array(self, 'i2', pixels)
