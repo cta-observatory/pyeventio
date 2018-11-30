@@ -43,8 +43,7 @@ def yield_subobjects(f, eventio_type):
     else:
         try:
             for o in f:
-                for x in yield_subobjects(o, eventio_type):
-                    yield x
+                yield from yield_subobjects(o, eventio_type)
         except ValueError as e:
             pass
 
