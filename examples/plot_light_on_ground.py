@@ -20,17 +20,19 @@ def main():
         for event in f:
             if args.telescope:
                 photons = [event.photon_bunches[args.telescope]]
+                positions = [f.telescope_positions[args.telescope]]
             else:
                 photons = list(event.photon_bunches.values())
+                positions = f.telescope_positions
 
             fig, ax = plt.subplots()
             ax.set_aspect(1)
             ax.set_facecolor('k')
 
-            for tel_photons in photons:
+            for pos, tel_photons in zip(positions, photons):
                 ax.scatter(
-                    x=tel_photons['x'],
-                    y=tel_photons['y'],
+                    x=tel_photons['x'] + pos[0],
+                    y=tel_photons['y'] + pos[1],
                     c='w',
                     s=10,
                     lw=0,

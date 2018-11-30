@@ -39,4 +39,4 @@ with eventio.IACTFile(args.inputfile or testfile) as f:
     ax.set_xlabel('x / m')
     ax.set_ylabel('y / m')
     ax.set_zlabel('z / km')
-    plt.show()
+    fig.savefig('shower.png', dpi=300)

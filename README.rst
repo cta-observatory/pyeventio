@@ -60,11 +60,11 @@ Open a file produced by the IACT CORSIKA extension
 First Example
 ~~~~~~~~~~~~~
 
-One may iterate over an instance of ``IACTFile`` class in order to
-retrieve events. Events have a small number of fields. The most
-important one is the ``photon_bunches`` field, which is dictionary
-mapping telescope ids to a simple structured ``np.array``, containing
-the typical parameters Cherekov photons bunches in Corsika have, like:
+One may iterate over an instance of ``IACTFile`` class in order to retrieve events.
+Events have a small number of fields.
+The most important one is the ``photon_bunches`` field,
+which is dictionary mapping telescope ids to a simple structured ``np.array``,
+containing the typical parameters Cherenkov photon bunches in CORSIKA have, like:
 
 -  ``x``, ``y`` coordinate in the observation plane (in cm)
 -  direction cosine ``cx``, ``cy`` in x and y direction of the incident
@@ -75,29 +75,31 @@ the typical parameters Cherekov photons bunches in Corsika have, like:
 -  the production height of the photon bunch (called ``zem``)
 -  a bool flag, whether the photon was scattered in the atmosphere
 
-An event has the following attributes: \* ``header``: a dictionary
+An event has the following attributes: \* ``header``: a ``namedtuple``
 containing the Corsika Event Header data \* ``end_block``: a numpy array
 containing the Corsika Event End data \* ``time_offset``, ``x_offset``,
 ``y_offsett``, the offset of the array
 
-This prints the number of photons for the first telescope in every
+This prints energy and the number of photons for the first telescope in every
 event:
 
-.. code:: {python}
+.. code:: python
 
     import eventio
 
-    with eventio.IACTFile('data/telescope.dat') as f:
+    with eventio.IACTFile('eventio/resources/one_shower.dat') as f:
         for event in f:
-            print(event.photon_buches[0]['photons'].sum())
+            print(event.header.total_energy)
+            print(event.photon_bunches[0]['photons'].sum())
+
 
 Second Example
 ~~~~~~~~~~~~~~
 
 If you like to plot the origin of the Cherenkov photons of the first
-event in file ``data/telescope.dat`` for the first telescope, have a
-look into `this
-example <https://github.com/fact-project/pyeventio/blob/new_api/examples/plot_production_3d.py>`__
+event in file ``eventio/resources/one_shower.data`` for the first telescope,
+have a look into
+`this example <https://github.com/fact-project/pyeventio/blob/new_api/examples/plot_production_3d.py>`__
 
 It might look similar to this picture:
 
@@ -111,8 +113,8 @@ Low level access
 
 For more low level access to the items of an ``EventIO`` file (or to
 implement a higher level abstraction like ``IACTFile``) one can use the
-``EventIOFile`` class which gives access to the ``Objects`` and
-``subitems`` in ``EventIO`` files.
+``EventIOFile`` class which gives access to the ``objects`` and
+``subobjects`` in ``EventIO`` files.
 
 This is how our test file looks like in the low level view:
 

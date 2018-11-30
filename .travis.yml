@@ -12,6 +12,7 @@ before_script:
 - pip install --upgrade pytest>=3.0.0
 script:
 - python setup.py test
+- python setup.py check -r -s
 
 
 deploy:
