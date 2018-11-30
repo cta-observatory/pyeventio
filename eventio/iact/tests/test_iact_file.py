@@ -2,7 +2,7 @@ import eventio
 import pkg_resources
 from os import path
 
-from pytest import approx
+from pytest import approx, raises, importorskip
 
 
 testfile = pkg_resources.resource_filename(
@@ -13,6 +13,10 @@ testfile_reuse = pkg_resources.resource_filename(
 )
 testfile_two_telescopes = pkg_resources.resource_filename(
     'eventio', path.join('resources', 'two_telescopes.dat')
+)
+testfile_zstd = pkg_resources.resource_filename(
+    'eventio',
+    path.join('resources', 'run102_gamma_za20deg_azm0deg-paranal-sst.corsika.zst')
 )
 
 
@@ -71,6 +75,40 @@ def test_iterating():
     with eventio.IACTFile(testfile) as f:
         for event in f:
             assert isinstance(event, eventio.iact.CORSIKAEvent)
+
+
+def test_iterating_zstd():
+    importorskip('zstandard')
+
+    with eventio.IACTFile(testfile_zstd) as f:
+        for i, event in enumerate(f):
+            assert isinstance(event, eventio.iact.CORSIKAEvent)
+            if i > 5:
+                break
+
+
+def test_iter():
+    importorskip('zstandard')
+    with eventio.IACTFile(testfile_zstd) as f:
+        it = iter(f)
+        for i in range(10):
+            next(it)
+
+
+def test_next_iter():
+    with eventio.IACTFile(testfile) as f:
+        first = next(iter(f))
+        second = next(iter(f))
+        assert first.header.event_id == second.header.event_id
+
+
+def test_next_iter_zstd():
+    importorskip('zstandard')
+    # zstd does not support backwards seeking
+    with raises(ValueError):
+        with eventio.IACTFile(testfile_zstd) as f:
+            next(iter(f))
+            next(iter(f))
 
 
 def test_bunches():

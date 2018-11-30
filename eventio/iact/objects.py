@@ -3,7 +3,7 @@ import struct
 import numpy as np
 from numpy.lib.recfunctions import append_fields
 
-from ..tools import read_ints, read_from
+from ..tools import read_ints, read_from, read_eventio_string
 from ..base import EventIOObject
 from ..exceptions import WrongSizeException
 from .parse_corsika_data import (
@@ -339,10 +339,6 @@ class CORSIKALongitudinal(EventIOObject):
 
     def __init__(self, header, parent):
         super().__init__(header, parent)
-        self.longitudinal_data = self.parse_data_field()
-
-    def __getitem__(self, idx):
-        return self.longitudinal_data[idx]
 
     def parse_data_field(self):
         '''
@@ -353,16 +349,18 @@ class CORSIKALongitudinal(EventIOObject):
         User Guide.
         '''
         self.seek(0)
-        n, = read_ints(1, self)
+        long = {}
+        long['event_id'], = read_ints(1, self)
+        long['type'], = read_ints(1, self)
+        long['np'], = read_from('<h', self)
+        long['nthick'], = read_from('<h', self)
+        long['thickstep'], = read_from('<f', self)
+        long['data'] = np.frombuffer(
+            self.read(4 * long['np'] * long['nthick']),
+            dtype='<f4'
+        ).reshape(long['np'], long['nthick'])
 
-        dtype = np.dtype('float32')
-        block = np.frombuffer(
-            self.read(n * dtype.itemsize),
-            dtype=dtype,
-            count=n,
-        )
-
-        return block
+        return long
 
 
 class CORSIKAInputCard(EventIOObject):
@@ -376,20 +374,12 @@ class CORSIKAInputCard(EventIOObject):
         Returns the CORSIKA steering card as string.
         '''
         self.seek(0)
-        # read number of items in the input card
-        # number of event is not needed, but we need to read it,
-        # to get rid of it.
-        read_from('i', self)
-
-        # corsika input card is stored as null terminated strings
-        data = self.read().decode()
-        strings = data.split('\0')
-        inputcard = [
-            remove_ascii_control_characters(string)
-            for string in strings
-            if string
-        ]
-        return inputcard
+        n_strings, = read_from('<i', self)
+        input_card = bytearray()
+        for i in range(n_strings):
+            input_card.extend(read_eventio_string(self))
+            input_card.append(ord('\n'))
+        return input_card
 
 
 def remove_ascii_control_characters(string):

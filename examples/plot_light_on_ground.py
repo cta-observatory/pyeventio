@@ -7,6 +7,7 @@ from eventio import IACTFile
 parser = ArgumentParser()
 parser.add_argument('-i', '--inputfile', dest='inputfile')
 parser.add_argument('-e', '--event', dest='event', type=int, default=0)
+parser.add_argument('-t', '--telescope', dest='telescope', type=int)
 
 
 def main():
@@ -17,19 +18,23 @@ def main():
     with IACTFile(args.inputfile) as f:
 
         for event in f:
-            photons = event.photon_bunches[0]
+            if args.telescope:
+                photons = [event.photon_bunches[args.telescope]]
+            else:
+                photons = list(event.photon_bunches.values())
 
             fig, ax = plt.subplots()
             ax.set_aspect(1)
             ax.set_facecolor('k')
 
-            ax.scatter(
-                x=photons['x'],
-                y=photons['y'],
-                c='w',
-                s=10,
-                lw=0,
-            )
+            for tel_photons in photons:
+                ax.scatter(
+                    x=tel_photons['x'],
+                    y=tel_photons['y'],
+                    c='w',
+                    s=10,
+                    lw=0,
+                )
 
             plt.show()
 
