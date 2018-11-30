@@ -1,5 +1,5 @@
-pyeventio |Build Status|
-========================
+pyeventio |Build Status| |LoC|
+==============================
 
 
 A Python (read-only) implementation of the EventIO data format invented
@@ -156,3 +156,5 @@ objects are not implemted yet):
 
 .. |Build Status| image:: https://travis-ci.org/fact-project/pyeventio.svg?branch=master
    :target: https://travis-ci.org/fact-project/pyeventio
+.. |LoC| image:: https://tokei.rs/b1/github/fact-project/pyeventio
+    :target: https://github.com/fact-project/pyeventio
