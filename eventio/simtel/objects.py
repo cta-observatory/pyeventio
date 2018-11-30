@@ -705,7 +705,7 @@ class SimTelTelADCSamp(EventIOObject):
         ):
             raise NotImplementedError
 
-        #  !! WTF: raw->zero_sup_mode |= zero_sup_mode << 5;
+        #  !! WTF: raw->zero_sup_mode |= zero_sup_mode << 5
 
         self.telescope_id = (flags_ >> 12) & 0xffff
 
@@ -899,6 +899,128 @@ class SimTelShower(EventIOObject):
 
 class SimTelPixelTiming(EventIOObject):
     eventio_type = 2016
+
+    def parse_data_field(self):
+        self.seek(0)
+        assert_exact_version(self, supported_version=1)
+
+        pixel_timing = {}
+        pixel_timing['num_pixels'] = read_from('<h', self)[0]
+        pixel_timing['num_gains'] = read_from('<h', self)[0]
+        pixel_timing['before_peak'] = read_from('<h', self)[0]
+        pixel_timing['after_peak'] = read_from('<h', self)[0]
+
+        pixel_timing['with_sum'] = (
+            (pixel_timing['before_peak'] >= 0) and
+            (pixel_timing['after_peak'] >= 0)
+        )
+
+        list_type = read_from('<h', self)[0]
+        assert list_type in (1, 2), "list_type has to be 1 or 2"
+        list_size = read_from('<h', self)[0]
+        pixel_timing['pixel_list'] = read_array(
+            self, 'i2', list_size * list_type)
+        pixel_timing['threshold'] = read_from('<h', self)[0]
+        pixel_timing['glob_only_selected'] = pixel_timing['threshold'] < 0
+        pixel_timing['num_types'] = read_from('<h', self)[0]
+
+        pixel_timing['time_type'] = read_array(
+            self, 'i2', pixel_timing['num_types'])
+        pixel_timing['time_level'] = read_array(
+            self, 'f4', pixel_timing['num_types'])
+
+        pixel_timing['granularity'] = read_from('<f', self)[0]
+        pixel_timing['peak_global'] = read_from('<f', self)[0]
+
+        if list_type == 1:
+            pixel_timing.update(self._parse_list_type_1(**pixel_timing))
+        else:
+            pixel_timing.update(self._parse_list_type_2(**pixel_timing))
+
+    def _parse_list_type_1(
+        self,
+        pixel_list,
+        num_types,
+        num_gains,
+        granularity,
+        num_pixels,
+        with_sum,
+        glob_only_selected,
+        **kwargs
+    ):
+        timval = np.zeros((num_pixels, num_types), dtype='f4')
+        # The first timing element is always initialised to indicate unknown.
+        timval[:, 0] = -1
+
+        pulse_sum_loc = np.zeros((num_gains, num_pixels), dtype='i4')
+        pulse_sum_glob = np.zeros((num_gains, num_pixels), dtype='i4')
+
+        for i_pix in pixel_list:
+            for i_type in range(num_types):
+                timval[i_pix, i_type] = granularity * read_from('<h', self)[0]
+
+            if with_sum:
+                for i_gain in range(num_gains):
+                    pulse_sum_loc[i_gain, i_pix] = read_utf8_like_signed_int(self)
+
+                if glob_only_selected:
+                    for i_gain in range(num_gains):
+                        pulse_sum_glob[i_gain, i_pix] = read_utf8_like_signed_int(self)
+
+        if with_sum and len(pixel_list) > 0 and not glob_only_selected:
+            for i_gain in range(num_gains):
+                for i_pix in range(num_pixels):
+                    pulse_sum_glob[i_gain, i_pix] = read_utf8_like_signed_int(self)
+
+        return {
+            'timval': timval,
+            'pulse_sum_glob': pulse_sum_glob,
+            'pulse_sum_loc': pulse_sum_loc,
+        }
+
+
+    def _parse_list_type_2(
+        self,
+        pixel_list,
+        num_types,
+        num_gains,
+        num_pixels,
+        with_sum,
+        glob_only_selected,
+        granularity,
+        **kwargs
+    ):
+        timval = np.zeros((num_pixels, num_types), dtype='f4')
+        # The first timing element is always initialised to indicate unknown.
+        timval[:, 0] = -1
+
+        pulse_sum_loc = np.zeros((num_gains, num_pixels), dtype='i4')
+        pulse_sum_glob = np.zeros((num_gains, num_pixels), dtype='i4')
+
+        for start, stop in np.array(pixel_list).reshape(-1, 2):
+            for i_pix in range(start, stop + 1):
+                for i_type in range(num_types):
+                    timval[i_pix, i_type] = granularity * read_from('<h', self)[0]
+
+                if with_sum:
+                    for i_gain in range(num_gains):
+                        pulse_sum_loc[i_gain, i_pix] = read_utf8_like_signed_int(self)
+
+                    if glob_only_selected:
+                        for i_gain in range(num_gains):
+                            pulse_sum_glob[i_gain, i_pix] = read_utf8_like_signed_int(self)
+
+        if with_sum and len(pixel_list) > 0 and not glob_only_selected:
+            for i_gain in range(num_gains):
+                for i_pix in range(num_pixels):
+                    pulse_sum_glob[i_gain, i_pix] = read_utf8_like_signed_int(self)
+
+        return {
+            'timval': timval,
+            'pulse_sum_glob': pulse_sum_glob,
+            'pulse_sum_loc': pulse_sum_loc,
+        }
+
 
 
 class SimTelPixelCalib(EventIOObject):

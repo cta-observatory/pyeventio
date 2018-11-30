@@ -403,9 +403,12 @@ def test_2015_3_objects():
             '''
 
 
-@pytest.mark.xfail
 def test_2016():
-    assert False
+    from eventio.simtel.objects import SimTelPixelTiming
+
+    with EventIOFile(prod4b_sst1m_file) as f:
+        for obj in yield_n_and_assert(f, SimTelPixelTiming, n=3):
+            parse_and_assert_consumption(obj, limit=3)
 
 
 @pytest.mark.xfail
