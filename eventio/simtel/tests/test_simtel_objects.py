@@ -5,10 +5,20 @@ import numpy as np
 
 from eventio.search_utils import (
     find_type,
-    collect_toplevel_of_type
+    collect_toplevel_of_type,
+    find_all_subobjects,
 )
 
-test_file = resource_filename('eventio', 'resources/gamma_test.simtel.gz')
+prod2_file = resource_filename('eventio', 'resources/gamma_test.simtel.gz')
+prod4b_sst1m_file = resource_filename(
+    'eventio',
+    'resources/gamma_20deg_0deg_run102___cta-prod4-sst-1m_desert-2150m-Paranal-sst-1m.simtel.gz'
+)
+prod4b_astri_file = resource_filename(
+    'eventio',
+    'resources/gamma_20deg_0deg_run103___cta-prod4-sst-astri_desert-2150m-Paranal-sst-astri.simtel.gz'
+)
+
 expected_adc_samples_event1_tel_id_38 = np.load(
     resource_filename(
         'eventio',
@@ -16,28 +26,12 @@ expected_adc_samples_event1_tel_id_38 = np.load(
     )
 )
 
-def find_all_subcontainers(f, structure, level=0):
-    '''
-    Find all subcontainers expected in structure.
-    So if you want all AdcSums, use
-    structure = [SimTelEvent, SimTelTelEvent, SimTelTelADCSum]
-    '''
-    objects = []
-    elem = structure[level]
-
-    for o in f:
-        if isinstance(o, structure[-1]):
-            objects.append(o)
-        elif isinstance(o, elem):
-            objects.extend(find_all_subcontainers(o, structure, level + 1))
-    return objects
-
 
 def test_70():
     from eventio import EventIOFile
     from eventio.simtel.objects import History
 
-    with EventIOFile(test_file) as f:
+    with EventIOFile(prod2_file) as f:
         all_histories = [
             o for o in f
             if o.header.type == History.eventio_type
@@ -56,7 +50,7 @@ def test_71():
     from eventio import EventIOFile
     from eventio.simtel.objects import History, HistoryCommandLine
 
-    with EventIOFile(test_file) as f:
+    with EventIOFile(prod2_file) as f:
         all_history_cmd_lines = []
         for o in f:
             if isinstance(o, History):
@@ -74,7 +68,7 @@ def test_72():
     from eventio import EventIOFile
     from eventio.simtel.objects import History, HistoryConfig
 
-    with EventIOFile(test_file) as f:
+    with EventIOFile(prod2_file) as f:
         all_history_configs = []
         for o in f:
             if isinstance(o, History):
@@ -92,7 +86,7 @@ def test_2000():
     from eventio import EventIOFile
     from eventio.simtel.objects import SimTelRunHeader
 
-    with EventIOFile(test_file) as f:
+    with EventIOFile(prod2_file) as f:
         classes_under_test = collect_toplevel_of_type(f, SimTelRunHeader)
 
         for o in classes_under_test:
@@ -110,7 +104,7 @@ def test_2000_as_well():
     from eventio import EventIOFile
     from eventio.simtel import SimTelRunHeader
 
-    with EventIOFile(test_file) as f:
+    with EventIOFile(prod2_file) as f:
         o = find_type(f, SimTelRunHeader)
 
         data = o.parse_data_field()
@@ -122,7 +116,7 @@ def test_2001():
     from eventio import EventIOFile
     from eventio.simtel.objects import SimTelMCRunHeader
 
-    with EventIOFile(test_file) as f:
+    with EventIOFile(prod2_file) as f:
         classes_under_test = collect_toplevel_of_type(f, SimTelMCRunHeader)
 
         for o in classes_under_test:
@@ -136,27 +130,47 @@ def test_2001():
                 assert byte_ == 0
 
 
-def test_2002():
+def test_2002_v3():
     from eventio import EventIOFile
     from eventio.simtel.objects import SimTelCamSettings
 
-    with EventIOFile(test_file) as f:
+    with EventIOFile(prod2_file) as f:
         obj = find_type(f, SimTelCamSettings)
 
-        # first camera should be the LST
+        assert obj.header.version == 3
+
+        # values from pyhessio
         camera_data = obj.parse_data_field()
         assert camera_data['telescope_id'] == 1
         assert camera_data['n_pixels'] == 1855
-        assert camera_data['focal_length'] == 28.0
+        assert camera_data['focal_length'] == np.float32(28.0)
         assert len(camera_data['pixel_x']) == 1855
         assert len(camera_data['pixel_y']) == 1855
+        assert camera_data['pixel_x'][1] == np.float32(0.05)
+        assert camera_data['pixel_x'][2] == np.float32(0.025)
+        assert np.all(camera_data['pixel_shape'] == -1)
+        assert camera_data['n_mirrors'] == 198
+        assert camera_data['cam_rot'] == 0.1901187151670456
+
+
+def test_2002_v5():
+    from eventio import EventIOFile
+    from eventio.simtel.objects import SimTelCamSettings
+
+    with EventIOFile(prod4b_astri_file) as f:
+        obj = find_type(f, SimTelCamSettings)
+
+        assert obj.header.version == 5
+        cam_data = obj.parse_data_field()
+        assert cam_data['n_pixels'] == 2368  # astri
+        assert 'effective_focal_length' in cam_data
 
 
 def test_2003():
     from eventio import EventIOFile
     from eventio.simtel.objects import SimTelCamOrgan
 
-    with EventIOFile(test_file) as f:
+    with EventIOFile(prod2_file) as f:
         classes_under_test = collect_toplevel_of_type(f, SimTelCamOrgan)
 
         for class_index, o in enumerate(classes_under_test):
@@ -182,7 +196,7 @@ def test_2004():
     from eventio import EventIOFile
     from eventio.simtel.objects import SimTelPixelset
 
-    with EventIOFile(test_file) as f:
+    with EventIOFile(prod2_file) as f:
         o = find_type(f, SimTelPixelset)
 
         assert o.telescope_id == 1
@@ -195,7 +209,7 @@ def test_2005():
     from eventio import EventIOFile
     from eventio.simtel.objects import SimTelPixelDisable
 
-    with EventIOFile(test_file) as f:
+    with EventIOFile(prod2_file) as f:
         obj = next(f)
         while obj.header.type != SimTelPixelDisable.eventio_type:
             obj = next(f)
@@ -214,7 +228,7 @@ def test_2005_all_objects():
     from eventio import EventIOFile
     from eventio.simtel.objects import SimTelPixelDisable
 
-    with EventIOFile(test_file) as f:
+    with EventIOFile(prod2_file) as f:
         all_2005_obs = [
             o for o in f
             if o.header.type == SimTelPixelDisable.eventio_type
@@ -235,7 +249,7 @@ def test_2006():
     from eventio import EventIOFile
     from eventio.simtel.objects import SimTelCamsoftset
 
-    with EventIOFile(test_file) as f:
+    with EventIOFile(prod2_file) as f:
         all_2006_obs = [
             o for o in f
             if o.header.type == SimTelCamsoftset.eventio_type
@@ -272,7 +286,7 @@ def test_2007():
     from eventio import EventIOFile
     from eventio.simtel.objects import SimTelPointingCor
 
-    with EventIOFile(test_file) as f:
+    with EventIOFile(prod2_file) as f:
         all_2007_obs = [
             o for o in f
             if o.header.type == SimTelPointingCor.eventio_type
@@ -296,7 +310,7 @@ def test_2008():
     from eventio import EventIOFile
     from eventio.simtel.objects import SimTelTrackSet
 
-    with EventIOFile(test_file) as f:
+    with EventIOFile(prod2_file) as f:
         o = find_type(f, SimTelTrackSet)
         assert o.telescope_id == 1
         tracking_info = o.parse_data_field()
@@ -311,7 +325,7 @@ def test_2009():
     from eventio import EventIOFile
     from eventio.simtel.objects import SimTelEvent, SimTelCentEvent
 
-    with EventIOFile(test_file) as f:
+    with EventIOFile(prod2_file) as f:
         o = find_type(f, SimTelEvent)
         s = find_type(o, SimTelCentEvent)
 
@@ -325,7 +339,7 @@ def test_2100():
     from eventio import EventIOFile
     from eventio.simtel.objects import SimTelEvent, SimTelTrackEvent
 
-    with EventIOFile(test_file) as f:
+    with EventIOFile(prod2_file) as f:
 
         # search for first event
         o = find_type(f, SimTelEvent)
@@ -350,7 +364,7 @@ def test_2010():
     # class under test
     from eventio.simtel.objects import SimTelEvent
 
-    with EventIOFile(test_file) as f:
+    with EventIOFile(prod2_file) as f:
         events = collect_toplevel_of_type(f, SimTelEvent)
         for event in events:
             assert isinstance(next(event), SimTelCentEvent)
@@ -362,14 +376,14 @@ def test_2011():
     # class under test
     from eventio.simtel.objects import SimTelTelEvtHead
 
-    with EventIOFile(test_file) as f:
-        all_2011_obs = find_all_subcontainers(
+    with EventIOFile(prod2_file) as f:
+        all_2011_obs = find_all_subobjects(
             f,
             [SimTelEvent, SimTelTelEvent, SimTelTelEvtHead]
         )
 
         for i, o in enumerate(all_2011_obs):
-            d = o.parse_data_field()
+            o.parse_data_field()
             # assert parse_data_field() consumed all data from o
             bytes_not_consumed = o.read()
             assert len(bytes_not_consumed) <= 4
@@ -439,9 +453,22 @@ def test_2011():
         }
         '''
 
-@pytest.mark.xfail
+
 def test_2012():
-    assert False
+    from eventio import EventIOFile
+    from eventio.simtel.objects import SimTelTelEvent, SimTelEvent
+    # class under test
+    from eventio.simtel.objects import SimTelTelADCSum
+
+    with EventIOFile(prod4b_astri_file) as f:
+        # find class under test in the deep hierarchy jungle
+        # would be nice to find an easier way for this.
+        all_adc_sums = find_all_subobjects(
+            f, [SimTelEvent, SimTelTelEvent, SimTelTelADCSum]
+        )
+
+        for o in all_adc_sums:
+            o.parse_data_field()
 
 
 def test_2013():
@@ -450,8 +477,8 @@ def test_2013():
     # class under test
     from eventio.simtel.objects import SimTelTelADCSamp
 
-    with EventIOFile(test_file) as f:
-        all_2013_obs = find_all_subcontainers(
+    with EventIOFile(prod2_file) as f:
+        all_2013_obs = find_all_subobjects(
             f,
             [SimTelEvent, SimTelTelEvent, SimTelTelADCSamp]
         )[:3]  # <--- reduce number of containers to speed up test
@@ -500,8 +527,8 @@ def test_2014():
     ]
     print(expected_telescope_ids)
 
-    with EventIOFile(test_file) as f:
-        all_2014_obs = find_all_subcontainers(
+    with EventIOFile(prod2_file) as f:
+        all_2014_obs = find_all_subobjects(
             f,
             [SimTelEvent, SimTelTelEvent, SimTelTelImage]
         )
@@ -547,20 +574,29 @@ def test_2018():
 def test_2019():
     assert False
 
-@pytest.mark.xfail
+
 def test_2020():
-    assert False
+    from eventio import EventIOFile
+    from eventio.simtel.objects import SimTelMCShower
+
+    hessio_data = np.load(resource_filename(
+        'eventio', 'resources/gamma_test_mc_shower.npy'
+    ))
+    with EventIOFile(prod2_file) as f:
+        for d, o in zip(hessio_data, filter(lambda o: isinstance(o, SimTelMCShower), f)):
+            mc = o.parse_data_field()
+            assert mc['primary_id'] == 0
+            assert mc['energy'] == d[0]
+            assert mc['h_first_int'] == d[1]
+            assert mc['xmax'] == d[2]
 
 
 def test_2021():
     from eventio import EventIOFile
     from eventio.simtel.objects import SimTelMCEvent
 
-    with EventIOFile(test_file) as f:
-        all_2021_obs = [
-            o for o in f
-            if o.header.type == SimTelMCEvent.eventio_type
-        ]
+    with EventIOFile(prod2_file) as f:
+        all_2021_obs = collect_toplevel_of_type(f, SimTelMCEvent)
 
         for i, o in enumerate(all_2021_obs):
             d = o.parse_data_field()
@@ -582,7 +618,7 @@ def test_2022():
     from eventio import EventIOFile
     from eventio.simtel.objects import SimTelTelMoni
 
-    with EventIOFile(test_file) as f:
+    with EventIOFile(prod2_file) as f:
         all_2022_obs = [
             o for o in f
             if o.header.type == SimTelTelMoni.eventio_type
@@ -660,7 +696,7 @@ def test_2023():
     from eventio import EventIOFile
     from eventio.simtel.objects import SimTelLasCal
 
-    with EventIOFile(test_file) as f:
+    with EventIOFile(prod2_file) as f:
         all_2023_obs = [
             o for o in f
             if o.header.type == SimTelLasCal.eventio_type
@@ -698,7 +734,7 @@ def test_2026():
     from eventio import EventIOFile
     from eventio.simtel.objects import SimTelMCPeSum
 
-    with EventIOFile(test_file) as f:
+    with EventIOFile(prod2_file) as f:
         all_2026_obs = [
             o for o in f
             if o.header.type == SimTelMCPeSum.eventio_type
@@ -714,13 +750,13 @@ def test_2026():
 
 
 def test_2027():
-    # This test does not work with our gamma_test_file
+    # This test does not work with our gamma_prod2_file
     # since it does not contain any object of type 2027
     # :-(
     from eventio import EventIOFile
     from eventio.simtel.objects import SimTelPixelList
 
-    with EventIOFile(test_file) as f:
+    with EventIOFile(prod2_file) as f:
         all_2027_obs = [
             o for o in f
             if o.header.type == SimTelPixelList.eventio_type

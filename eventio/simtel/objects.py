@@ -1,11 +1,12 @@
 ''' Implementations of the simtel_array EventIO object types '''
 import numpy as np
-from ..base import EventIOObject
+from ..base import EventIOObject, read_next_header
 from ..tools import (
     read_ints,
     read_eventio_string,
     read_from,
     read_utf8_like_signed_int,
+    read_utf8_like_unsigned_int,
     read_array,
     read_time,
     read_vector_of_uint32_scount_differential,
@@ -169,18 +170,70 @@ class SimTelCamSettings(TelescopeObject):
     eventio_type = 2002
 
     def parse_data_field(self):
+        self.seek(0)
+        assert_version_in(self, [0, 1, 2, 3, 4, 5])
         n_pixels, = read_from('<i', self)
-        focal_length, = read_from('<f', self)
-        pixel_x = read_array(self, count=n_pixels, dtype='float32')
-        pixel_y = read_array(self, count=n_pixels, dtype='float32')
 
-        return {
-            'telescope_id': self.telescope_id,
-            'n_pixels': n_pixels,
-            'focal_length': focal_length,
-            'pixel_x': pixel_x,
-            'pixel_y': pixel_y,
-        }
+        cam = {'n_pixels': n_pixels, 'telescope_id': self.telescope_id}
+        cam['focal_length'], = read_from('<f', self)
+        if self.header.version > 4:
+            cam['effective_focal_length'], = read_from('<f', self)
+
+        cam['pixel_x'] = read_array(self, count=n_pixels, dtype='float32')
+        cam['pixel_y'] = read_array(self, count=n_pixels, dtype='float32')
+
+        if self.header.version >= 4:
+            cam['curved_surface'] = read_utf8_like_signed_int(self)
+            cam['pixels_parallel'] = read_utf8_like_signed_int(self)
+
+            if cam['curved_surface']:
+                cam['pixel_z'] = read_array(self, dtype='<f4', count=n_pixels)
+            else:
+                cam['pixel_z'] = np.zeros(n_pixels, dtype='<f4')
+
+            if not cam['pixels_parallel']:
+                cam['nxpix'] = read_array(self, dtype='<f4', count=n_pixels)
+                cam['nypix'] = read_array(self, dtype='<f4', count=n_pixels)
+            else:
+                cam['nxpix'] = cam['nypix'] = np.zeros(n_pixels, dtype='f4')
+
+            cam['common_pixel_shape'] = read_utf8_like_signed_int(self)
+            if not cam['common_pixel_shape']:
+                cam['pixel_shape'] = np.array([
+                    read_utf8_like_signed_int(self) for _ in range(n_pixels)
+                ])
+                cam['pixel_area'] = read_array(self, dtype='<f4', count=n_pixels)
+                cam['pixel_size'] = read_array(self, dtype='<f4', count=n_pixels)
+            else:
+                cam['pixel_shape'] = np.repeat(read_utf8_like_signed_int(self), n_pixels)
+                cam['pixel_area'] = np.repeat(read_from('<f', self)[0], n_pixels)
+                cam['pixel_size'] = np.repeat(read_from('<f', self)[0], n_pixels)
+        else:
+            cam['curve_surface'] = 0
+            cam['pixels_parallel'] = 1
+            cam['common_pixel_shape'] = 0
+            cam['pixel_z'] = np.zeros(n_pixels, dtype='f4')
+            cam['nxpix'] = cam['nypix'] = np.zeros(n_pixels, dtype='f4')
+            cam['pixel_shape'] = np.full(n_pixels, -1, dtype='f4')
+            cam['pixel_area'] = read_array(self, dtype='<f4', count=n_pixels)
+            if self.header.version >= 1:
+                cam['pixel_size'] = read_array(self, dtype='<f4', count=n_pixels)
+            else:
+                cam['pixel_size'] = np.zeros(n_pixels, dtype='f4')
+
+        if self.header.version >= 2:
+            cam['n_mirrors'] = read_from('<i', self)[0]
+            cam['mirror_area'] = read_from('<f', self)[0]
+        else:
+            cam['n_mirrors'] = 0.0
+            cam['mirror_area'] = 0.0
+
+        if self.header.version >= 3:
+            cam['cam_rot'] = read_from('<f', self)[0]
+        else:
+            cam['cam_rot'] = 0.0
+
+        return cam
 
 
 class SimTelCamOrgan(TelescopeObject):
@@ -593,6 +646,48 @@ class SimTelTelEvtHead(TelescopeObject):
 class SimTelTelADCSum(EventIOObject):
     eventio_type = 2012
 
+    def __init__(self, header, parent):
+        super().__init__(header, parent)
+        if self.header.version <= 1:
+            self.telescope_id = (header.id >> 25) & 0x1f
+        else:
+            self.telescope_id = (header.id >> 12) & 0xffff
+
+    def parse_data_field(self):
+        self.seek(0)
+        assert_exact_version(self, 3)
+
+        flags = self.header.id
+        raw = {'telescope_id': self.telescope_id}
+        raw['zero_sup_mode'] = flags & 0x1f
+        raw['data_red_mode'] = (flags >> 5) & 0x1f
+        raw['list_known'] = (flags >> 10) & 0x01
+        n_pixels = read_from('<i', self)[0]
+        n_gains = read_from('<h', self)[0]
+
+        if raw['data_red_mode'] == 2:
+            offset_hg8 = read_from('<h', self)[0]
+            scale_hg8 = read_from('<h', self)[0]
+            if scale_hg8 <= 0:
+                scale_hg8 = 1
+
+        if raw['zero_sup_mode'] == 0.:
+            if raw['data_red_mode'] == 0:
+                # before version 3, it was just uint16
+                raw['adc_sums'] = np.array([
+                    read_vector_of_uint32_scount_differential(self, n_pixels)
+                    for gain in range(n_gains)
+
+                ])
+        if 'adc_sums' not in raw:
+            raise NotImplementedError(
+                'Currently no support for data_red_mode {} or zero_sup_mode{}'.format(
+                    raw['data_red_mode'], raw['zero_sup_mode'],
+                )
+            )
+
+        return raw
+
 
 class SimTelTelADCSamp(EventIOObject):
     eventio_type = 2013
@@ -604,9 +699,9 @@ class SimTelTelADCSamp(EventIOObject):
         self._data_red_mode = (flags_ >> 5) & 0x1f
         self._list_known = bool((flags_ >> 10) & 0x01)
         if (
-            (self._zero_sup_mode != 0 and header.version < 3) or
-            self._data_red_mode != 0 or
-            self._list_known
+            (self._zero_sup_mode != 0 and header.version < 3)
+            or self._data_red_mode != 0
+            or self._list_known
         ):
             raise NotImplementedError
 
@@ -812,6 +907,59 @@ class SimTelPixelCalib(EventIOObject):
 
 class SimTelMCShower(EventIOObject):
     eventio_type = 2020
+
+    def parse_data_field(self):
+        self.seek(0)
+        assert_version_in(self, [0, 1, 2])
+        mc = {}
+        mc['shower'] = self.header.id
+        mc['primary_id'] = read_from('<i', self)[0]
+        mc['energy'] = read_from('<f', self)[0]
+        mc['azimuth'] = read_from('<f', self)[0]
+        mc['altitude'] = read_from('<f', self)[0]
+        if self.header.version >= 1:
+            mc['depth_start'] = read_from('<f', self)[0]
+        mc['h_first_int'] = read_from('<f', self)[0]
+        mc['xmax'] = read_from('<f', self)[0]
+        if self.header.version >= 1:
+            mc['hmax'] = read_from('<f', self)[0]
+            mc['emax'] = read_from('<f', self)[0]
+            mc['cmax'] = read_from('<f', self)[0]
+        else:
+            mc['hmax'] = mc['emax'] = mc['cmax'] = 0.0
+
+        mc['n_profiles'] = read_from('<h', self)[0]
+        mc['profiles'] = []
+        for i in range(mc['n_profiles']):
+            p = {}
+            p['id'] = read_from('<i', self)[0]
+            p['num_steps'] = read_from('<i', self)[0]
+            p['start'] = read_from('<f', self)[0]
+            p['end'] = read_from('<f', self)[0]
+            p['content'] = read_array(self, dtype='<f4', count=p['num_steps'])
+            mc['profiles'].append(p)
+
+        if self.header.version >= 2:
+            h = read_next_header(self, toplevel=False)
+            assert h.type == 1215
+            mc['mc_extra_params'] = MC_Extra_Params(h, self).parse_data_field()
+        return mc
+
+
+class MC_Extra_Params(EventIOObject):
+    eventio_type = 1215
+
+    def parse_data_field(self):
+        ep = {
+            'weight': read_from('<f', self),
+            'n_iparam': read_utf8_like_unsigned_int(self),
+            'n_fparam': read_utf8_like_unsigned_int(self),
+        }
+        if ep['n_iparam'] > 0:
+            ep['iparam'] = read_array(self, dtype='<i4', count=ep['n_iparam'])
+        if ep['n_fparam'] > 0:
+            ep['fparam'] = read_array(self, dtype='<f4', count=ep['n_iparam'])
+        return ep
 
 
 class SimTelMCEvent(EventIOObject):
