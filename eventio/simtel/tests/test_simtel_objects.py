@@ -43,25 +43,6 @@ def find_all_subcontainers(f, structure, level=0):
     return objects
 
 
-def find_all_subcontainers(f, structure, level=0):
-    '''
-    Find all subcontainers expected in structure.
-    So if you want all AdcSums, use
-    structure = [SimTelEvent, SimTelTelEvent, SimTelTelADCSum]
-    '''
-    objects = []
-    elem = structure[level]
-
-    for o in f:
-        if isinstance(o, structure[-1]):
-            objects.append(o)
-        elif isinstance(o, elem):
-            objects.extend(find_all_subcontainers(f, structure, level + 1))
-    return objects
-
-
-
-
 def test_70():
     from eventio import EventIOFile
     from eventio.simtel.objects import History
