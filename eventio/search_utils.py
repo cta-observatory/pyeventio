@@ -51,6 +51,6 @@ def yield_subobjects(f, eventio_type):
 
 def yield_n_subobjects(f, eventio_type, n=3):
     for i, obj in enumerate(yield_subobjects(f, eventio_type)):
-        if i + 1 >= n:
+        if i >= n:
             break
         yield obj
