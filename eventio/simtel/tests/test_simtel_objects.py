@@ -13,6 +13,10 @@ prod4b_sst1m_file = resource_filename(
     'eventio',
     'resources/gamma_20deg_0deg_run102___cta-prod4-sst-1m_desert-2150m-Paranal-sst-1m.simtel.gz'
 )
+prod4b_astri_file = resource_filename(
+    'eventio',
+    'resources/gamma_20deg_0deg_run103___cta-prod4-sst-astri_desert-2150m-Paranal-sst-astri.simtel.gz'
+)
 
 expected_adc_samples_event1_tel_id_38 = np.load(
     resource_filename(
@@ -490,7 +494,7 @@ def test_2012():
     # class under test
     from eventio.simtel.objects import SimTelTelADCSum
 
-    with EventIOFile(test_file) as f:
+    with EventIOFile(prod4b_astri_file) as f:
         # find class under test in the deep hierarchy jungle
         # would be nice to find an easier way for this.
         all_adc_sums = find_all_subcontainers(

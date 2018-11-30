@@ -171,11 +171,14 @@ class SimTelCamSettings(TelescopeObject):
 
     def parse_data_field(self):
         self.seek(0)
-        assert_version_in(self, [0, 1, 2, 3, 4])
+        assert_version_in(self, [0, 1, 2, 3, 4, 5])
         n_pixels, = read_from('<i', self)
 
         cam = {'n_pixels': n_pixels, 'telescope_id': self.telescope_id}
         cam['focal_length'], = read_from('<f', self)
+        if self.header.version > 4:
+            cam['effective_focal_length'], = read_from('<f', self)
+
         cam['pixel_x'] = read_array(self, count=n_pixels, dtype='float32')
         cam['pixel_y'] = read_array(self, count=n_pixels, dtype='float32')
 
@@ -668,8 +671,8 @@ class SimTelTelADCSum(EventIOObject):
             if scale_hg8 <= 0:
                 scale_hg8 = 1
 
-        if raw['zero_sup_mode'] == 0:
-            if ['data_red_mode'] == 0:
+        if raw['zero_sup_mode'] == 0.:
+            if raw['data_red_mode'] == 0:
                 # before version 3, it was just uint16
                 raw['adc_sums'] = np.array([
                     read_vector_of_uint32_scount_differential(self, n_pixels)
