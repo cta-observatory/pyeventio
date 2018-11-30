@@ -4,10 +4,16 @@ import gzip
 import logging
 import warnings
 
-from .file_types import is_gzip, is_eventio
+from .file_types import is_gzip, is_eventio, is_zstd
 from .bits import bool_bit_from_pos, get_bits_from_word
 from . import constants
 from .exceptions import WrongTypeException
+
+try:
+    import zstandard as zstd
+    has_zstd = True
+except ImportError:
+    has_zstd = False
 
 log = logging.getLogger(__name__)
 
@@ -26,6 +32,15 @@ class EventIOFile:
         if is_gzip(path):
             log.info('Found gzipped file')
             self._filehandle = gzip.open(path, mode='rb')
+        elif is_zstd(path):
+            log.info('Found zstd compressed file')
+            if not has_zstd:
+                raise IOError(
+                    'You need to install the `zstandard module'
+                    'to read zstd compressed file`'
+                )
+            cctx = zstd.ZstdDecompressor()
+            self._filehandle = cctx.stream_reader(open(path, 'rb'))
         else:
             log.info('Found uncompressed file')
             self._filehandle = open(path, mode='rb')
