@@ -1,7 +1,7 @@
 import logging
 from collections import namedtuple
 
-from ..base import KNOWN_OBJECTS, EventIOFile
+from ..base import KNOWN_OBJECTS, EventIOFile, EventIOObject
 from ..exceptions import check_type
 
 from .objects import (
@@ -21,24 +21,8 @@ from .objects import (
 )
 
 
-KNOWN_OBJECTS.update({
-    o.eventio_type: o
-    for o in [
-        CORSIKARunHeader,
-        CORSIKATelescopeDefinition,
-        CORSIKAEventHeader,
-        CORSIKAArrayOffsets,
-        CORSIKATelescopeData,
-        IACTPhotons,
-        IACTLayout,
-        IACTTriggerTime,
-        IACTPhotoElectrons,
-        CORSIKAEventEndBlock,
-        CORSIKARunEndBlock,
-        CORSIKALongitudinal,
-        CORSIKAInputCard,
-    ]
-})
+for o in EventIOObject.__subclasses__():
+    KNOWN_OBJECTS[o.eventio_type] = o
 
 log = logging.getLogger(__name__)
 
@@ -124,8 +108,15 @@ class IACTFile(EventIOFile):
             array_offsets = reuse_object.parse_data_field()
             time_offset = reuse_object.time_offset
             for reuse in range(n_reuses):
-                telescope_data_obj = next(self)
-                check_type(telescope_data_obj, CORSIKATelescopeData)
+                obj = next(self)
+                if isinstance(obj, CORSIKALongitudinal):
+                    longitudinal = obj.parse_data_field()
+                    obj = next(self)
+                else:
+                    longitudinal = None
+
+                check_type(obj, CORSIKATelescopeData)
+                telescope_data_obj = obj
 
                 photon_bunches = {}
                 n_photons = {}
@@ -147,6 +138,7 @@ class IACTFile(EventIOFile):
                     reuse=reuse + 1,
                     n_photons=n_photons,
                     n_bunches=n_bunches,
+                    longitudinal=longitudinal,
                 )
 
             event_end = next(self)
@@ -164,6 +156,7 @@ CORSIKAEventTuple = namedtuple(
         'time_offset', 'x_offset', 'y_offset', 'weight',
         'event_id', 'reuse',
         'n_photons', 'n_bunches',
+        'longitudinal',
     ]
 )
 

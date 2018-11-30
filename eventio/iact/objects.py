@@ -339,7 +339,6 @@ class CORSIKALongitudinal(EventIOObject):
 
     def __init__(self, header, parent):
         super().__init__(header, parent)
-        self.longitudinal_data = self.parse_data_field()
 
     def __getitem__(self, idx):
         return self.longitudinal_data[idx]

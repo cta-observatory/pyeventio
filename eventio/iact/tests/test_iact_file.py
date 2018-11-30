@@ -14,6 +14,10 @@ testfile_reuse = pkg_resources.resource_filename(
 testfile_two_telescopes = pkg_resources.resource_filename(
     'eventio', path.join('resources', 'two_telescopes.dat')
 )
+testfile_zstd = pkg_resources.resource_filename(
+    'eventio',
+    path.join('resources', 'run102_gamma_za20deg_azm0deg-paranal-sst.corsika.zst')
+)
 
 
 def test_file_open():
@@ -71,6 +75,14 @@ def test_iterating():
     with eventio.IACTFile(testfile) as f:
         for event in f:
             assert isinstance(event, eventio.iact.CORSIKAEvent)
+
+
+def test_iterating_zstd():
+    with eventio.IACTFile(testfile_zstd) as f:
+        for i, event in enumerate(f):
+            assert isinstance(event, eventio.iact.CORSIKAEvent)
+            if i > 3:
+                break
 
 
 def test_bunches():
