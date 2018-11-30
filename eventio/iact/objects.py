@@ -340,9 +340,6 @@ class CORSIKALongitudinal(EventIOObject):
     def __init__(self, header, parent):
         super().__init__(header, parent)
 
-    def __getitem__(self, idx):
-        return self.longitudinal_data[idx]
-
     def parse_data_field(self):
         '''
         Read the data in this EventIOObject
@@ -352,16 +349,18 @@ class CORSIKALongitudinal(EventIOObject):
         User Guide.
         '''
         self.seek(0)
-        n, = read_ints(1, self)
+        long = {}
+        long['event_id'], = read_ints(1, self)
+        long['type'], = read_ints(1, self)
+        long['np'], = read_from('<h', self)
+        long['nthick'], = read_from('<h', self)
+        long['thickstep'], = read_from('<f', self)
+        long['data'] = np.frombuffer(
+            self.read(4 * long['np'] * long['nthick']),
+            dtype='<f4'
+        ).reshape(long['np'], long['nthick'])
 
-        dtype = np.dtype('float32')
-        block = np.frombuffer(
-            self.read(n * dtype.itemsize),
-            dtype=dtype,
-            count=n,
-        )
-
-        return block
+        return long
 
 
 class CORSIKAInputCard(EventIOObject):
