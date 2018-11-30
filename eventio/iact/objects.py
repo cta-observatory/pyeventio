@@ -3,7 +3,7 @@ import struct
 import numpy as np
 from numpy.lib.recfunctions import append_fields
 
-from ..tools import read_ints, read_from
+from ..tools import read_ints, read_from, read_eventio_string
 from ..base import EventIOObject
 from ..exceptions import WrongSizeException
 from .parse_corsika_data import (
@@ -376,20 +376,12 @@ class CORSIKAInputCard(EventIOObject):
         Returns the CORSIKA steering card as string.
         '''
         self.seek(0)
-        # read number of items in the input card
-        # number of event is not needed, but we need to read it,
-        # to get rid of it.
-        read_from('i', self)
-
-        # corsika input card is stored as null terminated strings
-        data = self.read().decode()
-        strings = data.split('\0')
-        inputcard = [
-            remove_ascii_control_characters(string)
-            for string in strings
-            if string
-        ]
-        return inputcard
+        n_strings, = read_from('<i', self)
+        input_card = bytearray()
+        for i in range(n_strings):
+            input_card.extend(read_eventio_string(self))
+            input_card.append(ord('\n'))
+        return input_card
 
 
 def remove_ascii_control_characters(string):
