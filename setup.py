@@ -1,4 +1,5 @@
 from setuptools import setup, find_packages
+from Cython.Build import cythonize
 
 with open('README.rst') as f:
     long_description = f.read()
@@ -13,9 +14,11 @@ setup(
     author_email='neised@phys.ethz.ch',
     license='MIT',
     packages=find_packages(),
+    ext_modules=cythonize('eventio/var_int.pyx'),
     package_data={'eventio': ['resources/*']},
     install_requires=[
-        'numpy'
+        'numpy',
+        'cython',
     ],
     classifiers=[
         'Development Status :: 4 - Beta',
@@ -33,6 +36,6 @@ setup(
         'Topic :: Scientific/Engineering :: Astronomy',
         'Topic :: Scientific/Engineering :: Physics',
     ],
-    setup_requires=['pytest-runner'],
+    setup_requires=['pytest-runner', 'Cython', 'numpy'],
     tests_require=['pytest>=3.0.0'],
 )
