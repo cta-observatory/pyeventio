@@ -281,14 +281,15 @@ class SimTelCamOrgan(TelescopeObject):
             # I will check for it in the tests.
             sectors.append(sector)
 
-        sector_type = []
-        sector_threshold = []
-        sector_pixthresh = []
-        for i in range(num_sectors):
-            type_, thresh_, pix_thr_ = read_from('<Bff', self)
-            sector_type.append(type_)
-            sector_threshold.append(thresh_)
-            sector_pixthresh.append(pix_thr_)
+        sectors = read_array(
+            self,
+            dtype=[
+                ('type', 'uint8'),
+                ('thresh', 'float32'),
+                ('pix_thresh', 'float32')
+            ],
+            count=num_sectors,
+        )
 
         return {
             'telescope_id': self.telescope_id,
@@ -298,9 +299,9 @@ class SimTelCamOrgan(TelescopeObject):
             'chip': chip,
             'channel': channel,
             'sectors': sectors,
-            'sector_type': np.array(sector_type),
-            'sector_threshold': np.array(sector_threshold),
-            'sector_pixthresh': np.array(sector_pixthresh),
+            'sector_type': sectors['type'],
+            'sector_threshold': sectors['thresh'],
+            'sector_pixthresh': sectors['pix_thresh'],
         }
 
 
