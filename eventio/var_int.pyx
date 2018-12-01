@@ -2,7 +2,20 @@ import numpy as np
 cimport numpy as np
 
 
-def get_length_of_varint(const unsigned char first_byte):
+cpdef unsigned_varint(const unsigned char[:] data, unsigned long offset=0):
+    length = get_length_of_varint(data[0])
+    value = parse_varint(data[offset:offset + length])
+    return value, length
+
+
+def varint(const unsigned char[:] data, unsigned long offset=0):
+    value, length = unsigned_varint(data, offset)
+    if (value & 1) == 1:  # Negative number;
+        return -(value >> 1) - 1, length
+    return value >> 1, length
+
+
+cpdef get_length_of_varint(const unsigned char first_byte):
     if (first_byte & 0x80) == 0:
         return 1
     if (first_byte & 0xc0) == 0x80:
@@ -22,7 +35,7 @@ def get_length_of_varint(const unsigned char first_byte):
     return 9
 
 
-def parse_varint(const unsigned char[:] var_int_bytes):
+cpdef parse_varint(const unsigned char[:] var_int_bytes):
     length = var_int_bytes.shape[0]
     cdef unsigned long v[9]
     cdef i  = 0
@@ -98,7 +111,49 @@ def parse_varint(const unsigned char[:] var_int_bytes):
         | v[8]
     )
 
-def varint_arrays_differential_from_bytes(
+
+cpdef unsigned_varint_array(
+    const unsigned char[:] data,
+    unsigned long n_elements,
+    unsigned long offset = 0,
+):
+    cdef np.ndarray output = np.empty(n_elements, dtype='uint64')
+
+    cdef int val
+    cdef unsigned long i
+    cdef unsigned long pos
+    cdef unsigned long idx
+    cdef unsigned char v0, v1, v2, v3, v4
+    pos = 0
+
+    for i in range(n_elements):
+        idx = pos + offset
+        length = get_length_of_varint(data[idx])
+        output[i] = parse_varint(data[idx:idx + length])
+        pos += length
+
+    return output, pos
+
+
+def varint_array(
+    const unsigned char[:] data,
+    unsigned long n_elements,
+    unsigned long offset = 0,
+):
+    cdef unsigned long bytes_read
+    cdef np.ndarray mask
+    cdef np.ndarray output = np.empty(n_elements, dtype='int64')
+
+    unsigned_output, bytes_read = unsigned_varint_array(data, n_elements, offset)
+
+    mask = (output & 1) == 1
+    output[mask] = -(unsigned_output[mask] >> 1) - 1
+    output[~mask] = unsigned_output[~mask] >> 1
+
+    return output, bytes_read
+
+
+def unsigned_varint_arrays_differential(
     const unsigned char[:] data,
     unsigned long n_arrays,
     unsigned long n_elements,
@@ -115,7 +170,7 @@ def varint_arrays_differential_from_bytes(
 
     for i in range(n_arrays):
 
-        output[i], bytes_read = varint_array_differential_from_bytes(
+        output[i], bytes_read = unsigned_varint_array_differential(
             data, n_elements, offset=offset
         )
         offset += bytes_read
@@ -124,7 +179,7 @@ def varint_arrays_differential_from_bytes(
     return output, bytes_read_total
 
 
-cpdef varint_array_differential_from_bytes(
+cpdef unsigned_varint_array_differential(
     const unsigned char[:] data,
     unsigned long n_elements,
     unsigned long offset = 0,
