@@ -18,7 +18,7 @@ setup(
     package_data={'eventio': ['resources/*']},
     install_requires=[
         'numpy',
-        'cython',
+        'Cython',
     ],
     classifiers=[
         'Development Status :: 4 - Beta',
