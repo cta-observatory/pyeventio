@@ -221,12 +221,11 @@ class EventIOObject:
         return self.parent.tell() - self.header.data_field_first_byte
 
     def __repr__(self):
-        return '{}[{}](size={}, only_subobjects={}, first_byte={})'.format(
+        return '{}[{}](size={}, only_subobjects={})'.format(
             self.__class__.__name__,
             self.header.type,
             self.header.length,
             self.header.only_subobjects,
-            self.header.data_field_first_byte
         )
 
 

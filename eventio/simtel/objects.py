@@ -1,4 +1,5 @@
 ''' Implementations of the simtel_array EventIO object types '''
+import pprint
 import numpy as np
 from ..base import EventIOObject, read_next_header
 from ..tools import (
@@ -25,12 +26,11 @@ class TelescopeObject(EventIOObject):
         self.telescope_id = header.id
 
     def __repr__(self):
-        return '{}[{}](telescope_id={}, size={}, first_byte={})'.format(
+        return '{}[{}](telescope_id={}, size={})'.format(
             self.__class__.__name__,
             self.eventio_type,
             self.telescope_id,
             self.header.length,
-            self.header.data_field_first_byte
         )
 
 
@@ -103,6 +103,25 @@ class SimTelRunHeader(EventIOObject):
         super().__init__(header, parent)
         self.run_id = self.header.id
 
+    def __repr__(self):
+        s = '{}[{}](id={})'.format(
+            self.__class__.__name__,
+            self.header.type,
+            self.header.id,
+        )
+
+        content = self.parse_data_field()
+        interesting_parts = [
+            'n_telescopes',
+            'run',
+        ]
+        reported_content = {
+            name: content[name]
+            for name in interesting_parts
+        }
+        s += pprint.pformat(reported_content)
+        return s
+
     def parse_data_field(self):
         '''See write_hess_runheader l. 184 io_hess.c '''
         self.seek(0)
@@ -126,6 +145,17 @@ class SimTelRunHeader(EventIOObject):
 
 class SimTelMCRunHeader(EventIOObject):
     eventio_type = 2001
+
+    def __repr__(self):
+        s = '{}[{}](id={})'.format(
+            self.__class__.__name__,
+            self.header.type,
+            self.header.id,
+        )
+
+        content = self.parse_data_field()
+        s += '\n' + pprint.pformat(content)
+        return s
 
     def parse_data_field(self):
         ''' '''
@@ -168,6 +198,28 @@ class SimTelMCRunHeader(EventIOObject):
 
 class SimTelCamSettings(TelescopeObject):
     eventio_type = 2002
+
+    def __repr__(self):
+        s = '{}[{}](telescope_id={})'.format(
+            self.__class__.__name__,
+            self.header.type,
+            self.header.id,
+        )
+
+        content = self.parse_data_field()
+        interesting_parts = [
+            'n_pixels',
+            'focal_length',
+            'mirror_area'
+        ]
+        reported_content = {
+            name: content[name]
+            for name in interesting_parts
+        }
+        s += '\n' + pprint.pformat(reported_content, indent=2)
+        return s
+
+
 
     def parse_data_field(self):
         self.seek(0)
@@ -239,6 +291,25 @@ class SimTelCamSettings(TelescopeObject):
 class SimTelCamOrgan(TelescopeObject):
     eventio_type = 2003
 
+    def __repr__(self):
+        s = '{}[{}](telescope_id={})'.format(
+            self.__class__.__name__,
+            self.header.type,
+            self.header.id,
+        )
+
+        content = self.parse_data_field()
+        interesting_parts = [
+            'num_drawers',
+        ]
+        reported_content = {
+            name: content[name]
+            for name in interesting_parts
+        }
+        s += '\n' + pprint.pformat(reported_content, indent=2)
+        return s
+
+
     def parse_data_field(self):
         self.seek(0)
         assert_exact_version(self, supported_version=1)
@@ -304,6 +375,26 @@ class SimTelPixelset(TelescopeObject):
     eventio_type = 2004
     from .pixelset import dt1, dt2, dt3, dt4
 
+    def __repr__(self):
+        s = '{}[{}](telescope_id={})'.format(
+            self.__class__.__name__,
+            self.header.type,
+            self.header.id,
+        )
+
+        content = self.parse_data_field()
+        interesting_parts = [
+            'setup_id',
+            'trigger_mode',
+        ]
+        reported_content = {
+            name: content[name]
+            for name in interesting_parts
+        }
+        s += '\n' + pprint.pformat(reported_content, indent=1)
+        return s
+
+
     def parse_data_field(self):
         ''' '''
         self.seek(0)
@@ -325,12 +416,19 @@ class SimTelPixelset(TelescopeObject):
         return merge_structured_arrays_into_dict([p1, p2, p3, p4])
 
 
-class SimTelPixelDisable(EventIOObject):
+class SimTelPixelDisable(TelescopeObject):
     eventio_type = 2005
 
-    def __init__(self, header, parent):
-        super().__init__(header, parent)
-        self.telescope_id = header.id
+    def __repr__(self):
+        s = '{}[{}](telescope_id={})'.format(
+            self.__class__.__name__,
+            self.header.type,
+            self.header.id,
+        )
+
+        content = self.parse_data_field()
+        s += '\n' + pprint.pformat(content, indent=2)
+        return s
 
     def parse_data_field(self):
         ''' '''
@@ -356,12 +454,22 @@ class SimTelPixelDisable(EventIOObject):
         }
 
 
-class SimTelCamsoftset(EventIOObject):
+class SimTelCamsoftset(TelescopeObject):
     eventio_type = 2006
 
     def __init__(self, header, parent):
         super().__init__(header, parent)
-        self.telescope_id = header.id
+
+    def __repr__(self):
+        s = '{}[{}](telescope_id={})'.format(
+            self.__class__.__name__,
+            self.header.type,
+            self.header.id,
+        )
+
+        content = self.parse_data_field()
+        s += '\n' + pprint.pformat(content, indent=1)
+        return s
 
     def parse_data_field(self):
         ''' '''
@@ -409,6 +517,17 @@ class SimTelCamsoftset(EventIOObject):
 class SimTelPointingCor(TelescopeObject):
     eventio_type = 2007
 
+    def __repr__(self):
+        s = '{}[{}](telescope_id={})'.format(
+            self.__class__.__name__,
+            self.header.type,
+            self.header.id,
+        )
+
+        content = self.parse_data_field()
+        s += '\n' + pprint.pformat(content, indent=2)
+        return s
+
     def parse_data_field(self):
         ''' '''
         self.seek(0)
@@ -428,6 +547,18 @@ class SimTelPointingCor(TelescopeObject):
 
 class SimTelTrackSet(TelescopeObject):
     eventio_type = 2008
+
+    def __repr__(self):
+        s = '{}[{}](telescope_id={})'.format(
+            self.__class__.__name__,
+            self.header.type,
+            self.header.id,
+        )
+
+        content = self.parse_data_field()
+        s += '\n' + pprint.pformat(content, indent=2)
+        return s
+
 
     def parse_data_field(self):
         tracking_info = {}
@@ -460,6 +591,26 @@ class SimTelCentEvent(EventIOObject):
             raise IOError('Unsupported CENTEVENT Version: {}'.format(header.version))
 
         self.global_count = self.header.id
+
+    def __repr__(self):
+        s = '{}[{}](id={})'.format(
+            self.__class__.__name__,
+            self.header.type,
+            self.header.id,
+        )
+        content = self.parse_data_field()
+        interesting_parts = [
+            'triggered_telescopes',
+            'trigger_times',
+            'telescopes_with_data',
+        ]
+        reported_content = {
+            name: content[name]
+            for name in interesting_parts
+        }
+        s += '\n' + pprint.pformat(reported_content, indent=1)
+        return s
+
 
     def parse_data_field(self):
 
@@ -550,12 +701,10 @@ class SimTelTrackEvent(EventIOObject):
         return 2100 + telescope_id % 100 + 1000 * (telescope_id // 100)
 
     def __repr__(self):
-        return '{}[{}](telescope_id={}, size={}, first_byte={})'.format(
+        return '{}[{}](telescope_id={})'.format(
             self.__class__.__name__,
             self.eventio_type,
             self.telescope_id,
-            self.header.length,
-            self.header.data_field_first_byte
         )
 
 
@@ -585,27 +734,56 @@ class SimTelTelEvent(EventIOObject):
         return 2200 + telescope_id % 100 + 1000 * (telescope_id // 100)
 
     def __repr__(self):
-        return '{}[{}](telescope_id={}, size={}, first_byte={})'.format(
+        return '{}[{}](telescope_id={}, id={})'.format(
             self.__class__.__name__,
             self.eventio_type,
             self.telescope_id,
-            self.header.length,
-            self.header.data_field_first_byte
+            self.header.id
         )
 
 
 class SimTelEvent(EventIOObject):
     eventio_type = 2010
 
+    def __repr__(self):
+        return '{}[{}](id={})'.format(
+            self.__class__.__name__,
+            self.header.type,
+            self.header.id,
+        )
+
 
 class SimTelTelEvtHead(TelescopeObject):
     eventio_type = 2011
+
+    def __repr__(self):
+        s = '{}[{}](telescope_id={})'.format(
+            self.__class__.__name__,
+            self.header.type,
+            self.telescope_id
+        )
+
+        content = self.parse_data_field()
+        interesting_parts = [
+            'event_id',
+            'cpu_time',
+            'gps_time',
+            'list_trgsect',
+            'time_trgsect',
+        ]
+        reported_content = {
+            name: content[name]
+            for name in interesting_parts
+        }
+        s += '\n' + pprint.pformat(reported_content, indent=1)
+        return s
 
     def parse_data_field(self):
         self.seek(0)
         event_head = {}
         event_head['loc_count'], = read_from('<i', self)
         event_head['glob_count'], = read_from('<i', self)
+        event_head['event_id'] = event_head['glob_count']
         event_head['cpu_time'] = read_time(self)
         event_head['gps_time'] = read_time(self)
         t, = read_from('<h', self)
@@ -691,6 +869,19 @@ class SimTelTelADCSum(EventIOObject):
 
 class SimTelTelADCSamp(EventIOObject):
     eventio_type = 2013
+
+    def __repr__(self):
+        s = '{}[{}](telescope_id={}, zero_sup={}, data_red={}, list_known={})'.format(
+            self.__class__.__name__,
+            self.header.type,
+            self.telescope_id,
+            self._zero_sup_mode,
+            self._data_red_mode,
+            self._list_known,
+        )
+        content = self.parse_data_field()
+        s += f'\n shape:{content.shape}'
+        return s
 
     def __init__(self, header, parent):
         super().__init__(header, parent)
@@ -779,18 +970,27 @@ class SimTelTelADCSamp(EventIOObject):
 class SimTelTelImage(EventIOObject):
     eventio_type = 2014
 
+    def __init__(self, header, parent):
+        super().__init__(header, parent)
+        self.flags = self.header.id
+        self.telescope_id = (
+            (self.flags & 0xff) | (self.flags & 0x3f000000) >> 16
+        )
+        self.cut_id = (self.flags & 0xff000) >> 12
+
+    def __repr__(self):
+        return '{}[{}](telescope_id={}, cut_id={})'.format(
+            self.__class__.__name__,
+            self.header.type,
+            self.telescope_id,
+            self.cut_id,
+        )
+
     def parse_data_field(self):
         self.seek(0)
         assert_exact_version(self, supported_version=5)
 
-        flags = self.header.id
         tel_image = {}
-        tel_image['flags'] = flags
-        tel_image['flags_hex'] = hex(flags)
-        tel_image['telescope_id'] = (
-            (flags & 0xff) | (flags & 0x3f000000) >> 16
-        )
-        tel_image['cut_id'] = (flags & 0xff000) >> 12
         tel_image['pixels'] = read_from('<h', self)[0]
         tel_image['num_sat'] = read_from('<h', self)[0]
 
@@ -810,20 +1010,20 @@ class SimTelTelImage(EventIOObject):
         tel_image['num_conc'] = read_from('<h', self)[0]
         tel_image['concentration'] = read_from('<f', self)[0]
 
-        if flags & 0x100:
+        if self.flags & 0x100:
             tel_image['x_err'] = read_from('<f', self)[0]
             tel_image['y_err'] = read_from('<f', self)[0]
             tel_image['phi_err'] = read_from('<f', self)[0]
             tel_image['l_err'] = read_from('<f', self)[0]
             tel_image['w_err'] = read_from('<f', self)[0]
 
-        if flags & 0x200:
+        if self.flags & 0x200:
             tel_image['skewness'] = read_from('<f', self)[0]
             tel_image['skewness_err'] = read_from('<f', self)[0]
             tel_image['kurtosis'] = read_from('<f', self)[0]
             tel_image['kurtosis_err'] = read_from('<f', self)[0]
 
-        if flags & 0x400:
+        if self.flags & 0x400:
             # from v6 on this is crazy int
             num_hot = read_from('<h', self)[0]
             tel_image['num_hot'] = num_hot
@@ -831,7 +1031,7 @@ class SimTelTelImage(EventIOObject):
             # from v6 on this is array of crazy int
             tel_image['hot_pixel'] = read_array(self, 'i2', num_hot)
 
-        if flags & 0x800:
+        if self.flags & 0x800:
             tel_image['tm_slope'] = read_from('<f', self)[0]
             tel_image['tm_residual'] = read_from('<f', self)[0]
             tel_image['tm_width1'] = read_from('<f', self)[0]
@@ -843,6 +1043,17 @@ class SimTelTelImage(EventIOObject):
 
 class SimTelShower(EventIOObject):
     eventio_type = 2015
+
+    def __repr__(self):
+        self.result_bits = self.header.id
+
+        br = np.binary_repr(self.result_bits, width=12)
+        nice = '0b_' + br[:4] + '_' + br[4:8] + '_' + br[8:]
+        return '{}[{}](result_bits={})'.format(
+            self.__class__.__name__,
+            self.header.type,
+            nice,
+        )
 
     def parse_data_field(self):
         self.seek(0)
@@ -897,7 +1108,7 @@ class SimTelShower(EventIOObject):
         return shower
 
 
-class SimTelPixelTiming(EventIOObject):
+class SimTelPixelTiming(TelescopeObject):
     eventio_type = 2016
 
     def parse_data_field(self):
@@ -1021,7 +1232,12 @@ class SimTelPixelTiming(EventIOObject):
             'pulse_sum_loc': pulse_sum_loc,
         }
 
-
+    def __repr__(self):
+        return '{}[{}](telescope_id={})'.format(
+            self.__class__.__name__,
+            self.header.type,
+            self.header.id,
+        )
 
 class SimTelPixelCalib(EventIOObject):
     eventio_type = 2017
@@ -1029,6 +1245,34 @@ class SimTelPixelCalib(EventIOObject):
 
 class SimTelMCShower(EventIOObject):
     eventio_type = 2020
+
+    def __repr__(self):
+        s = '{}[{}](shower={})'.format(
+            self.__class__.__name__,
+            self.header.type,
+            self.header.id,
+        )
+
+        content = self.parse_data_field()
+        interesting_parts = [
+            'energy',
+            'altitude',
+            'azimuth',
+            'shower',
+            'xmax',
+            'hmax',
+            'emax',
+            'cmax',
+            'h_first_int',
+        ]
+        reported_content = {
+            name: content[name]
+            for name in interesting_parts
+        }
+        s += '\n' + pprint.pformat(reported_content, indent=1)
+        return s
+
+
 
     def parse_data_field(self):
         self.seek(0)
@@ -1100,21 +1344,56 @@ class SimTelMCEvent(EventIOObject):
             # 'aweight': read_from('<f', self),  # only in version 2
         }
 
+    def __repr__(self):
+        s = '{}[{}](event={})'.format(
+            self.__class__.__name__,
+            self.header.type,
+            self.header.id,
+        )
+
+        content = self.parse_data_field()
+        interesting_parts = [
+            'xcore',
+            'ycore',
+        ]
+        reported_content = {
+            name: content[name]
+            for name in interesting_parts
+        }
+        s += '\n' + pprint.pformat(reported_content, indent=1)
+        return s
+
 
 class SimTelTelMoni(EventIOObject):
     eventio_type = 2022
+
+    def __init__(self, header, parent):
+        super().__init__(header, parent)
+        self.telescope_id = (
+            (self.header.id & 0xff) |
+            ((self.header.id & 0x3f000000) >> 16)
+        )
+
+        # should explain what has changed since last TelMoni?
+        self.what = ((self.header.id & 0xffff00) >> 8) & 0xffff
+
+    def __repr__(self):
+
+        return '{}[{}](telescope_id={}, what={})'.format(
+            self.__class__.__name__,
+            self.header.type,
+            self.telescope_id,
+            hex(self.what)
+        )
 
     def parse_data_field(self):
         self.seek(0)
         assert_exact_version(self, supported_version=0)
 
-        telescope_id = (
-            (self.header.id & 0xff) |
-            ((self.header.id & 0x3f000000) >> 16)
-        )
+        telescope_id = self.telescope_id
 
         # what: denotes what has changed (since last report?)
-        what = ((self.header.id & 0xffff00) >> 8) & 0xffff
+        what = self.what
         known, = read_from('<h', self)   # C-code used |= instead of = here.
         new_parts, = read_from('<h', self)
         monitor_id, = read_from('<i', self)
@@ -1254,6 +1533,15 @@ class SimTelTelMoni(EventIOObject):
 class SimTelLasCal(TelescopeObject):
     eventio_type = 2023
 
+    def __repr__(self):
+
+        return '{}[{}](telescope_id={})'.format(
+            self.__class__.__name__,
+            self.header.type,
+            self.telescope_id
+        )
+
+
     def parse_data_field(self):
         ''' '''
         self.seek(0)
@@ -1294,6 +1582,13 @@ class SimTelMCRunStat(EventIOObject):
 
 class SimTelMCPeSum(EventIOObject):
     eventio_type = 2026
+
+    def __repr__(self):
+        return '{}[{}](id={})'.format(
+            self.__class__.__name__,
+            self.header.type,
+            self.header.id,
+        )
 
     def parse_data_field(self):
         self.seek(0)
@@ -1344,15 +1639,25 @@ class SimTelMCPeSum(EventIOObject):
 class SimTelPixelList(EventIOObject):
     eventio_type = 2027
 
+    def __init__(self, header, parent):
+        super().__init__(header, parent)
+        self.telescope_id = self.header.id % 1_000_000
+        self.code = self.header.id // 1_000_000
+
+    def __repr__(self):
+        return '{}[{}](telescope_id={}, code={})'.format(
+            self.__class__.__name__,
+            self.header.type,
+            self.telescope_id,
+            self.code,
+        )
+
     def parse_data_field(self):
         self.seek(0)
         # even in the prod3b version of Max N the objects
         # of type 2027 seem to be of version 0 only.
         # not sure if version 1 was ever produced.
         assert_exact_version(self, supported_version=0)
-
-        code = self.header.id // 1_000_000
-        telescope = self.header.id % 1_000_000
 
         pixels = read_from('<h', self)[0]
         # in version 1 pixels is a crazy int
@@ -1361,8 +1666,6 @@ class SimTelPixelList(EventIOObject):
         # in version 1 pixel_list is an array of crazy int
 
         return {
-            'code': code,
-            'telescope': telescope,
             'pixels': pixels,
             'pixel_list': pixel_list,
         }

@@ -2,6 +2,7 @@
 import struct
 import numpy as np
 from numpy.lib.recfunctions import append_fields
+import pprint
 
 from ..tools import read_ints, read_from
 from ..base import EventIOObject
@@ -182,6 +183,13 @@ class CORSIKATelescopeData(EventIOObject):
     '''
     eventio_type = 1204
 
+    def __repr__(self):
+        return '{}[{}](event={})'.format(
+            self.__class__.__name__,
+            self.header.type,
+            self.header.id,
+        )
+
 
 class IACTPhotons(EventIOObject):
     '''
@@ -286,6 +294,13 @@ class IACTTriggerTime(EventIOObject):
 class IACTPhotoElectrons(EventIOObject):
     eventio_type = 1208
 
+    def __repr__(self):
+        return '{}[{}](id={})'.format(
+            self.__class__.__name__,
+            self.header.type,
+            self.header.id,
+        )
+
 
 class CORSIKAEventEndBlock(EventIOObject):
     eventio_type = 1209
@@ -368,6 +383,13 @@ class CORSIKALongitudinal(EventIOObject):
 class CORSIKAInputCard(EventIOObject):
     ''' This Object contains the CORSIKA steering card '''
     eventio_type = 1212
+
+    def __repr__(self):
+        return '{}[{}](id={})'.format(
+            self.__class__.__name__,
+            self.header.type,
+            self.header.id,
+        )
 
     def parse_data_field(self):
         '''
