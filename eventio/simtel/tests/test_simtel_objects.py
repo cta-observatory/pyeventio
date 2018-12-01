@@ -376,7 +376,7 @@ def test_2014_3_objects():
         for i, o in enumerate(yield_n_and_assert(f, SimTelTelImage, n=3)):
             d = parse_and_assert_consumption(o, limit=2)
 
-            assert d['telescope_id'] == expected_telescope_ids[i]
+            assert o.telescope_id == expected_telescope_ids[i]
 
 
 def test_2015_3_objects():
