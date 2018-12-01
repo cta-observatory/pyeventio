@@ -678,6 +678,24 @@ class SimTelTrackEvent(EventIOObject):
         self.has_raw = bool(header.id & 0x100)
         self.has_cor = bool(header.id & 0x200)
 
+    def __repr__(self):
+        s = '{}[{}](telescope_id={}, has_raw={}, has_cor={})'.format(
+            self.__class__.__name__,
+            self.header.type,
+            self.telescope_id,
+            self.has_raw,
+            self.has_cor,
+        )
+
+        content = self.parse_data_field()
+        interesting_parts = content.dtype.names
+        reported_content = {
+            name: content[name]
+            for name in interesting_parts
+        }
+        s += '\n' + pprint.pformat(reported_content, indent=1)
+        return s
+
     def parse_data_field(self):
         dt = []
         if self.has_raw:
@@ -699,13 +717,6 @@ class SimTelTrackEvent(EventIOObject):
     @staticmethod
     def telid_to_type(telescope_id):
         return 2100 + telescope_id % 100 + 1000 * (telescope_id // 100)
-
-    def __repr__(self):
-        return '{}[{}](telescope_id={})'.format(
-            self.__class__.__name__,
-            self.eventio_type,
-            self.telescope_id,
-        )
 
 
 class SimTelTelEvent(EventIOObject):
@@ -979,12 +990,22 @@ class SimTelTelImage(EventIOObject):
         self.cut_id = (self.flags & 0xff000) >> 12
 
     def __repr__(self):
-        return '{}[{}](telescope_id={}, cut_id={})'.format(
+        s = '{}[{}](telescope_id={}, cut_id={})'.format(
             self.__class__.__name__,
             self.header.type,
             self.telescope_id,
             self.cut_id,
         )
+
+        content = self.parse_data_field()
+        interesting_parts = content.keys()
+        reported_content = {
+            name: content[name]
+            for name in interesting_parts
+        }
+        s += '\n' + pprint.pformat(reported_content, indent=1)
+        return s
+
 
     def parse_data_field(self):
         self.seek(0)
@@ -1645,12 +1666,26 @@ class SimTelPixelList(EventIOObject):
         self.code = self.header.id // 1_000_000
 
     def __repr__(self):
-        return '{}[{}](telescope_id={}, code={})'.format(
+        s = '{}[{}](telescope_id={}, code={})'.format(
             self.__class__.__name__,
             self.header.type,
             self.telescope_id,
             self.code,
         )
+
+        content = self.parse_data_field()
+        interesting_parts = [
+            'n_telescopes',
+            'run',
+        ]
+        interesting_parts = content.keys()
+        reported_content = {
+            name: content[name]
+            for name in interesting_parts
+        }
+        s += '\n' + pprint.pformat(reported_content, indent=1)
+        return s
+
 
     def parse_data_field(self):
         self.seek(0)
