@@ -4,10 +4,7 @@ from pytest import approx
 import numpy as np
 from eventio import EventIOFile
 from eventio.search_utils import (
-    find_type,
     collect_toplevel_of_type,
-    find_all_subobjects,
-    yield_subobjects,
     yield_n_subobjects,
 )
 
@@ -413,16 +410,6 @@ def test_2016():
 
 @pytest.mark.xfail
 def test_2017():
-    assert False
-
-
-@pytest.mark.xfail
-def test_2018():
-    assert False
-
-
-@pytest.mark.xfail
-def test_2019():
     assert False
 
 
