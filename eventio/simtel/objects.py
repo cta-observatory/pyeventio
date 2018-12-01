@@ -106,9 +106,8 @@ class SimTelMCRunHeader(EventIOObject):
     eventio_type = 2001
 
     def parse_data_field(self):
-        ''' '''
-        self.seek(0)
         assert_exact_version(self, 4)
+        self.seek(0)
 
         return {
             'shower_prog_id': read_from('<i', self)[0],
@@ -148,8 +147,9 @@ class SimTelCamSettings(TelescopeObject):
     eventio_type = 2002
 
     def parse_data_field(self):
-        self.seek(0)
         assert_version_in(self, [0, 1, 2, 3, 4, 5])
+
+        self.seek(0)
         n_pixels, = read_from('<i', self)
 
         cam = {'n_pixels': n_pixels, 'telescope_id': self.telescope_id}
@@ -218,8 +218,8 @@ class SimTelCamOrgan(TelescopeObject):
     eventio_type = 2003
 
     def parse_data_field(self):
-        self.seek(0)
         assert_exact_version(self, supported_version=1)
+        self.seek(0)
 
         num_pixels = read_from('<i', self)[0]
         num_drawers = read_from('<i', self)[0]
@@ -276,31 +276,33 @@ class SimTelCamOrgan(TelescopeObject):
         }
 
 
-
-
 class SimTelPixelset(TelescopeObject):
     eventio_type = 2004
-    from .pixelset import dt1, dt2, dt3, dt4
+    from .pixelset import dt1, build_dt2, build_dt3, build_dt4
 
     def parse_data_field(self):
-        ''' '''
+        assert_max_version(self, 2)
         self.seek(0)
 
         p1 = read_array(self, dtype=SimTelPixelset.dt1, count=1)[0]
 
-        dt2 = SimTelPixelset.dt2(num_pixels=p1['num_pixels'])
+        dt2 = SimTelPixelset.build_dt2(num_pixels=p1['num_pixels'])
         p2 = read_array(self, dtype=dt2, count=1)[0]
 
-        dt3 = SimTelPixelset.dt3(num_drawers=p2['num_drawers'])
+        dt3 = SimTelPixelset.build_dt3(
+            self.header.version, num_drawers=p2['num_drawers']
+        )
         p3 = read_array(self, dtype=dt3, count=1)[0]
 
-        nrefshape = read_utf8_like_signed_int(self)
-        lrefshape = read_utf8_like_signed_int(self)
+        parts = [p1, p2, p3]
+        if self.header.version >= 2:
+            nrefshape = read_utf8_like_signed_int(self)
+            lrefshape = read_utf8_like_signed_int(self)
 
-        dt4 = SimTelPixelset.dt4(nrefshape, lrefshape)
-        p4 = read_array(self, dtype=dt4, count=1)[0]
+            dt4 = SimTelPixelset.build_dt4(nrefshape, lrefshape)
+            parts.append(read_array(self, dtype=dt4, count=1)[0])
 
-        return merge_structured_arrays_into_dict([p1, p2, p3, p4])
+        return merge_structured_arrays_into_dict(parts)
 
 
 class SimTelPixelDisable(EventIOObject):
