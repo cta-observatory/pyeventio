@@ -313,10 +313,9 @@ class SimTelPixelDisable(EventIOObject):
         self.telescope_id = header.id
 
     def parse_data_field(self):
-        ''' '''
-        self.seek(0)
-
         assert_exact_version(self, supported_version=0)
+
+        self.seek(0)
 
         num_trig_disabled, = read_from('<i', self)
         trigger_disabled = read_array(
@@ -344,9 +343,9 @@ class SimTelCamsoftset(EventIOObject):
         self.telescope_id = header.id
 
     def parse_data_field(self):
-        ''' '''
-        self.seek(0)
         assert_exact_version(self, supported_version=0)
+
+        self.seek(0)
 
         dyn_trig_mode, = read_from('<i', self)
         dyn_trig_threshold, = read_from('<i', self)
@@ -390,9 +389,9 @@ class SimTelPointingCor(TelescopeObject):
     eventio_type = 2007
 
     def parse_data_field(self):
-        ''' '''
-        self.seek(0)
         assert_exact_version(self, supported_version=0)
+
+        self.seek(0)
 
         function_type, = read_from('<i', self)
         num_param, = read_from('<i', self)
@@ -410,12 +409,14 @@ class SimTelTrackSet(TelescopeObject):
     eventio_type = 2008
 
     def parse_data_field(self):
+        assert_exact_version(self, 0)
+        self.seek(0)
+
         tracking_info = {}
         tracking_info['drive_type_az'], = read_from('<h', self)
         tracking_info['drive_type_alt'], = read_from('<h', self)
         tracking_info['zeropoint_az'], = read_from('<f', self)
         tracking_info['zeropoint_alt'], = read_from('<f', self)
-
         tracking_info['sign_az'], = read_from('<f', self)
         tracking_info['sign_alt'], = read_from('<f', self)
         tracking_info['resolution_az'], = read_from('<f', self)
@@ -435,13 +436,11 @@ class SimTelCentEvent(EventIOObject):
 
     def __init__(self, header, parent):
         super().__init__(header, parent)
-
-        if header.version > 2:
-            raise IOError('Unsupported CENTEVENT Version: {}'.format(header.version))
-
         self.global_count = self.header.id
 
     def parse_data_field(self):
+        assert_max_version(self, 2)
+        self.seek(0)
 
         event_info = {}
         event_info['cpu_time'] = read_time(self)
@@ -508,6 +507,9 @@ class SimTelTrackEvent(EventIOObject):
         self.has_cor = bool(header.id & 0x200)
 
     def parse_data_field(self):
+        assert_exact_version(self, 0)
+
+        self.seek(0)
         dt = []
         if self.has_raw:
             dt.extend([('azimuth_raw', '<f4'), ('altitude_raw', '<f4')])
@@ -577,11 +579,26 @@ class SimTelTelEvent(EventIOObject):
 class SimTelEvent(EventIOObject):
     eventio_type = 2010
 
+    def __init__(self, header, parent):
+        super().__init__(header, parent)
+        self.glob_count = header.id
+
+    def __repr__(self):
+        return '{}[{}](glob_count={}, size={}, first_byte={})'.format(
+            self.__class__.__name__,
+            self.eventio_type,
+            self.glob_count,
+            self.header.length,
+            self.header.data_field_first_byte
+        )
+
 
 class SimTelTelEvtHead(TelescopeObject):
     eventio_type = 2011
 
     def parse_data_field(self):
+        assert_max_version(self, 2)
+
         self.seek(0)
         event_head = {}
         event_head['loc_count'], = read_from('<i', self)
