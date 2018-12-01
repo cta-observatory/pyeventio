@@ -28,14 +28,6 @@ def read_from(fmt, f):
     return result
 
 
-def read_eventio_string(f):
-    '''Read a string from eventio file or object f
-    Eventio stores strings as a short
-    '''
-    length, = read_from('<h', f)
-    return f.read(length)
-
-
 def read_ints(n, f):
     ''' read n ints from file f '''
     return read_from('{:d}i'.format(n), f)
