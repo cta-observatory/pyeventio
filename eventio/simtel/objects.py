@@ -13,6 +13,9 @@ from ..tools import (
     read_vector_of_uint32_scount_differential_optimized,
 )
 from ..bits import bool_bit_from_pos
+from ..version_handling import (
+    assert_exact_version, assert_max_version, assert_version_in
+)
 
 
 class TelescopeObject(EventIOObject):
@@ -31,36 +34,6 @@ class TelescopeObject(EventIOObject):
             self.telescope_id,
             self.header.length,
             self.header.data_field_first_byte
-        )
-
-
-def assert_exact_version(self, supported_version):
-    if self.header.version != supported_version:
-        raise NotImplementedError(
-            (
-                'Unsupported version of {name}'
-                'only supports version {supported_version}'
-                'the given version is {given_version}'
-            ).format(
-                name=self.__class__.__name__,
-                supported_version=supported_version,
-                given_version=self.header.version,
-            )
-        )
-
-
-def assert_version_in(self, supported_versions):
-    if self.header.version not in supported_versions:
-        raise NotImplementedError(
-            (
-                'Unsupported version of {name} '
-                'supported versions are: {supported_versions} '
-                'the given version is: {given_version} '
-            ).format(
-                name=self.__class__.__name__,
-                supported_versions=supported_versions,
-                given_version=self.header.version,
-            )
         )
 
 
@@ -95,8 +68,8 @@ class HistoryConfig(EventIOObject):
 class SimTelRunHeader(EventIOObject):
     eventio_type = 2000
     from .runheader_dtypes import (
-        runheader_dtype_part1,
-        runheader_dtype_part2
+        build_dtype_part1,
+        build_dtype_part2
     )
 
     def __init__(self, header, parent):
@@ -105,11 +78,16 @@ class SimTelRunHeader(EventIOObject):
 
     def parse_data_field(self):
         '''See write_hess_runheader l. 184 io_hess.c '''
+        assert_max_version(self, 2)
+
         self.seek(0)
-        dt1 = SimTelRunHeader.runheader_dtype_part1
+        dt1 = SimTelRunHeader.build_dtype_part1(self.header.version)
 
         part1 = read_array(self, dtype=dt1, count=1)[0]
-        dt2 = SimTelRunHeader.runheader_dtype_part2(part1['n_telescopes'])
+        dt2 = SimTelRunHeader.build_dtype_part2(
+            self.header.version,
+            part1['n_telescopes']
+        )
         part2 = read_array(self, dtype=dt2, count=1)[0]
 
         # rest is two null-terminated strings

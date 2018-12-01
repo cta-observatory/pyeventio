@@ -1,21 +1,35 @@
 import numpy as np
+from functools import lru_cache
 
-runheader_dtype_part1 = np.dtype([
+
+@lru_cache(maxsize=1)
+def build_dtype_part1(version):
     #  (fieldname, type, shape)
-    ('run', 'i4'),
-    ('time', 'i4'),
-    ('run_type', 'i4'),
-    ('tracking_mode', 'i4'),
-    ('reverse_flag', 'i4'),
-    ('direction', 'f4', (2,)),
-    ('offset_fov', 'f4', (2,)),
-    ('conv_depth', 'f4'),
-    ('conv_ref_pos', 'f4', (2,)),
-    ('n_telescopes', 'i4'),
-])
+    dtype = [
+        ('run', 'i4'),
+        ('time', 'i4'),
+        ('run_type', 'i4'),
+        ('tracking_mode', 'i4'),
+    ]
+
+    if version >= 2:
+        dtype.append(('reverse_flag', 'i4'))
+
+    dtype.extend([
+        ('direction', 'f4', (2,)),
+        ('offset_fov', 'f4', (2,)),
+        ('conv_depth', 'f4'),
+    ])
+    if version >= 1:
+        dtype.append(('conv_ref_pos', 'f4', (2,)))
+
+    dtype.append(('n_telescopes', 'i4'))
+
+    return np.dtype(dtype)
 
 
-def runheader_dtype_part2(n_telescopes):
+@lru_cache()
+def build_dtype_part2(version, n_telescopes):
     return np.dtype([
         #  (fieldname, type, shape)
         ('tel_id', 'i2', (n_telescopes,)),

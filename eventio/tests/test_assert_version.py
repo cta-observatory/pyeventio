@@ -1,10 +1,26 @@
 import pytest
 
-def test_assert_exact_version():
-    from eventio.simtel.objects import assert_exact_version
 
-    class Dummy:
-        pass
+class Dummy:
+    pass
+
+
+def test_assert_max_version():
+    from eventio.version_handling import assert_max_version
+
+    fake_object = Dummy()
+    fake_object.header = Dummy()
+
+    for i in range(3):
+        fake_object.header.version = i
+        assert_max_version(fake_object, 2)
+
+    with pytest.raises(NotImplementedError):
+        assert_max_version(fake_object, 1)
+
+
+def test_assert_exact_version():
+    from eventio.version_handling import assert_exact_version
 
     fake_object = Dummy()
     fake_object.header = Dummy()
@@ -18,10 +34,7 @@ def test_assert_exact_version():
 
 
 def test_assert_version_in():
-    from eventio.simtel.objects import assert_version_in
-
-    class Dummy:
-        pass
+    from eventio.version_handling import assert_version_in
 
     fake_object = Dummy()
     fake_object.header = Dummy()
