@@ -281,7 +281,7 @@ class SimTelCamOrgan(TelescopeObject):
             # I will check for it in the tests.
             sectors.append(sector)
 
-        sectors = read_array(
+        sector_data = read_array(
             self,
             dtype=[
                 ('type', 'uint8'),
@@ -299,9 +299,9 @@ class SimTelCamOrgan(TelescopeObject):
             'chip': chip,
             'channel': channel,
             'sectors': sectors,
-            'sector_type': sectors['type'],
-            'sector_threshold': sectors['thresh'],
-            'sector_pixthresh': sectors['pix_thresh'],
+            'sector_type': sector_data['type'],
+            'sector_threshold': sector_data['thresh'],
+            'sector_pixthresh': sector_data['pix_thresh'],
         }
 
 
