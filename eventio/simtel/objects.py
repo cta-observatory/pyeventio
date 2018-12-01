@@ -1351,8 +1351,8 @@ class SimTelPixelList(EventIOObject):
         # not sure if version 1 was ever produced.
         assert_exact_version(self, supported_version=0)
 
-        code = self.header.id // 1_000_000
-        telescope = self.header.id % 1_000_000
+        code = self.header.id // int(1e6)
+        telescope = self.header.id % int(1e6)
 
         pixels = read_from('<h', self)[0]
         # in version 1 pixels is a crazy int
