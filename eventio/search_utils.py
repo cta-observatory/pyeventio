@@ -1,3 +1,6 @@
+from eventio import EventIOFile
+
+
 def find_type(f, eventio_type):
     o = next(f)
     while not isinstance(o, eventio_type):
@@ -36,16 +39,23 @@ def find_all_subobjects(f, structure, level=0):
     return objects
 
 
+def yield_all_objects_depth_first(f, level=0):
+    '''yield subobjects of type, regardless of structure'''
+
+    if isinstance(f, EventIOFile) or f.header.only_subobjects:
+        for o in f:
+            yield o, level
+            yield from yield_all_objects_depth_first(o, level + 1)
+
+
 def yield_subobjects(f, eventio_type):
     '''yield subobjects of type, regardless of structure'''
     if isinstance(f, eventio_type):
         yield f
     else:
-        try:
+        if isinstance(f, EventIOFile) or f.header.only_subobjects:
             for o in f:
                 yield from yield_subobjects(o, eventio_type)
-        except ValueError as e:
-            pass
 
 
 def yield_n_subobjects(f, eventio_type, n=3):
