@@ -1,4 +1,8 @@
-def get_length_of_varint(unsigned char first_byte):
+import numpy as np
+cimport numpy as np
+
+
+def get_length_of_varint(const unsigned char first_byte):
     if (first_byte & 0x80) == 0:
         return 1
     if (first_byte & 0xc0) == 0x80:
@@ -18,7 +22,7 @@ def get_length_of_varint(unsigned char first_byte):
     return 9
 
 
-def parse_varint(unsigned char[:] var_int_bytes):
+def parse_varint(const unsigned char[:] var_int_bytes):
     length = var_int_bytes.shape[0]
     cdef unsigned long v[9]
     cdef i  = 0
@@ -93,3 +97,117 @@ def parse_varint(unsigned char[:] var_int_bytes):
         | (v[7]<<8)
         | v[8]
     )
+
+def varint_arrays_differential_from_bytes(
+    const unsigned char[:] data,
+    unsigned long n_arrays,
+    unsigned long n_elements,
+    unsigned long offset = 0,
+):
+    cdef unsigned long pos = 0
+    cdef unsigned long bytes_read_total = 0
+    cdef unsigned long i
+    cdef unsigned long j
+
+    cdef np.ndarray output = np.empty(
+        (n_arrays, n_elements), dtype='uint32'
+    )
+
+    for i in range(n_arrays):
+
+        output[i], bytes_read = varint_array_differential_from_bytes(
+            data, n_elements, offset=offset
+        )
+        offset += bytes_read
+        bytes_read_total += bytes_read
+
+    return output, bytes_read_total
+
+
+cpdef varint_array_differential_from_bytes(
+    const unsigned char[:] data,
+    unsigned long n_elements,
+    unsigned long offset = 0,
+):
+
+    cdef np.ndarray output = np.empty(n_elements, dtype='uint32')
+
+    cdef int val
+    cdef unsigned long i
+    cdef unsigned long pos
+    cdef unsigned char v0, v1, v2, v3, v4
+    pos = 0
+
+    val = np.int32(0)
+    for i in range(n_elements):
+        v0 = data[pos + offset]
+        pos += 1
+
+        if (v0 & 0x80) == 0:  # one byte
+            if (v0 & 1) == 0:  # positive
+                val += v0 >> 1
+            else:  # negative
+                val -= (v0 >> 1) + 1
+        elif (v0 & 0xc0) == 0x80:  # two bytes
+            v1 = data[pos + offset]
+            pos += 1
+            if (v1 & 1) == 0:  # positive
+                val += ((v0 & 0x3f) << 7) | (v1 >> 1)
+            else:  # negative
+                val -= ((v0 & 0x3f) << 7) | ((v1 >> 1) + 1)
+        elif (v0 & 0xe0) == 0xc0:  # three bytes
+            v1, v2 = data[pos + offset:pos + offset + 2]
+            pos += 2
+
+            if (v2 & 1) == 0:
+                val += (
+                    ((v0 & 0x1f) << 15)
+                    | (v1 << 7)
+                    | (v2 >> 1)
+                )
+            else:
+                val -= (
+                    ((v0 & 0x1f) << 15)
+                    | (v1 << 7)
+                    | ((v2 >> 1) + 1)
+                )
+        elif (v0 & 0xf0) == 0xe0:  # four bytes
+            v1, v2, v3 = data[pos + offset:pos + offset + 3]
+            pos += 3
+            if (v3 & 1) == 0:
+                val += (
+                    ((v0 & 0x0f) << 23)
+                    | (v1 << 15)
+                    | (v2 << 7)
+                    | (v3 >> 1)
+                )
+            else:
+                val -= (
+                    ((v0 & 0x0f) << 23)
+                    | (v1 << 15)
+                    | (v2 << 7)
+                    | ((v3 >> 1) + 1)
+                )
+        elif (v0 & 0xf8) == 0xf0:
+            v1, v2, v3, v4 = data[pos + offset:pos + offset + 4]
+            pos += 4
+            # The format would allow bits 32 and 33 being set but we ignore this here. */
+            if (v4 & 1) == 0:
+                val += (
+                    ((v0 & 0x07) << 31)
+                    | (v1 << 23)
+                    | (v2 << 15)
+                    | (v3 << 7)
+                    | (v4 >> 1)
+                )
+            else:
+                val -= (
+                    ((v0 & 0x07) << 31)
+                    | (v1 << 23)
+                    | (v2 << 15)
+                    | (v3 << 7)
+                    | ((v4 >> 1) + 1)
+                )
+        output[i] = val
+
+    return output, pos

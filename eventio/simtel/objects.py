@@ -9,10 +9,11 @@ from ..tools import (
     read_utf8_like_unsigned_int,
     read_array,
     read_time,
-    read_vector_of_uint32_scount_differential,
-    read_vector_of_uint32_scount_differential_optimized,
 )
 from ..bits import bool_bit_from_pos
+from ..var_int import (
+    varint_arrays_differential_from_bytes,
+)
 
 
 class TelescopeObject(EventIOObject):
@@ -665,26 +666,18 @@ class SimTelTelADCSum(EventIOObject):
         n_pixels = read_from('<i', self)[0]
         n_gains = read_from('<h', self)[0]
 
-        if raw['data_red_mode'] == 2:
-            offset_hg8 = read_from('<h', self)[0]
-            scale_hg8 = read_from('<h', self)[0]
-            if scale_hg8 <= 0:
-                scale_hg8 = 1
-
-        if raw['zero_sup_mode'] == 0.:
-            if raw['data_red_mode'] == 0:
-                # before version 3, it was just uint16
-                raw['adc_sums'] = np.array([
-                    read_vector_of_uint32_scount_differential(self, n_pixels)
-                    for gain in range(n_gains)
-
-                ])
-        if 'adc_sums' not in raw:
+        if raw['data_red_mode'] != 0 or raw['zero_sup_mode'] != 0:
             raise NotImplementedError(
                 'Currently no support for data_red_mode {} or zero_sup_mode{}'.format(
                     raw['data_red_mode'], raw['zero_sup_mode'],
                 )
             )
+
+        raw['adc_sums'] = []
+        data = self.read()
+        raw['adc_sums'], bytes_read = varint_arrays_differential_from_bytes(
+            data, n_arrays=n_gains, n_elements=n_pixels
+        )
 
         return raw
 
@@ -746,14 +739,16 @@ class SimTelTelADCSamp(EventIOObject):
             (num_gains, num_pixels, num_samples),
             dtype='u2'
         )
+        n_pixels_signal = sum(p[1] - p[0] for p in pixel_ranges)
+        data = self.read()
+        adc_samples_signal, bytes_read = varint_arrays_differential_from_bytes(
+            data, n_arrays=num_gains * n_pixels_signal, n_elements=num_samples,
+        )
+
         for i_gain in range(num_gains):
             for pixel_range in pixel_ranges:
-                for i_pix in range(*pixel_range):
-                    adc_samples[i_gain, i_pix, :] = (
-                        read_vector_of_uint32_scount_differential_optimized(
-                            self, num_samples
-                        )
-                    )
+                for i_array, i_pix in enumerate(range(*pixel_range)):
+                    adc_samples[i_gain, i_pix, :] = adc_samples_signal[i_gain, i_array]
         return adc_samples
 
     def _parse_in_not_zero_suppressed_mode(
@@ -762,18 +757,15 @@ class SimTelTelADCSamp(EventIOObject):
         num_pixels,
         num_samples,
     ):
-        adc_samples = np.zeros(
-            (num_gains, num_pixels, num_samples),
-            dtype='u2'
+
+        data = self.read()
+        adc_samples, bytes_read = varint_arrays_differential_from_bytes(
+            data, n_arrays=num_gains * num_pixels, n_elements=num_samples,
         )
-        for i_gain in range(num_gains):
-            for i_pix in range(num_pixels):
-                adc_samples[i_gain, i_pix, :] = (
-                    read_vector_of_uint32_scount_differential_optimized(
-                        self, num_samples
-                    )
-                )
-        return adc_samples
+
+        return adc_samples.reshape(
+            num_gains, num_pixels, num_samples
+        ).astype('u2')
 
 
 class SimTelTelImage(EventIOObject):
@@ -977,7 +969,6 @@ class SimTelPixelTiming(EventIOObject):
             'pulse_sum_glob': pulse_sum_glob,
             'pulse_sum_loc': pulse_sum_loc,
         }
-
 
     def _parse_list_type_2(
         self,
