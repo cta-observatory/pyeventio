@@ -5,6 +5,14 @@ from eventio.simtel.objects import (
     History,
     SimTelLasCal,
     SimTelTelMoni,
+    SimTelCamSettings,
+    SimTelCamOrgan,
+    SimTelPixelset,
+    SimTelPixelDisable,
+    SimTelCamsoftset,
+    SimTelTrackSet,
+    SimTelPointingCor,
+
 )
 
 url = 'eventio/resources/gamma_20deg_0deg_run102___cta-prod4-sst-1m_desert-2150m-Paranal-sst-1m.simtel.gz'
@@ -21,8 +29,15 @@ def print_object_indented(obj, indent, remove_simtel=True):
 
 filter_objects = [
     History,
-    SimTelLasCal,
-    SimTelTelMoni,
+    SimTelCamSettings,
+    SimTelCamOrgan,
+    SimTelPixelset,
+    SimTelPixelDisable,
+    SimTelCamsoftset,
+    SimTelTrackSet,
+    SimTelPointingCor,
+    #SimTelLasCal,
+    #SimTelTelMoni,
 ]
 
 def p_file(file_, indent='', level=0):
