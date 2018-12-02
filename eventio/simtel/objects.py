@@ -2,7 +2,9 @@
 import numpy as np
 from ..base import EventIOObject, read_next_header
 from ..tools import (
-    read_ints,
+    read_short,
+    read_int,
+    read_float,
     read_eventio_string,
     read_from,
     read_utf8_like_signed_int,
@@ -46,7 +48,7 @@ class HistoryCommandLine(EventIOObject):
 
     def __init__(self, header, parent):
         super().__init__(header, parent)
-        self.timestamp, = read_ints(1, self)
+        self.timestamp = read_int(self)
 
     def parse_data_field(self):
         self.seek(4)  # skip the int, we already read in init
@@ -58,7 +60,7 @@ class HistoryConfig(EventIOObject):
 
     def __init__(self, header, parent):
         super().__init__(header, parent)
-        self.timestamp, = read_ints(1, self)
+        self.timestamp = read_int(self)
 
     def parse_data_field(self):
         self.seek(4)  # skip the int, we already read in init
@@ -110,36 +112,36 @@ class SimTelMCRunHeader(EventIOObject):
         self.seek(0)
 
         return {
-            'shower_prog_id': read_from('<i', self)[0],
-            'shower_prog_vers': read_from('<i', self)[0],
-            'shower_prog_start': read_from('<i', self)[0],
-            'detector_prog_id': read_from('<i', self)[0],
-            'detector_prog_vers': read_from('<i', self)[0],
-            'detector_prog_start': read_from('<i', self)[0],
-            'obsheight': read_from('<f', self)[0],
-            'num_showers': read_from('<i', self)[0],
-            'num_use': read_from('<i', self)[0],
-            'core_pos_mode': read_from('<i', self)[0],
+            'shower_prog_id': read_int(self),
+            'shower_prog_vers': read_int(self),
+            'shower_prog_start': read_int(self),
+            'detector_prog_id': read_int(self),
+            'detector_prog_vers': read_int(self),
+            'detector_prog_start': read_int(self),
+            'obsheight': read_float(self),
+            'num_showers': read_int(self),
+            'num_use': read_int(self),
+            'core_pos_mode': read_int(self),
             'core_range': read_array(self, 'f4', 2),
             'alt_range': read_array(self, 'f4', 2),
             'az_range': read_array(self, 'f4', 2),
-            'diffuse': read_from('<i', self)[0],
+            'diffuse': read_int(self),
             'viewcone': read_array(self, 'f4', 2),
             'E_range': read_array(self, 'f4', 2),
-            'spectral_index': read_from('<f', self)[0],
-            'B_total': read_from('<f', self)[0],
-            'B_inclination': read_from('<f', self)[0],
-            'B_declination': read_from('<f', self)[0],
-            'injection_height': read_from('<f', self)[0],
-            'atmosphere': read_from('<i', self)[0],
-            'corsika_iact_options': read_from('<i', self)[0],
-            'corsika_low_E_model': read_from('<i', self)[0],
-            'corsika_high_E_model': read_from('<i', self)[0],
-            'corsika_bunchsize': read_from('<f', self)[0],
-            'corsika_wlen_min': read_from('<f', self)[0],
-            'corsika_wlen_max': read_from('<f', self)[0],
-            'corsika_low_E_detail': read_from('<i', self)[0],
-            'corsika_high_E_detail': read_from('<i', self)[0],
+            'spectral_index': read_float(self),
+            'B_total': read_float(self),
+            'B_inclination': read_float(self),
+            'B_declination': read_float(self),
+            'injection_height': read_float(self),
+            'atmosphere': read_int(self),
+            'corsika_iact_options': read_int(self),
+            'corsika_low_E_model': read_int(self),
+            'corsika_high_E_model': read_int(self),
+            'corsika_bunchsize': read_float(self),
+            'corsika_wlen_min': read_float(self),
+            'corsika_wlen_max': read_float(self),
+            'corsika_low_E_detail': read_int(self),
+            'corsika_high_E_detail': read_int(self),
         }
 
 
@@ -148,14 +150,13 @@ class SimTelCamSettings(TelescopeObject):
 
     def parse_data_field(self):
         assert_version_in(self, [0, 1, 2, 3, 4, 5])
-
         self.seek(0)
-        n_pixels, = read_from('<i', self)
+        n_pixels = read_int(self)
 
         cam = {'n_pixels': n_pixels, 'telescope_id': self.telescope_id}
-        cam['focal_length'], = read_from('<f', self)
+        cam['focal_length'] = read_float(self)
         if self.header.version > 4:
-            cam['effective_focal_length'], = read_from('<f', self)
+            cam['effective_focal_length'] = read_float(self)
 
         cam['pixel_x'] = read_array(self, count=n_pixels, dtype='float32')
         cam['pixel_y'] = read_array(self, count=n_pixels, dtype='float32')
@@ -184,8 +185,8 @@ class SimTelCamSettings(TelescopeObject):
                 cam['pixel_size'] = read_array(self, dtype='<f4', count=n_pixels)
             else:
                 cam['pixel_shape'] = np.repeat(read_utf8_like_signed_int(self), n_pixels)
-                cam['pixel_area'] = np.repeat(read_from('<f', self)[0], n_pixels)
-                cam['pixel_size'] = np.repeat(read_from('<f', self)[0], n_pixels)
+                cam['pixel_area'] = np.repeat(read_float(self), n_pixels)
+                cam['pixel_size'] = np.repeat(read_float(self), n_pixels)
         else:
             cam['curve_surface'] = 0
             cam['pixels_parallel'] = 1
@@ -200,14 +201,14 @@ class SimTelCamSettings(TelescopeObject):
                 cam['pixel_size'] = np.zeros(n_pixels, dtype='f4')
 
         if self.header.version >= 2:
-            cam['n_mirrors'] = read_from('<i', self)[0]
-            cam['mirror_area'] = read_from('<f', self)[0]
+            cam['n_mirrors'] = read_int(self)
+            cam['mirror_area'] = read_float(self)
         else:
             cam['n_mirrors'] = 0.0
             cam['mirror_area'] = 0.0
 
         if self.header.version >= 3:
-            cam['cam_rot'] = read_from('<f', self)[0]
+            cam['cam_rot'] = read_float(self)
         else:
             cam['cam_rot'] = 0.0
 
@@ -221,10 +222,10 @@ class SimTelCamOrgan(TelescopeObject):
         assert_exact_version(self, supported_version=1)
         self.seek(0)
 
-        num_pixels = read_from('<i', self)[0]
-        num_drawers = read_from('<i', self)[0]
-        num_gains = read_from('<i', self)[0]
-        num_sectors = read_from('<i', self)[0]
+        num_pixels = read_int(self)
+        num_drawers = read_int(self)
+        num_gains = read_int(self)
+        num_sectors = read_int(self)
 
         drawer = read_array(self, 'i2', num_pixels)
         card = read_array(
@@ -239,7 +240,7 @@ class SimTelCamOrgan(TelescopeObject):
 
         sectors = []
         for _ in range(num_pixels):
-            n = read_from('<h', self)[0]
+            n = read_short(self)
             sector = read_array(self, 'i2', n)
             # FIXME:
             # according to a comment in the c-sources
@@ -257,7 +258,7 @@ class SimTelCamOrgan(TelescopeObject):
         sector_threshold = []
         sector_pixthresh = []
         for i in range(num_sectors):
-            type_, thresh_, pix_thr_ = read_from('<Bff', self)
+            type_, thresh_, pix_thr_ = read_from(self, '<Bff')
             sector_type.append(type_)
             sector_threshold.append(thresh_)
             sector_pixthresh.append(pix_thr_)
@@ -314,16 +315,14 @@ class SimTelPixelDisable(EventIOObject):
 
     def parse_data_field(self):
         assert_exact_version(self, supported_version=0)
-
         self.seek(0)
-
-        num_trig_disabled, = read_from('<i', self)
+        num_trig_disabled = read_int(self)
         trigger_disabled = read_array(
             self,
             count=num_trig_disabled,
             dtype='i4'
         )
-        num_HV_disabled, = read_from('<i', self)
+        num_HV_disabled = read_int(self)
         HV_disabled = read_array(self, count=num_trig_disabled, dtype='i4')
 
         return {
@@ -344,25 +343,24 @@ class SimTelCamsoftset(EventIOObject):
 
     def parse_data_field(self):
         assert_exact_version(self, supported_version=0)
-
         self.seek(0)
 
-        dyn_trig_mode, = read_from('<i', self)
-        dyn_trig_threshold, = read_from('<i', self)
-        dyn_HV_mode, = read_from('<i', self)
-        dyn_HV_threshold, = read_from('<i', self)
-        data_red_mode, = read_from('<i', self)
-        zero_sup_mode, = read_from('<i', self)
-        zero_sup_num_thr, = read_from('<i', self)
+        dyn_trig_mode = read_int(self)
+        dyn_trig_threshold = read_int(self)
+        dyn_HV_mode = read_int(self)
+        dyn_HV_threshold = read_int(self)
+        data_red_mode = read_int(self)
+        zero_sup_mode = read_int(self)
+        zero_sup_num_thr = read_int(self)
         zero_sup_thresholds = read_array(self, 'i4', zero_sup_num_thr)
-        unbiased_scale, = read_from('<i', self)
-        dyn_ped_mode, = read_from('<i', self)
-        dyn_ped_events, = read_from('<i', self)
-        dyn_ped_period, = read_from('<i', self)
-        monitor_cur_period, = read_from('<i', self)
-        report_cur_period, = read_from('<i', self)
-        monitor_HV_period, = read_from('<i', self)
-        report_HV_period, = read_from('<i', self)
+        unbiased_scale = read_int(self)
+        dyn_ped_mode = read_int(self)
+        dyn_ped_events = read_int(self)
+        dyn_ped_period = read_int(self)
+        monitor_cur_period = read_int(self)
+        report_cur_period = read_int(self)
+        monitor_HV_period = read_int(self)
+        report_HV_period = read_int(self)
 
         return {
             'telescope_id': self.telescope_id,
@@ -390,11 +388,10 @@ class SimTelPointingCor(TelescopeObject):
 
     def parse_data_field(self):
         assert_exact_version(self, supported_version=0)
-
         self.seek(0)
 
-        function_type, = read_from('<i', self)
-        num_param, = read_from('<i', self)
+        function_type = read_int(self)
+        num_param = read_int(self)
         pointing_param = read_array(self, 'f4', num_param)
 
         return {
@@ -413,20 +410,21 @@ class SimTelTrackSet(TelescopeObject):
         self.seek(0)
 
         tracking_info = {}
-        tracking_info['drive_type_az'], = read_from('<h', self)
-        tracking_info['drive_type_alt'], = read_from('<h', self)
-        tracking_info['zeropoint_az'], = read_from('<f', self)
-        tracking_info['zeropoint_alt'], = read_from('<f', self)
-        tracking_info['sign_az'], = read_from('<f', self)
-        tracking_info['sign_alt'], = read_from('<f', self)
-        tracking_info['resolution_az'], = read_from('<f', self)
-        tracking_info['resolution_alt'], = read_from('<f', self)
-        tracking_info['range_low_az'], = read_from('<f', self)
-        tracking_info['range_low_alt'], = read_from('<f', self)
-        tracking_info['range_high_az'], = read_from('<f', self)
-        tracking_info['range_high_alt'], = read_from('<f', self)
-        tracking_info['park_pos_az'], = read_from('<f', self)
-        tracking_info['park_pos_alt'], = read_from('<f', self)
+        tracking_info['drive_type_az'] = read_short(self)
+        tracking_info['drive_type_alt'] = read_short(self)
+        tracking_info['zeropoint_az'] = read_float(self)
+        tracking_info['zeropoint_alt'] = read_float(self)
+
+        tracking_info['sign_az'] = read_float(self)
+        tracking_info['sign_alt'] = read_float(self)
+        tracking_info['resolution_az'] = read_float(self)
+        tracking_info['resolution_alt'] = read_float(self)
+        tracking_info['range_low_az'] = read_float(self)
+        tracking_info['range_low_alt'] = read_float(self)
+        tracking_info['range_high_az'] = read_float(self)
+        tracking_info['range_high_alt'] = read_float(self)
+        tracking_info['park_pos_az'] = read_float(self)
+        tracking_info['park_pos_alt'] = read_float(self)
 
         return tracking_info
 
@@ -445,11 +443,11 @@ class SimTelCentEvent(EventIOObject):
         event_info = {}
         event_info['cpu_time'] = read_time(self)
         event_info['gps_time'] = read_time(self)
-        event_info['trigger_pattern'], = read_from('<i', self)
-        event_info['data_pattern'], = read_from('<i', self)
+        event_info['trigger_pattern'] = read_int(self)
+        event_info['data_pattern'] = read_int(self)
 
         if self.header.version >= 1:
-            tels_trigger, = read_from('<h', self)
+            tels_trigger = read_short(self)
             event_info['n_triggered_telescopes'] = tels_trigger
 
             event_info['triggered_telescopes'] = read_array(
@@ -458,7 +456,7 @@ class SimTelCentEvent(EventIOObject):
             event_info['trigger_times'] = read_array(
                 self, count=tels_trigger, dtype='<f4',
             )
-            tels_data, = read_from('<h', self)
+            tels_data = read_short(self)
             event_info['n_telescopes_with_data'] = tels_data
             event_info['telescopes_with_data'] = read_array(
                 self, count=tels_data, dtype='<i2'
@@ -480,7 +478,7 @@ class SimTelCentEvent(EventIOObject):
                     event_info['teltrg_time_by_type'][tel_id] = {}
                     for trigger in range(3):
                         if bool_bit_from_pos(mask, trigger):
-                            t = read_from('<f', self)[0]
+                            t = read_float(self)
                             event_info['teltrg_time_by_type'][tel_id][trigger] = t
 
         return event_info
@@ -601,16 +599,16 @@ class SimTelTelEvtHead(TelescopeObject):
 
         self.seek(0)
         event_head = {}
-        event_head['loc_count'], = read_from('<i', self)
-        event_head['glob_count'], = read_from('<i', self)
+        event_head['loc_count'] = read_int(self)
+        event_head['glob_count'] = read_int(self)
         event_head['cpu_time'] = read_time(self)
         event_head['gps_time'] = read_time(self)
-        t, = read_from('<h', self)
+        t = read_short(self)
         event_head['trg_source'] = t & 0xff
 
         if t & 0x100:
             if self.header.version <= 1:
-                num_list_trgsect, = read_from('<h', self)
+                num_list_trgsect = read_short(self)
                 event_head['list_trgsect'] = read_array(
                     self, dtype='<i2', count=num_list_trgsect
                 )
@@ -627,7 +625,7 @@ class SimTelTelEvtHead(TelescopeObject):
 
         if t & 0x200:
             if self.header.version <= 1:
-                event_head['num_phys_addr'] = read_from('<h', self)
+                event_head['num_phys_addr'] = read_short(self)
                 event_head['phys_addr'] = read_array(
                     self, dtype='<i2', count=event_head['num_phys_addr']
                 )
@@ -659,12 +657,12 @@ class SimTelTelADCSum(EventIOObject):
         raw['zero_sup_mode'] = flags & 0x1f
         raw['data_red_mode'] = (flags >> 5) & 0x1f
         raw['list_known'] = (flags >> 10) & 0x01
-        n_pixels = read_from('<i', self)[0]
-        n_gains = read_from('<h', self)[0]
+        n_pixels = read_int(self)
+        n_gains = read_short(self)
 
         if raw['data_red_mode'] == 2:
-            offset_hg8 = read_from('<h', self)[0]
-            scale_hg8 = read_from('<h', self)[0]
+            offset_hg8 = read_short(self)
+            scale_hg8 = read_short(self)
             if scale_hg8 <= 0:
                 scale_hg8 = 1
 
@@ -713,9 +711,9 @@ class SimTelTelADCSamp(EventIOObject):
         self.seek(0)
 
         args = {
-            'num_pixels': read_from('<l', self)[0],
-            'num_gains': read_from('<h', self)[0],
-            'num_samples': read_from('<h', self)[0],
+            'num_pixels': read_int(self),
+            'num_gains': read_short(self),
+            'num_samples': read_short(self),
         }
         if self._zero_sup_mode:
             return self._parse_in_zero_suppressed_mode(**args)
@@ -790,52 +788,52 @@ class SimTelTelImage(EventIOObject):
             (flags & 0xff) | (flags & 0x3f000000) >> 16
         )
         tel_image['cut_id'] = (flags & 0xff000) >> 12
-        tel_image['pixels'] = read_from('<h', self)[0]
-        tel_image['num_sat'] = read_from('<h', self)[0]
+        tel_image['pixels'] = read_short(self)
+        tel_image['num_sat'] = read_short(self)
 
         # from version 6 on
         # pixels = read_utf8_like_signed_int(self)  # from version 6 on
         # num_sat = read_utf8_like_signed_int(self)
 
         if tel_image['num_sat'] > 0:
-            tel_image['clip_amp'] = read_from('<f', self)[0]
+            tel_image['clip_amp'] = read_float(self)
 
-        tel_image['amplitude'] = read_from('<f', self)[0]
-        tel_image['x'] = read_from('<f', self)[0]
-        tel_image['y'] = read_from('<f', self)[0]
-        tel_image['phi'] = read_from('<f', self)[0]
-        tel_image['l'] = read_from('<f', self)[0]
-        tel_image['w'] = read_from('<f', self)[0]
-        tel_image['num_conc'] = read_from('<h', self)[0]
-        tel_image['concentration'] = read_from('<f', self)[0]
+        tel_image['amplitude'] = read_float(self)
+        tel_image['x'] = read_float(self)
+        tel_image['y'] = read_float(self)
+        tel_image['phi'] = read_float(self)
+        tel_image['l'] = read_float(self)
+        tel_image['w'] = read_float(self)
+        tel_image['num_conc'] = read_short(self)
+        tel_image['concentration'] = read_float(self)
 
         if flags & 0x100:
-            tel_image['x_err'] = read_from('<f', self)[0]
-            tel_image['y_err'] = read_from('<f', self)[0]
-            tel_image['phi_err'] = read_from('<f', self)[0]
-            tel_image['l_err'] = read_from('<f', self)[0]
-            tel_image['w_err'] = read_from('<f', self)[0]
+            tel_image['x_err'] = read_float(self)
+            tel_image['y_err'] = read_float(self)
+            tel_image['phi_err'] = read_float(self)
+            tel_image['l_err'] = read_float(self)
+            tel_image['w_err'] = read_float(self)
 
         if flags & 0x200:
-            tel_image['skewness'] = read_from('<f', self)[0]
-            tel_image['skewness_err'] = read_from('<f', self)[0]
-            tel_image['kurtosis'] = read_from('<f', self)[0]
-            tel_image['kurtosis_err'] = read_from('<f', self)[0]
+            tel_image['skewness'] = read_float(self)
+            tel_image['skewness_err'] = read_float(self)
+            tel_image['kurtosis'] = read_float(self)
+            tel_image['kurtosis_err'] = read_float(self)
 
         if flags & 0x400:
             # from v6 on this is crazy int
-            num_hot = read_from('<h', self)[0]
+            num_hot = read_short(self)
             tel_image['num_hot'] = num_hot
             tel_image['hot_amp'] = read_array(self, 'f4', num_hot)
             # from v6 on this is array of crazy int
             tel_image['hot_pixel'] = read_array(self, 'i2', num_hot)
 
         if flags & 0x800:
-            tel_image['tm_slope'] = read_from('<f', self)[0]
-            tel_image['tm_residual'] = read_from('<f', self)[0]
-            tel_image['tm_width1'] = read_from('<f', self)[0]
-            tel_image['tm_width2'] = read_from('<f', self)[0]
-            tel_image['tm_rise'] = read_from('<f', self)[0]
+            tel_image['tm_slope'] = read_float(self)
+            tel_image['tm_residual'] = read_float(self)
+            tel_image['tm_width1'] = read_float(self)
+            tel_image['tm_width2'] = read_float(self)
+            tel_image['tm_rise'] = read_float(self)
 
         return tel_image
 
@@ -850,48 +848,48 @@ class SimTelShower(EventIOObject):
         shower = {}
         result_bits = self.header.id
         shower['result_bits'] = result_bits
-        shower['num_trg'] = read_from('<h', self)[0]
-        shower['num_read'] = read_from('<h', self)[0]
-        shower['num_img'] = read_from('<h', self)[0]
-        shower['img_pattern'] = read_from('<i', self)[0]
+        shower['num_trg'] = read_short(self)
+        shower['num_read'] = read_short(self)
+        shower['num_img'] = read_short(self)
+        shower['img_pattern'] = read_int(self)
 
         if result_bits & 0x01:
-            shower['Az'] = read_from('<f', self)[0]
-            shower['Alt'] = read_from('<f', self)[0]
+            shower['Az'] = read_float(self)
+            shower['Alt'] = read_float(self)
 
         if result_bits & 0x02:
-            shower['err_dir1'] = read_from('<f', self)[0]
-            shower['err_dir2'] = read_from('<f', self)[0]
-            shower['err_dir3'] = read_from('<f', self)[0]
+            shower['err_dir1'] = read_float(self)
+            shower['err_dir2'] = read_float(self)
+            shower['err_dir3'] = read_float(self)
 
         if result_bits & 0x04:
-            shower['xc'] = read_from('<f', self)[0]
-            shower['yc'] = read_from('<f', self)[0]
+            shower['xc'] = read_float(self)
+            shower['yc'] = read_float(self)
 
         if result_bits & 0x08:
-            shower['err_core1'] = read_from('<f', self)[0]
-            shower['err_core2'] = read_from('<f', self)[0]
-            shower['err_core3'] = read_from('<f', self)[0]
+            shower['err_core1'] = read_float(self)
+            shower['err_core2'] = read_float(self)
+            shower['err_core3'] = read_float(self)
 
         if result_bits & 0x10:
-            shower['mscl'] = read_from('<f', self)[0]
-            shower['mscw'] = read_from('<f', self)[0]
+            shower['mscl'] = read_float(self)
+            shower['mscw'] = read_float(self)
 
         if result_bits & 0x20:
-            shower['err_mscl'] = read_from('<f', self)[0]
-            shower['err_mscw'] = read_from('<f', self)[0]
+            shower['err_mscl'] = read_float(self)
+            shower['err_mscw'] = read_float(self)
 
         if result_bits & 0x40:
-            shower['energy'] = read_from('<f', self)[0]
+            shower['energy'] = read_float(self)
 
         if result_bits & 0x80:
-            shower['err_energy'] = read_from('<f', self)[0]
+            shower['err_energy'] = read_float(self)
 
         if result_bits & 0x0100:
-            shower['xmax'] = read_from('<f', self)[0]
+            shower['xmax'] = read_float(self)
 
         if result_bits & 0x0200:
-            shower['err_xmax'] = read_from('<f', self)[0]
+            shower['err_xmax'] = read_float(self)
 
         return shower
 
@@ -904,32 +902,32 @@ class SimTelPixelTiming(EventIOObject):
         self.seek(0)
 
         pixel_timing = {}
-        pixel_timing['num_pixels'] = read_from('<h', self)[0]
-        pixel_timing['num_gains'] = read_from('<h', self)[0]
-        pixel_timing['before_peak'] = read_from('<h', self)[0]
-        pixel_timing['after_peak'] = read_from('<h', self)[0]
+        pixel_timing['num_pixels'] = read_short(self)
+        pixel_timing['num_gains'] = read_short(self)
+        pixel_timing['before_peak'] = read_short(self)
+        pixel_timing['after_peak'] = read_short(self)
 
         pixel_timing['with_sum'] = (
             (pixel_timing['before_peak'] >= 0)
             and (pixel_timing['after_peak'] >= 0)
         )
 
-        list_type = read_from('<h', self)[0]
+        list_type = read_short(self)
         assert list_type in (1, 2), "list_type has to be 1 or 2"
-        list_size = read_from('<h', self)[0]
+        list_size = read_short(self)
         pixel_timing['pixel_list'] = read_array(
             self, 'i2', list_size * list_type)
-        pixel_timing['threshold'] = read_from('<h', self)[0]
+        pixel_timing['threshold'] = read_short(self)
         pixel_timing['glob_only_selected'] = pixel_timing['threshold'] < 0
-        pixel_timing['num_types'] = read_from('<h', self)[0]
+        pixel_timing['num_types'] = read_short(self)
 
         pixel_timing['time_type'] = read_array(
             self, 'i2', pixel_timing['num_types'])
         pixel_timing['time_level'] = read_array(
             self, 'f4', pixel_timing['num_types'])
 
-        pixel_timing['granularity'] = read_from('<f', self)[0]
-        pixel_timing['peak_global'] = read_from('<f', self)[0]
+        pixel_timing['granularity'] = read_float(self)
+        pixel_timing['peak_global'] = read_float(self)
 
         if list_type == 1:
             pixel_timing.update(self._parse_list_type_1(**pixel_timing))
@@ -956,7 +954,7 @@ class SimTelPixelTiming(EventIOObject):
 
         for i_pix in pixel_list:
             for i_type in range(num_types):
-                timval[i_pix, i_type] = granularity * read_from('<h', self)[0]
+                timval[i_pix, i_type] = granularity * read_short(self)
 
             if with_sum:
                 for i_gain in range(num_gains):
@@ -998,7 +996,7 @@ class SimTelPixelTiming(EventIOObject):
         for start, stop in np.array(pixel_list).reshape(-1, 2):
             for i_pix in range(start, stop + 1):
                 for i_type in range(num_types):
-                    timval[i_pix, i_type] = granularity * read_from('<h', self)[0]
+                    timval[i_pix, i_type] = granularity * read_short(self)
 
                 if with_sum:
                     for i_gain in range(num_gains):
@@ -1033,29 +1031,29 @@ class SimTelMCShower(EventIOObject):
         self.seek(0)
         mc = {}
         mc['shower'] = self.header.id
-        mc['primary_id'] = read_from('<i', self)[0]
-        mc['energy'] = read_from('<f', self)[0]
-        mc['azimuth'] = read_from('<f', self)[0]
-        mc['altitude'] = read_from('<f', self)[0]
+        mc['primary_id'] = read_int(self)
+        mc['energy'] = read_float(self)
+        mc['azimuth'] = read_float(self)
+        mc['altitude'] = read_float(self)
         if self.header.version >= 1:
-            mc['depth_start'] = read_from('<f', self)[0]
-        mc['h_first_int'] = read_from('<f', self)[0]
-        mc['xmax'] = read_from('<f', self)[0]
+            mc['depth_start'] = read_float(self)
+        mc['h_first_int'] = read_float(self)
+        mc['xmax'] = read_float(self)
         if self.header.version >= 1:
-            mc['hmax'] = read_from('<f', self)[0]
-            mc['emax'] = read_from('<f', self)[0]
-            mc['cmax'] = read_from('<f', self)[0]
+            mc['hmax'] = read_float(self)
+            mc['emax'] = read_float(self)
+            mc['cmax'] = read_float(self)
         else:
             mc['hmax'] = mc['emax'] = mc['cmax'] = 0.0
 
-        mc['n_profiles'] = read_from('<h', self)[0]
+        mc['n_profiles'] = read_short(self)
         mc['profiles'] = []
         for i in range(mc['n_profiles']):
             p = {}
-            p['id'] = read_from('<i', self)[0]
-            p['num_steps'] = read_from('<i', self)[0]
-            p['start'] = read_from('<f', self)[0]
-            p['end'] = read_from('<f', self)[0]
+            p['id'] = read_int(self)
+            p['num_steps'] = read_int(self)
+            p['start'] = read_float(self)
+            p['end'] = read_float(self)
             p['content'] = read_array(self, dtype='<f4', count=p['num_steps'])
             mc['profiles'].append(p)
 
@@ -1072,7 +1070,7 @@ class MC_Extra_Params(EventIOObject):
     def parse_data_field(self):
         self.seek(0)
         ep = {
-            'weight': read_from('<f', self),
+            'weight': read_float(self),
             'n_iparam': read_utf8_like_unsigned_int(self),
             'n_fparam': read_utf8_like_unsigned_int(self),
         }
@@ -1093,10 +1091,10 @@ class SimTelMCEvent(EventIOObject):
 
         return {
             'event': self.header.id,
-            'shower_num': read_from('<i', self)[0],
-            'xcore': read_from('<f', self)[0],
-            'ycore': read_from('<f', self)[0],
-            # 'aweight': read_from('<f', self),  # only in version 2
+            'shower_num': read_int(self),
+            'xcore': read_float(self),
+            'ycore': read_float(self),
+            # 'aweight': read_float(self),  # only in version 2
         }
 
 
@@ -1114,14 +1112,14 @@ class SimTelTelMoni(EventIOObject):
 
         # what: denotes what has changed (since last report?)
         what = ((self.header.id & 0xffff00) >> 8) & 0xffff
-        known, = read_from('<h', self)   # C-code used |= instead of = here.
-        new_parts, = read_from('<h', self)
-        monitor_id, = read_from('<i', self)
+        known = read_short(self)   # C-code used |= instead of = here.
+        new_parts = read_short(self)
+        monitor_id = read_int(self)
         moni_time = read_time(self)
 
         #  Dimensions of various things
         # version 0
-        ns, np, nd, ng = read_from('<hhhh', self)
+        ns, np, nd, ng = read_from(self, '<hhhh')
         # in version 1 this uses crazy 32bit ints
         # ns = read_utf8_like_signed_int(self)
         # np = read_utf8_like_signed_int(self)
@@ -1167,7 +1165,7 @@ class SimTelTelMoni(EventIOObject):
     def _status_only_changed__what_and_0x01(self, **kwargs):
         return {
             'status_time': read_time(self),
-            'status_bits': read_from('<i', self)[0],
+            'status_bits': read_int(self),
         }
 
     def _counts_and_rates_changed__what_and_0x02(
@@ -1175,13 +1173,13 @@ class SimTelTelMoni(EventIOObject):
     ):
         return {
             'trig_time': read_time(self),
-            'coinc_count': read_from('<l', self)[0],
-            'event_count': read_from('<l', self)[0],
-            'trigger_rate': read_from('<f', self)[0],
+            'coinc_count': read_int(self),
+            'event_count': read_int(self),
+            'trigger_rate': read_float(self),
             'sector_rate': read_array(self, 'f4', num_sectors),
-            'event_rate': read_from('<f', self)[0],
-            'data_rate': read_from('<f', self)[0],
-            'mean_significant': read_from('<f', self)[0],
+            'event_rate': read_float(self),
+            'data_rate': read_float(self),
+            'mean_significant': read_float(self),
         }
 
     def _pedestal_and_noice_changed__what_and_0x04(
@@ -1189,7 +1187,7 @@ class SimTelTelMoni(EventIOObject):
     ):
         return {
             'ped_noise_time': read_time(self),
-            'num_ped_slices': read_from('<h', self)[0],
+            'num_ped_slices': read_short(self),
             'pedestal': read_array(
                 self, 'f4', num_gains * num_pixels
             ).reshape((num_gains, num_pixels)),
@@ -1202,8 +1200,8 @@ class SimTelTelMoni(EventIOObject):
         self, num_pixels, num_drawers, **kwargs
     ):
         hv_temp_time = read_time(self)
-        num_drawer_temp = read_from('<h', self)[0]
-        num_camera_temp = read_from('<h', self)[0]
+        num_drawer_temp = read_short(self)
+        num_camera_temp = read_short(self)
         return {
             'hv_temp_time': hv_temp_time,
             'num_drawer_temp': num_drawer_temp,
@@ -1242,11 +1240,11 @@ class SimTelTelMoni(EventIOObject):
     ):
         return {
             'set_daq_time': read_time(self),
-            'daq_conf': read_from('<H', self)[0],
-            'daq_scaler_win': read_from('<H', self)[0],
-            'daq_nd': read_from('<H', self)[0],
-            'daq_acc': read_from('<H', self)[0],
-            'daq_nl': read_from('<H', self)[0],
+            'daq_conf': read_short(self),
+            'daq_scaler_win': read_short(self),
+            'daq_nd': read_short(self),
+            'daq_acc': read_short(self),
+            'daq_nl': read_short(self),
         }
 
 
@@ -1258,9 +1256,9 @@ class SimTelLasCal(TelescopeObject):
         assert_exact_version(self, supported_version=2)
         self.seek(0)
 
-        num_pixels = read_from('<h', self)[0]
-        num_gains = read_from('<h', self)[0]
-        lascal_id = read_from('<i', self)[0]
+        num_pixels = read_short(self)
+        num_gains = read_short(self)
+        lascal_id = read_int(self)
         calib = read_array(
             self, 'f4', num_gains * num_pixels
         ).reshape(num_gains, num_pixels)
@@ -1299,8 +1297,8 @@ class SimTelMCPeSum(EventIOObject):
         self.seek(0)
 
         event = self.header.id
-        shower_num = read_from('<i', self)[0]
-        num_tel = read_from('<i', self)[0]
+        shower_num = read_int(self)
+        num_tel = read_int(self)
         num_pe = read_array(self, 'i4', num_tel)
         num_pixels = read_array(self, 'i4', num_tel)
 
@@ -1314,7 +1312,7 @@ class SimTelMCPeSum(EventIOObject):
         for n_pe, n_pixels in zip(num_pe, num_pixels):
             if n_pe <= 0 or n_pixels <= 0:
                 continue
-            non_empty = read_from('<h', self)[0]
+            non_empty = read_short(self)
             pixel_id = read_array(self, 'i2', non_empty)
             pe = read_array(self, 'i4', non_empty)
             pix_pe.append(pixel_id, pe)
@@ -1354,7 +1352,7 @@ class SimTelPixelList(EventIOObject):
         code = self.header.id // int(1e6)
         telescope = self.header.id % int(1e6)
 
-        pixels = read_from('<h', self)[0]
+        pixels = read_short(self)
         # in version 1 pixels is a crazy int
 
         pixel_list = read_array(self, 'i2', pixels)
