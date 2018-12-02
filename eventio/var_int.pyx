@@ -1,8 +1,9 @@
 import numpy as np
 cimport numpy as np
 
-
-cpdef unsigned_varint(const unsigned char[:] data, unsigned long offset=0):
+cpdef (unsigned long, unsigned int) unsigned_varint(const unsigned char[:] data, unsigned long offset=0):
+    cdef unsigned int length
+    cdef unsigned long value
     length = get_length_of_varint(data[0])
     value = parse_varint(data[offset:offset + length])
     return value, length
@@ -15,7 +16,7 @@ def varint(const unsigned char[:] data, unsigned long offset=0):
     return value >> 1, length
 
 
-cpdef get_length_of_varint(const unsigned char first_byte):
+cpdef unsigned int get_length_of_varint(const unsigned char first_byte):
     if (first_byte & 0x80) == 0:
         return 1
     if (first_byte & 0xc0) == 0x80:
@@ -34,11 +35,10 @@ cpdef get_length_of_varint(const unsigned char first_byte):
         return 8
     return 9
 
-
-cpdef parse_varint(const unsigned char[:] var_int_bytes):
+cpdef unsigned long parse_varint(const unsigned char[:] var_int_bytes):
     length = var_int_bytes.shape[0]
     cdef unsigned long v[9]
-    cdef i  = 0
+    cdef unsigned long i  = 0
     for i in range(length):
         v[i] = var_int_bytes[i]
 
@@ -117,13 +117,14 @@ cpdef unsigned_varint_array(
     unsigned long n_elements,
     unsigned long offset = 0,
 ):
-    cdef np.ndarray output = np.empty(n_elements, dtype='uint64')
+    cdef np.ndarray[np.uint64_t, ndim=1] output = np.empty(n_elements, dtype='uint64')
 
     cdef int val
     cdef unsigned long i
     cdef unsigned long pos
     cdef unsigned long idx
     cdef unsigned char v0, v1, v2, v3, v4
+    cdef unsigned long length
     pos = 0
 
     for i in range(n_elements):
@@ -142,7 +143,7 @@ def varint_array(
 ):
     cdef unsigned long bytes_read
     cdef np.ndarray mask
-    cdef np.ndarray output = np.empty(n_elements, dtype='int64')
+    cdef np.ndarray[np.int64_t, ndim=1] output = np.empty(n_elements, dtype='int64')
 
     unsigned_output, bytes_read = unsigned_varint_array(data, n_elements, offset)
 
@@ -185,15 +186,13 @@ cpdef unsigned_varint_array_differential(
     unsigned long offset = 0,
 ):
 
-    cdef np.ndarray output = np.empty(n_elements, dtype='uint32')
+    cdef np.ndarray[np.uint32_t, ndim=1] output = np.empty(n_elements, dtype='uint32')
 
-    cdef int val
+    cdef int val = 0
     cdef unsigned long i
-    cdef unsigned long pos
+    cdef unsigned long pos = 0
     cdef unsigned char v0, v1, v2, v3, v4
-    pos = 0
 
-    val = np.int32(0)
     for i in range(n_elements):
         v0 = data[pos + offset]
         pos += 1
@@ -211,7 +210,8 @@ cpdef unsigned_varint_array_differential(
             else:  # negative
                 val -= ((v0 & 0x3f) << 7) | ((v1 >> 1) + 1)
         elif (v0 & 0xe0) == 0xc0:  # three bytes
-            v1, v2 = data[pos + offset:pos + offset + 2]
+            v1 = data[pos + offset + 0]
+            v2 = data[pos + offset + 1]
             pos += 2
 
             if (v2 & 1) == 0:
@@ -227,7 +227,9 @@ cpdef unsigned_varint_array_differential(
                     | ((v2 >> 1) + 1)
                 )
         elif (v0 & 0xf0) == 0xe0:  # four bytes
-            v1, v2, v3 = data[pos + offset:pos + offset + 3]
+            v1 = data[pos + offset + 0]
+            v2 = data[pos + offset + 1]
+            v3 = data[pos + offset + 2]
             pos += 3
             if (v3 & 1) == 0:
                 val += (
@@ -244,7 +246,10 @@ cpdef unsigned_varint_array_differential(
                     | ((v3 >> 1) + 1)
                 )
         elif (v0 & 0xf8) == 0xf0:
-            v1, v2, v3, v4 = data[pos + offset:pos + offset + 4]
+            v1 = data[pos + offset + 0]
+            v2 = data[pos + offset + 1]
+            v3 = data[pos + offset + 2]
+            v4 = data[pos + offset + 3]
             pos += 4
             # The format would allow bits 32 and 33 being set but we ignore this here. */
             if (v4 & 1) == 0:
