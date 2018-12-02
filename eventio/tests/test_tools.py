@@ -29,6 +29,40 @@ def test_uint32_vector_differential():
     assert np.all(values == read_vector_of_uint32_scount_differential_optimized(b, 10))
 
 
+def test_read_types():
+    from eventio.tools import (
+        read_short,
+        read_unsigned_short,
+        read_int,
+        read_unsigned_int,
+        read_float
+    )
+
+    b = BytesIO()
+    b.write(struct.pack('h', -5))
+    b.write(struct.pack('H', 300))
+    b.write(struct.pack('i', -2**18))
+    b.write(struct.pack('I', 2**18))
+    b.write(struct.pack('f', 2.25))
+    b.seek(0)
+
+    assert read_short(b) == -5
+    assert read_unsigned_short(b) == 300
+    assert read_int(b) == -2**18
+    assert read_unsigned_int(b) == 2**18
+    assert read_float(b) == 2.25
+
+
+def test_read_without_change():
+    from eventio.tools import read_from_without_position_change
+
+    b = BytesIO()
+    b.write(b'\xff\xf3')
+    b.seek(0)
+    assert read_from_without_position_change(b, 'H')[0] == 0xf3ff
+    assert b.tell() == 0
+
+
 def test_read_string():
     from eventio.tools import read_eventio_string
     s = b'Hello World'

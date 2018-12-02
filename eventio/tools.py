@@ -3,6 +3,31 @@ import numpy as np
 from .var_int import get_length_of_varint, parse_varint
 
 
+def read_short(f):
+    ''' Read a signed 2 byte integer from `f`'''
+    return struct.unpack('<h', f.read(2))[0]
+
+
+def read_unsigned_short(f):
+    ''' Read an unsigned 2 byte integer from `f`'''
+    return struct.unpack('<H', f.read(2))[0]
+
+
+def read_int(f):
+    ''' Read a signed 4 byte integer from `f`'''
+    return struct.unpack('<i', f.read(4))[0]
+
+
+def read_unsigned_int(f):
+    ''' Read an signed 4 byte integer from `f`'''
+    return struct.unpack('<I', f.read(4))[0]
+
+
+def read_float(f):
+    ''' Read a 4 byte float from `f`'''
+    return struct.unpack('<f', f.read(4))[0]
+
+
 def read_array(f, dtype, count):
     '''Read a numpy array with `dtype` of length `count` from file-like `f`'''
     dt = np.dtype(dtype)
@@ -10,14 +35,15 @@ def read_array(f, dtype, count):
 
 
 def read_eventio_string(f):
-    '''Read a string from eventio file or object f
-    Eventio stores strings as a short
+    '''Read a string from eventio file or object f.
+    Eventio stores strings as a short giving the length
+    of the string and the string itself.
     '''
-    length, = read_from('<h', f)
+    length = read_short(f)
     return f.read(length)
 
 
-def read_from(fmt, f):
+def read_from(f, fmt):
     '''
     read the struct fmt specification from file f
     Moves the current position.
@@ -29,22 +55,22 @@ def read_from(fmt, f):
     return result
 
 
-def read_ints(n, f):
+def read_ints(f, n_ints):
     ''' read n ints from file f '''
-    return read_from('{:d}i'.format(n), f)
+    return read_from(f, '{:d}i'.format(n_ints))
 
 
-def read_from_without_position_change(fmt, f):
+def read_from_without_position_change(f, fmt):
     ''' Read struct format and return to old cursor position '''
     position = f.tell()
-    result = read_from(fmt, f)
+    result = read_from(f, fmt)
     f.seek(position)
     return result
 
 
 def read_time(f):
     '''Read a time as combination of seconds and nanoseconds'''
-    sec, nano = read_from('<ii', f)
+    sec, nano = read_from(f, '<ii')
     return sec, nano
 
 
