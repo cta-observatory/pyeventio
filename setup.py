@@ -3,14 +3,14 @@ from setuptools import setup, find_packages
 # make sure users without cython can install our extensions
 try:
     from Cython.Distutils.extension import Extension
-    from Cython.Distutils import _build_ext
+    from Cython.Distutils import build_ext as _build_ext
     USE_CYTHON = True
 except ImportError:
     from setuptools import Extension
     from setuptools.command.build_ext import build_ext as _build_ext
     USE_CYTHON = False
 
-
+print('using cython', USE_CYTHON)
 # make sure numpy is installed before we try to build
 # the extenion
 class build_ext(_build_ext):
