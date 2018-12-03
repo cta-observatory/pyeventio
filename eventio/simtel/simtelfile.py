@@ -229,9 +229,12 @@ class SimTelFile:
         tel_events = []
         while True:
             try:
-                tel_events.append(
+                tel_event = self.parse_simtel_tel_event(
                     simtel_event.next_assert(SimTelTelEvent)
                 )
+
+                tel_event['waveform'] = tel_event['adc_samp'].parse_data_field()
+                tel_events.append(tel_event)
             except WrongType:
                 break
         result['tel_events'] = tel_events
@@ -250,6 +253,15 @@ class SimTelFile:
         # result['shower'] = simtel_event.next_assert(SimTelShower)
 
         return result
+
+    def parse_simtel_tel_event(self, tel_event):
+        return {
+            'header': tel_event.next_assert(SimTelTelEvtHead),
+            'adc_samp': tel_event.next_assert(SimTelTelADCSamp),
+            'pixel_timing': tel_event.next_assert(SimTelPixelTiming),
+            'image': tel_event.next_assert(SimTelTelImage),
+            'pixel_list': tel_event.next_assert(SimTelPixelList),
+        }
 
 
 class EventIOFileWithNextAssert(EventIOFile, WithNextAssert):
