@@ -1,6 +1,23 @@
 from setuptools import setup, find_packages
-from Cython.Build import cythonize
 import numpy as np
+
+# make sure users without cython can install our extensions
+try:
+    from Cython.Distutils.extension import Extension
+    from Cython.Distutils import build_ext
+    USE_CYTHON = True
+except ImportError:
+    from setuptools import Extension
+    USE_CYTHON = False
+
+
+# if we have cython, use the cython file if not the c file
+ext = '.pyx' if USE_CYTHON else '.c'
+extensions = [
+    Extension('eventio.var_int', sources=['eventio/var_int' + ext])
+]
+cmdclass = {'build_ext': build_ext} if USE_CYTHON else {}
+
 
 with open('README.rst') as f:
     long_description = f.read()
@@ -17,7 +34,8 @@ setup(
 
     packages=find_packages(),
 
-    ext_modules=cythonize('eventio/var_int.pyx'),
+    ext_modules=extensions,
+    cmdclass=cmdclass,
     include_dirs=[np.get_include()],
 
     package_data={'eventio': ['resources/*']},
