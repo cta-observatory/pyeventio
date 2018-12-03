@@ -1,5 +1,39 @@
 from setuptools import setup, find_packages
 
+# make sure users without cython can install our extensions
+try:
+    from Cython.Distutils.extension import Extension
+    from Cython.Distutils import build_ext as _build_ext
+    USE_CYTHON = True
+except ImportError:
+    from setuptools import Extension
+    from setuptools.command.build_ext import build_ext as _build_ext
+    USE_CYTHON = False
+
+print('using cython', USE_CYTHON)
+
+
+# make sure numpy is installed before we try to build
+# the extenion
+class build_ext(_build_ext):
+    def finalize_options(self):
+        super().finalize_options()
+        import numpy
+        self.include_dirs.append(numpy.get_include())
+
+
+# if we have cython, use the cython file if not the c file
+ext = '.pyx' if USE_CYTHON else '.c'
+extensions = [
+    Extension('eventio.var_int', sources=['eventio/var_int' + ext]),
+    Extension(
+        'eventio.simtel.camorgan',
+        sources=['eventio/simtel/camorgan' + ext]
+    )
+]
+cmdclass = {'build_ext': build_ext}
+
+
 with open('README.rst') as f:
     long_description = f.read()
 
@@ -12,11 +46,18 @@ setup(
     author='Dominik Neise, Maximilian Noethe',
     author_email='neised@phys.ethz.ch',
     license='MIT',
+
     packages=find_packages(),
+
+    ext_modules=extensions,
+    cmdclass=cmdclass,
+
     package_data={'eventio': ['resources/*']},
     install_requires=[
-        'numpy'
+        'numpy',
     ],
+    setup_requires=['pytest-runner', 'numpy'],
+    tests_require=['pytest>=3.0.0'],
     classifiers=[
         'Development Status :: 4 - Beta',
         'Intended Audience :: Science/Research',
@@ -33,6 +74,4 @@ setup(
         'Topic :: Scientific/Engineering :: Astronomy',
         'Topic :: Scientific/Engineering :: Physics',
     ],
-    setup_requires=['pytest-runner'],
-    tests_require=['pytest>=3.0.0'],
 )

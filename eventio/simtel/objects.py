@@ -1,5 +1,6 @@
 ''' Implementations of the simtel_array EventIO object types '''
 import numpy as np
+import struct
 from ..base import EventIOObject, read_next_header
 from ..tools import (
     read_short,
@@ -11,12 +12,19 @@ from ..tools import (
     read_utf8_like_unsigned_int,
     read_array,
     read_time,
-    read_vector_of_uint32_scount_differential,
-    read_vector_of_uint32_scount_differential_optimized,
 )
 from ..bits import bool_bit_from_pos
+from ..var_int import (
+    unsigned_varint_arrays_differential,
+    unsigned_varint_array,
+    varint_array,
+    unsigned_varint,
+    varint,
+)
 from ..version_handling import (
-    assert_exact_version, assert_max_version, assert_version_in
+    assert_exact_version,
+    assert_max_version,
+    assert_version_in
 )
 
 
@@ -218,6 +226,8 @@ class SimTelCamSettings(TelescopeObject):
 class SimTelCamOrgan(TelescopeObject):
     eventio_type = 2003
 
+    from .camorgan import read_sector_information
+
     def parse_data_field(self):
         assert_exact_version(self, supported_version=1)
         self.seek(0)
@@ -238,30 +248,23 @@ class SimTelCamOrgan(TelescopeObject):
             self, 'i2', num_pixels * num_gains
         ).reshape(num_pixels, num_gains)
 
-        sectors = []
-        for _ in range(num_pixels):
-            n = read_short(self)
-            sector = read_array(self, 'i2', n)
-            # FIXME:
-            # according to a comment in the c-sources
-            # there is might be an old bug here,
-            # which is trailing zeros.
-            # is an ascending list of numbes, so any zero
-            # after the first position indicates the end of sector.
-            #
-            # DN: maybe this bug was fixed long ago,
-            # so maybe we do not have to account for it here
-            # I will check for it in the tests.
-            sectors.append(sector)
+        data = self.read()
+        pos = 0
+        sectors, bytes_read = SimTelCamOrgan.read_sector_information(
+            data, num_pixels
+        )
+        pos += bytes_read
 
-        sector_type = []
-        sector_threshold = []
-        sector_pixthresh = []
-        for i in range(num_sectors):
-            type_, thresh_, pix_thr_ = read_from(self, '<Bff')
-            sector_type.append(type_)
-            sector_threshold.append(thresh_)
-            sector_pixthresh.append(pix_thr_)
+        sector_data = np.frombuffer(
+            data,
+            dtype=[
+                ('type', 'uint8'),
+                ('thresh', 'float32'),
+                ('pix_thresh', 'float32')
+            ],
+            count=num_sectors,
+            offset=pos,
+        )
 
         return {
             'telescope_id': self.telescope_id,
@@ -271,9 +274,9 @@ class SimTelCamOrgan(TelescopeObject):
             'chip': chip,
             'channel': channel,
             'sectors': sectors,
-            'sector_type': np.array(sector_type),
-            'sector_threshold': np.array(sector_threshold),
-            'sector_pixthresh': np.array(sector_pixthresh),
+            'sector_type': sector_data['type'],
+            'sector_threshold': sector_data['thresh'],
+            'sector_pixthresh': sector_data['pix_thresh'],
         }
 
 
@@ -606,35 +609,46 @@ class SimTelTelEvtHead(TelescopeObject):
         t = read_short(self)
         event_head['trg_source'] = t & 0xff
 
+        pos = 0
+        data = self.read()
+
         if t & 0x100:
             if self.header.version <= 1:
-                num_list_trgsect = read_short(self)
-                event_head['list_trgsect'] = read_array(
-                    self, dtype='<i2', count=num_list_trgsect
+                num_list_trgsect, = struct.unpack('<h', data[pos:pos + 2])
+                pos += 2
+                event_head['list_trgsect'] = np.frombuffer(
+                    data, dtype='<i2', count=num_list_trgsect, offset=pos,
                 )
+                pos += num_list_trgsect * 2
             else:
-                num_list_trgsect, = read_utf8_like_signed_int(self)
-                event_head['list_trgsect'] = np.array([
-                    read_utf8_like_signed_int(self)
-                    for _ in range(num_list_trgsect)
-                ])
-            if self.header.version >= 1 and (t & 0x400):
-                event_head['time_trgsect'] = read_array(
-                    self, dtype='<f4', count=num_list_trgsect
+                num_list_trgsect, length = varint(data, offset=pos)
+                pos += length
+                event_head['list_trgsect'], length = varint_array(
+                    data, n_elements=num_list_trgsect, offset=pos,
                 )
+                pos += length
+            if self.header.version >= 1 and (t & 0x400):
+                event_head['time_trgsect'] = np.frombuffer(
+                    data, dtype='<f4', count=num_list_trgsect, offset=pos
+                )
+                pos += 4 * num_list_trgsect
 
         if t & 0x200:
             if self.header.version <= 1:
-                event_head['num_phys_addr'] = read_short(self)
-                event_head['phys_addr'] = read_array(
-                    self, dtype='<i2', count=event_head['num_phys_addr']
+                event_head['num_phys_addr'] = struct.unpack('<h', data[pos:pos + 2])
+                pos += 2
+                event_head['phys_addr'] = np.from_buffer(
+                    data, dtype='<i2', count=event_head['num_phys_addr'], offset=pos
                 )
+                pos += 2 * event_head['num_phys_addr']
             else:
-                event_head['num_phys_addr'] = read_utf8_like_signed_int(self)
-                event_head['phys_addr'] = np.array([
-                    read_utf8_like_signed_int(self)
-                    for _ in range(event_head['num_phys_addr'])
-                ])
+                event_head['num_phys_addr'], length = varint(data, offset=pos)
+                pos += length
+                event_head['phys_addr'], length = varint_array(
+                    data, n_elements=event_head['num_phys_addr'], offset=pos
+                )
+                pos += length
+
         return event_head
 
 
@@ -660,26 +674,18 @@ class SimTelTelADCSum(EventIOObject):
         n_pixels = read_int(self)
         n_gains = read_short(self)
 
-        if raw['data_red_mode'] == 2:
-            offset_hg8 = read_short(self)
-            scale_hg8 = read_short(self)
-            if scale_hg8 <= 0:
-                scale_hg8 = 1
-
-        if raw['zero_sup_mode'] == 0.:
-            if raw['data_red_mode'] == 0:
-                # before version 3, it was just uint16
-                raw['adc_sums'] = np.array([
-                    read_vector_of_uint32_scount_differential(self, n_pixels)
-                    for gain in range(n_gains)
-
-                ])
-        if 'adc_sums' not in raw:
+        if raw['data_red_mode'] != 0 or raw['zero_sup_mode'] != 0:
             raise NotImplementedError(
                 'Currently no support for data_red_mode {} or zero_sup_mode{}'.format(
                     raw['data_red_mode'], raw['zero_sup_mode'],
                 )
             )
+
+        raw['adc_sums'] = []
+        data = self.read()
+        raw['adc_sums'], bytes_read = unsigned_varint_arrays_differential(
+            data, n_arrays=n_gains, n_elements=n_pixels
+        )
 
         return raw
 
@@ -743,14 +749,16 @@ class SimTelTelADCSamp(EventIOObject):
             (num_gains, num_pixels, num_samples),
             dtype='u2'
         )
+        n_pixels_signal = sum(p[1] - p[0] for p in pixel_ranges)
+        data = self.read()
+        adc_samples_signal, bytes_read = unsigned_varint_arrays_differential(
+            data, n_arrays=num_gains * n_pixels_signal, n_elements=num_samples,
+        )
+
         for i_gain in range(num_gains):
             for pixel_range in pixel_ranges:
-                for i_pix in range(*pixel_range):
-                    adc_samples[i_gain, i_pix, :] = (
-                        read_vector_of_uint32_scount_differential_optimized(
-                            self, num_samples
-                        )
-                    )
+                for i_array, i_pix in enumerate(range(*pixel_range)):
+                    adc_samples[i_gain, i_pix, :] = adc_samples_signal[i_gain, i_array]
         return adc_samples
 
     def _parse_in_not_zero_suppressed_mode(
@@ -759,18 +767,15 @@ class SimTelTelADCSamp(EventIOObject):
         num_pixels,
         num_samples,
     ):
-        adc_samples = np.zeros(
-            (num_gains, num_pixels, num_samples),
-            dtype='u2'
+
+        data = self.read()
+        adc_samples, bytes_read = unsigned_varint_arrays_differential(
+            data, n_arrays=num_gains * num_pixels, n_elements=num_samples,
         )
-        for i_gain in range(num_gains):
-            for i_pix in range(num_pixels):
-                adc_samples[i_gain, i_pix, :] = (
-                    read_vector_of_uint32_scount_differential_optimized(
-                        self, num_samples
-                    )
-                )
-        return adc_samples
+
+        return adc_samples.reshape(
+            num_gains, num_pixels, num_samples
+        ).astype('u2')
 
 
 class SimTelTelImage(EventIOObject):
@@ -952,22 +957,31 @@ class SimTelPixelTiming(EventIOObject):
         pulse_sum_loc = np.zeros((num_gains, num_pixels), dtype='i4')
         pulse_sum_glob = np.zeros((num_gains, num_pixels), dtype='i4')
 
+        data = self.read()
+        pos = 0
+
         for i_pix in pixel_list:
-            for i_type in range(num_types):
-                timval[i_pix, i_type] = granularity * read_short(self)
+            timval[i_pix, :] = granularity * np.frombuffer(
+                data, count=num_types, dtype='<i2', offset=pos,
+            )
+            pos += num_types * 2
 
             if with_sum:
-                for i_gain in range(num_gains):
-                    pulse_sum_loc[i_gain, i_pix] = read_utf8_like_signed_int(self)
+                pulse_sum_loc[:, i_pix], length = varint_array(
+                    data, n_elements=num_gains, offset=pos
+                )
+                pos += length
 
                 if glob_only_selected:
-                    for i_gain in range(num_gains):
-                        pulse_sum_glob[i_gain, i_pix] = read_utf8_like_signed_int(self)
+                    pulse_sum_glob[:, i_pix], length = varint_array(
+                        data, n_elements=num_gains, offset=pos
+                    )
+                    pos += length
 
         if with_sum and len(pixel_list) > 0 and not glob_only_selected:
-            for i_gain in range(num_gains):
-                for i_pix in range(num_pixels):
-                    pulse_sum_glob[i_gain, i_pix] = read_utf8_like_signed_int(self)
+            pulse_sum_glob = varint_array(
+                data, n_elements=num_gains * num_pixels, offset=pos,
+            ).reshape(num_gains, num_pixels)
 
         return {
             'timval': timval,

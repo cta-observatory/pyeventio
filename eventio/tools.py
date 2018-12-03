@@ -1,5 +1,6 @@
 import struct
 import numpy as np
+from .var_int import get_length_of_varint, parse_varint
 
 
 def read_short(f):
@@ -84,47 +85,14 @@ def read_utf8_like_signed_int(f):
         return u >> 1
 
 
-# The dict below is used as a performance improvement in
-# read_utf8_like_unsigned_int().
-# position_of_most_significant_zero_in_byte
-# stored in a dict for increased execution speed.
-# (factor 8..10 faster, if building the dict can be ignored)
-# This whole setup part here takes <1ms on my machine
-POS_OF_MSB_ZERO_DICT = {}
-for i in range(256):
-    byte_ = bytes([i])
-
-    # If there is no zero in the byte, we need to use -1
-    # This is not one of the minus ones used for denoting an error or
-    # an exceptional case, but we really need -1 here.
-    POS_OF_MSB_ZERO_DICT[byte_] = -1
-    # find the most significant zero in a[0]
-    for pos_of_msb_zero in range(8)[::-1]:  # pos_of_msb_zero goes from 7..0
-        if ~i & (1 << pos_of_msb_zero):
-            POS_OF_MSB_ZERO_DICT[byte_] = pos_of_msb_zero
-            break
-
-
 def read_utf8_like_unsigned_int(f):
     '''this returns a python integer'''
     # this is a reimplementation from eventio.c lines 797ff
-    _byte = f.read(1)
-    start_byte = _byte[0]
-    b = np.zeros(8, dtype='B')
+    var_int_bytes = bytearray(f.read(1))
+    var_int_length = get_length_of_varint(var_int_bytes[0])
+    var_int_bytes.extend(f.read(var_int_length - 1))
 
-    pos_of_msb_zero = POS_OF_MSB_ZERO_DICT[_byte]
-
-    # mask away some leading ones in a[0]
-    masked_start_byte = start_byte & ((1 << (pos_of_msb_zero + 1)) - 1)
-
-    # copy the interesting part from a into b and return a view
-    b[pos_of_msb_zero] = masked_start_byte
-    b[pos_of_msb_zero + 1:] = np.frombuffer(
-        f.read(7 - pos_of_msb_zero),
-        dtype='B',
-    )
-
-    return int(b.view('>u8')[0])
+    return parse_varint(var_int_bytes)
 
 
 def read_vector_of_uint32_scount_differential(f, count):
