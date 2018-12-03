@@ -33,8 +33,6 @@ class Histograms(EventIOObject):
                 axes = 'x'
                 n_counts = hist['n_bins_x']
 
-            print(n_counts)
-
             for ax in axes:
                 hist['underflow_' + ax] = read_int(self)
                 hist['overflow_' + ax] = read_int(self)
