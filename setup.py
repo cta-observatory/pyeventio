@@ -1,14 +1,23 @@
 from setuptools import setup, find_packages
-import numpy as np
 
 # make sure users without cython can install our extensions
 try:
     from Cython.Distutils.extension import Extension
-    from Cython.Distutils import build_ext
+    from Cython.Distutils import _build_ext
     USE_CYTHON = True
 except ImportError:
     from setuptools import Extension
+    from setuptools.command.build_ext import build_ext as _build_ext
     USE_CYTHON = False
+
+
+# make sure numpy is installed before we try to build
+# the extenion
+class build_ext(_build_ext):
+    def finalize_options(self):
+        super().finalize_options()
+        import numpy
+        self.include_dirs.append(numpy.get_include())
 
 
 # if we have cython, use the cython file if not the c file
@@ -16,7 +25,7 @@ ext = '.pyx' if USE_CYTHON else '.c'
 extensions = [
     Extension('eventio.var_int', sources=['eventio/var_int' + ext])
 ]
-cmdclass = {'build_ext': build_ext} if USE_CYTHON else {}
+cmdclass = {'build_ext': build_ext}
 
 
 with open('README.rst') as f:
@@ -36,14 +45,12 @@ setup(
 
     ext_modules=extensions,
     cmdclass=cmdclass,
-    include_dirs=[np.get_include()],
 
     package_data={'eventio': ['resources/*']},
     install_requires=[
         'numpy',
-        'Cython',
     ],
-    setup_requires=['pytest-runner', 'Cython', 'numpy'],
+    setup_requires=['pytest-runner', 'numpy'],
     tests_require=['pytest>=3.0.0'],
     classifiers=[
         'Development Status :: 4 - Beta',
