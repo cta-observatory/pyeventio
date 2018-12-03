@@ -139,6 +139,7 @@ class SimTelFile:
                 break
 
         self.header = self.file_.next_assert(SimTelRunHeader)
+        self.n_telescopes = self.header.parse_data_field()['n_telescopes']
         self.mc_header = []
         while True:
             try:
@@ -154,7 +155,7 @@ class SimTelFile:
                 break
 
 
-        self.n_telescopes = self.header.parse_data_field()['n_telescopes']
+
         self.telescope_descriptions = [
             telescope_description_from(self.file_)
             for _ in range(self.n_telescopes)
@@ -255,12 +256,20 @@ class SimTelFile:
         return result
 
     def parse_simtel_tel_event(self, tel_event):
+        header = tel_event.next_assert(SimTelTelEvtHead)
+        adc_samp = tel_event.next_assert(SimTelTelADCSamp)
+        waveform = adc_samp.parse_data_field()
+        pixel_timing = tel_event.next_assert(SimTelPixelTiming)
+        image = tel_event.next_assert(SimTelTelImage)
+        pixel_list = tel_event.next_assert(SimTelPixelList)
         return {
-            'header': tel_event.next_assert(SimTelTelEvtHead),
-            'adc_samp': tel_event.next_assert(SimTelTelADCSamp),
-            'pixel_timing': tel_event.next_assert(SimTelPixelTiming),
-            'image': tel_event.next_assert(SimTelTelImage),
-            'pixel_list': tel_event.next_assert(SimTelPixelList),
+            'header': header,
+            'adc_samp': adc_samp,
+            'waveform': waveform,
+            'pixel_timing': pixel_timing,
+            'image': image,
+            'pixel_list': pixel_list,
+
         }
 
 
