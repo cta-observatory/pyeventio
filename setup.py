@@ -11,6 +11,8 @@ except ImportError:
     USE_CYTHON = False
 
 print('using cython', USE_CYTHON)
+
+
 # make sure numpy is installed before we try to build
 # the extenion
 class build_ext(_build_ext):
@@ -23,7 +25,11 @@ class build_ext(_build_ext):
 # if we have cython, use the cython file if not the c file
 ext = '.pyx' if USE_CYTHON else '.c'
 extensions = [
-    Extension('eventio.var_int', sources=['eventio/var_int' + ext])
+    Extension('eventio.var_int', sources=['eventio/var_int' + ext]),
+    Extension(
+        'eventio.simtel.camorgan',
+        sources=['eventio/simtel/camorgan' + ext]
+    )
 ]
 cmdclass = {'build_ext': build_ext}
 
