@@ -55,7 +55,41 @@
 
 
 """
-from eventio.base import EventIOFile
+from eventio.base import EventIOFile, EventIOObject
+
+class WrongType(Exception):
+    pass
+
+
+class WithNextAssert:
+    '''MixIn for EventIoFile adding `next_assert`'''
+
+    def next_assert(self, object_):
+        '''return next object from file, only
+        if it is of type `object_`
+        else raise WrongType
+
+        Make sure the object is not lost, but another call to next_assert
+        will see the exact same object
+        '''
+        if not hasattr(self, '_last_obj'):
+            self._last_obj = None
+
+        if self._last_obj is None:
+            try:
+                self._last_obj = next(self)
+            except StopIteration:
+                raise WrongType
+
+        o = self._last_obj
+
+        if not isinstance(o, object_):
+            raise WrongType(f"is:{o}, not:{object_}")
+
+        self._last_obj = None
+        return o
+
+EventIOObject.next_assert = WithNextAssert.next_assert
 from eventio.iact.objects import CORSIKAInputCard, CORSIKATelescopeData
 from eventio.simtel.objects import (
     History,
@@ -151,7 +185,18 @@ class SimTelFile:
 
     def next_mc_event(self):
         result = {}
-        result['mc_event'] = self.file_.next_assert(SimTelMCEvent)
+
+
+        mc_event = []
+        while True:
+            try:
+                mc_event.append(self.file_.next_assert(SimTelMCEvent))
+            except WrongType:
+                break
+
+        if not mc_event:
+            raise WrongType
+        result['mc_event'] = mc_event
         try:
             result['corsika_tel_data'] = self.file_.next_assert(CORSIKATelescopeData)
         except WrongType:
@@ -170,42 +215,41 @@ class SimTelFile:
 
         try:
             result['pe_sum'] = self.file_.next_assert(SimTelMCPeSum)
-            result['event'] = self.file_.next_assert(SimTelEvent)
+            event_ = self.file_.next_assert(SimTelEvent)
+            result['event'] = self.parse_simtel_event(event_)
         except WrongType:
             pass
 
         return result
 
+    def parse_simtel_event(self, simtel_event):
+        result = {}
+        result['cent_event'] = simtel_event.next_assert(SimTelCentEvent)
 
-class WrongType(Exception):
-    pass
+        tel_events = []
+        while True:
+            try:
+                tel_events.append(
+                    simtel_event.next_assert(SimTelTelEvent)
+                )
+            except WrongType:
+                break
+        result['tel_events'] = tel_events
 
+        track_events = []
+        while True:
+            try:
+                track_events.append(
+                    simtel_event.next_assert(SimTelTrackEvent)
+                )
+            except WrongType:
 
-class WithNextAssert:
-    '''MixIn for EventIoFile adding `next_assert`'''
+                break
+        result['track_events'] = track_events
 
-    def next_assert(self, object_):
-        '''return next object from file, only
-        if it is of type `object_`
-        else raise WrongType
+        # result['shower'] = simtel_event.next_assert(SimTelShower)
 
-        Make sure the object is not lost, but another call to next_assert
-        will see the exact same object
-        '''
-        if not hasattr(self, '_last_obj'):
-
-            self._last_obj = None
-
-        if self._last_obj is None:
-            self._last_obj = next(self)
-
-        o = self._last_obj
-
-        if not isinstance(o, object_):
-            raise WrongType(f"is:{o}, not:{object_}")
-
-        self._last_obj = None
-        return o
+        return result
 
 
 class EventIOFileWithNextAssert(EventIOFile, WithNextAssert):
