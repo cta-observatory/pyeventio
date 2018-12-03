@@ -48,6 +48,7 @@ class EventIOFile:
         self._next_header_pos = 0
 
     def __iter__(self):
+        self._next_header_pos = 0
         return self
 
     def __next__(self):
@@ -201,6 +202,7 @@ class EventIOObject:
             raise ValueError(
                 'Only EventIOObjects that contain just subobjects are iterable'
             )
+        self._next_header_pos = 0
         return self
 
     def __next__(self):

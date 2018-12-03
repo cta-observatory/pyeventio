@@ -3,7 +3,9 @@ import struct
 import numpy as np
 from numpy.lib.recfunctions import append_fields
 
-from ..tools import read_ints, read_from, read_eventio_string
+from ..tools import (
+    read_short, read_int, read_float, read_from, read_eventio_string
+)
 from ..base import EventIOObject
 from ..exceptions import WrongSizeException
 from .parse_corsika_data import (
@@ -66,7 +68,7 @@ class CORSIKATelescopeDefinition(EventIOObject):
 
     def __init__(self, header, parent):
         super().__init__(header, parent)
-        self.n_telescopes, = read_ints(1, self)
+        self.n_telescopes = read_int(self)
 
     def __len__(self):
         return self.n_telescopes
@@ -134,8 +136,8 @@ class CORSIKAArrayOffsets(EventIOObject):
 
     def __init__(self, header, parent):
         super().__init__(header, parent)
-        self.n_arrays, = read_ints(1, self)
-        self.time_offset, = read_from('f', self)
+        self.n_arrays = read_int(self)
+        self.time_offset = read_float(self)
         self.n_reuses = self.n_arrays
 
     def parse_data_field(self):
@@ -200,7 +202,7 @@ class IACTPhotons(EventIOObject):
             self.telescope,
             self.n_photons,
             self.n_bunches
-        ) = read_from('hhfi', self)
+        ) = read_from(self, 'hhfi')
 
     def __repr__(self):
         return '{}(length={}, n_bunches={})'.format(
@@ -292,7 +294,7 @@ class CORSIKAEventEndBlock(EventIOObject):
 
     def parse_data_field(self):
         self.seek(0)
-        n, = read_ints(1, self)
+        n = read_int(self)
         if n != 273:
             raise WrongSizeException(
                 'Expected 273 bytes, but found {}'.format(n))
@@ -321,7 +323,7 @@ class CORSIKARunEndBlock(EventIOObject):
         '''
 
         self.seek(0)
-        n, = read_ints(1, self)
+        n = read_int(self)
 
         dtype = np.dtype('float32')
         block = np.frombuffer(
@@ -350,11 +352,11 @@ class CORSIKALongitudinal(EventIOObject):
         '''
         self.seek(0)
         long = {}
-        long['event_id'], = read_ints(1, self)
-        long['type'], = read_ints(1, self)
-        long['np'], = read_from('<h', self)
-        long['nthick'], = read_from('<h', self)
-        long['thickstep'], = read_from('<f', self)
+        long['event_id'] = read_int(self)
+        long['type'] = read_int(self)
+        long['np'] = read_short(self)
+        long['nthick'] = read_short(self)
+        long['thickstep'] = read_float(self)
         long['data'] = np.frombuffer(
             self.read(4 * long['np'] * long['nthick']),
             dtype='<f4'
@@ -374,7 +376,7 @@ class CORSIKAInputCard(EventIOObject):
         Returns the CORSIKA steering card as string.
         '''
         self.seek(0)
-        n_strings, = read_from('<i', self)
+        n_strings = read_int(self)
         input_card = bytearray()
         for i in range(n_strings):
             input_card.extend(read_eventio_string(self))
