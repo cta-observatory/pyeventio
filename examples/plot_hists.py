@@ -13,7 +13,7 @@ parser.add_argument(
 default = 'eventio/resources/gamma_20deg_0deg_run102___cta-prod4-sst-1m_desert-2150m-Paranal-sst-1m.simtel.gz'
 
 args = parser.parse_args()
-inputfile = args.inputfile or default
+inputfile = args.inputfile[0] or default
 
 with EventIOFile(inputfile) as f:
     o = find_type(f, Histograms)
