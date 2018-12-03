@@ -226,6 +226,8 @@ class SimTelCamSettings(TelescopeObject):
 class SimTelCamOrgan(TelescopeObject):
     eventio_type = 2003
 
+    from .camorgan import read_sector_information
+
     def parse_data_field(self):
         assert_exact_version(self, supported_version=1)
         self.seek(0)
@@ -246,30 +248,22 @@ class SimTelCamOrgan(TelescopeObject):
             self, 'i2', num_pixels * num_gains
         ).reshape(num_pixels, num_gains)
 
-        sectors = []
-        for _ in range(num_pixels):
-            n = read_short(self)
-            sector = read_array(self, 'i2', n)
-            # FIXME:
-            # according to a comment in the c-sources
-            # there is might be an old bug here,
-            # which is trailing zeros.
-            # is an ascending list of numbes, so any zero
-            # after the first position indicates the end of sector.
-            #
-            # DN: maybe this bug was fixed long ago,
-            # so maybe we do not have to account for it here
-            # I will check for it in the tests.
-            sectors.append(sector)
+        data = self.read()
+        pos = 0
+        sectors, bytes_read = SimTelCamOrgan.read_sector_information(
+            data, num_pixels
+        )
+        pos += bytes_read
 
-        sector_data = read_array(
-            self,
+        sector_data = np.frombuffer(
+            data,
             dtype=[
                 ('type', 'uint8'),
                 ('thresh', 'float32'),
                 ('pix_thresh', 'float32')
             ],
             count=num_sectors,
+            offset=pos,
         )
 
         return {

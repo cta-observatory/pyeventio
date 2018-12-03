@@ -8,32 +8,7 @@ CORSIKA: https://www.ikp.kit.edu/corsika
 
 Documentation of the file format: https://www.mpi-hd.mpg.de/hfm/~bernlohr/sim_telarray/Documentation/eventio_en.pdf
 
-Reading the data of the following Objects is currently supported:
-
-+--------+-------------------------------+
-| Code   | Description                   |
-+========+===============================+
-| 1200   | CORSIKA Run Header            |
-+--------+-------------------------------+
-| 1201   | CORSIKA Telescope Positions   |
-+--------+-------------------------------+
-| 1202   | CORSIKA Event Header          |
-+--------+-------------------------------+
-| 1203   | CORSIKA Array Offsets         |
-+--------+-------------------------------+
-| 1204   | CORSIKA Telescope Data        |
-+--------+-------------------------------+
-| 1205   | IACT Photons                  |
-+--------+-------------------------------+
-| 1209   | CORSIKA Event End Block       |
-+--------+-------------------------------+
-| 1210   | CORSIKA Run End Block         |
-+--------+-------------------------------+
-| 1211   | CORSIKA Longitudinal Block    |
-+--------+-------------------------------+
-| 1212   | CORSIKA Input Card            |
-+--------+-------------------------------+
-
+Most blocks of the IACT extension and SimTel are implemented.
 The following blocks are known, but reading their data is not (yet)
 implemented:
 
@@ -46,6 +21,15 @@ implemented:
 +--------+-----------------------+
 | 1208   | IACT PhotoElectrons   |
 +--------+-----------------------+
+| 2017   | SimTel PixelCalib     |
++--------+-----------------------+
+| 2024   | SimTel RunStat        |
++--------+-----------------------+
+| 2025   | SimTel MC_RunStat     |
++--------+-----------------------+
+| 2028   | SimTel CalibEvent     |
++--------+-----------------------+
+
 
 install with
 ------------
@@ -137,22 +121,32 @@ This is how our test file looks like in the low level view:
     CORSIKARunEndBlock[1210](size=16, only_subobjects=False, first_byte=10036)
 
 
-And this is how a ``sim_telarray`` file looks like (sim\_telarray
-objects are not implemted yet):
+And this is how a ``sim_telarray`` file looks like
 
 :: 
 
-    In [4]: with EventIOFile('../../CTA/ctapipe-extra/ctapipe_resources/gamma_test.simtel.gz') as f: 
+    In [4]: with EventIOFile('eventio/resources/gamma_test.simtel.gz') as f: 
        ...:     for obj in f: 
        ...:         print(obj)                                                                                                                                     
-    EventIOObject[70](size=11960, only_subobjects=True, first_byte=16)
-    EventIOObject[70](size=1744732, only_subobjects=True, first_byte=11992)
-    EventIOObject[70](size=838000, only_subobjects=True, first_byte=1756740)
-    EventIOObject[2000](size=1876, only_subobjects=False, first_byte=2594756)
-    EventIOObject[2001](size=140, only_subobjects=False, first_byte=2596648)
-    EventIOObject[2001](size=140, only_subobjects=False, first_byte=2596804)
-    ...
-
+    History[70](size=11960, only_subobjects=True, first_byte=16)
+    History[70](size=1744732, only_subobjects=True, first_byte=11992)
+    History[70](size=838000, only_subobjects=True, first_byte=1756740)
+    SimTelRunHeader[2000](size=1876, only_subobjects=False, first_byte=2594756)
+    SimTelMCRunHeader[2001](size=140, only_subobjects=False, first_byte=2596648)
+    SimTelMCRunHeader[2001](size=140, only_subobjects=False, first_byte=2596804)
+    CORSIKAInputCard[1212](size=31408, only_subobjects=False, first_byte=2596960)
+    CORSIKAInputCard[1212](size=31376, only_subobjects=False, first_byte=2628384)
+    SimTelCamSettings[2002](telescope_id=1, size=29700, first_byte=2659776)
+    SimTelCamOrgan[2003](telescope_id=1, size=108896, first_byte=2689492)
+    SimTelPixelset[2004](telescope_id=1, size=10060, first_byte=2798404)
+    SimTelPixelDisable[2005](size=8, only_subobjects=False, first_byte=2808480)
+    SimTelCamsoftset[2006](size=60, only_subobjects=False, first_byte=2808504)
+    SimTelTrackSet[2008](telescope_id=1, size=52, first_byte=2808580)
+    SimTelPointingCor[2007](telescope_id=1, size=8, first_byte=2808648)
+    SimTelCamSettings[2002](telescope_id=2, size=29700, first_byte=2808672)
+    .
+    .
+    .
 
 
 
