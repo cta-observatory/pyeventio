@@ -10,6 +10,8 @@ cpdef (unsigned long, unsigned int) unsigned_varint(const unsigned char[:] data,
 
 
 def varint(const unsigned char[:] data, unsigned long offset=0):
+    cdef unsigned int length
+    cdef unsigned long value
     value, length = unsigned_varint(data, offset)
     if (value & 1) == 1:  # Negative number;
         return -(value >> 1) - 1, length
@@ -142,25 +144,31 @@ def varint_array(
     unsigned long offset = 0,
 ):
     cdef unsigned long bytes_read
-    cdef np.ndarray mask
+    cdef np.ndarray[np.uint64_t, ndim=1] unsigned_output
     cdef np.ndarray[np.int64_t, ndim=1] output = np.empty(n_elements, dtype='int64')
 
     unsigned_output, bytes_read = unsigned_varint_array(data, n_elements, offset)
 
-    mask = (output & 1) == 1
-    output[mask] = -(unsigned_output[mask] >> 1) - 1
-    output[~mask] = unsigned_output[~mask] >> 1
+    cdef unsigned long one = 1;
+    cdef unsigned long i
+
+    for i in range(n_elements):
+        if (unsigned_output[i] & one):
+            output[i] = -(unsigned_output[i] >> one) - one
+        else:
+            output[i] = unsigned_output[i] >> one
 
     return output, bytes_read
 
 
-def unsigned_varint_arrays_differential(
+cpdef unsigned_varint_arrays_differential(
     const unsigned char[:] data,
     unsigned long n_arrays,
     unsigned long n_elements,
     unsigned long offset = 0,
 ):
     cdef unsigned long pos = 0
+    cdef unsigned long bytes_read = 0
     cdef unsigned long bytes_read_total = 0
     cdef unsigned long i
     cdef unsigned long j
