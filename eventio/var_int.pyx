@@ -38,7 +38,7 @@ cpdef unsigned int get_length_of_varint(const unsigned char first_byte):
 cpdef unsigned long parse_varint(const unsigned char[:] var_int_bytes):
     length = var_int_bytes.shape[0]
     cdef unsigned long v[9]
-    cdef unsigned long i  = 0
+    cdef long i  = 0
     for i in range(length):
         v[i] = var_int_bytes[i]
 
@@ -165,7 +165,7 @@ def unsigned_varint_arrays_differential(
     cdef unsigned long i
     cdef unsigned long j
 
-    cdef np.ndarray output = np.empty(
+    cdef np.ndarray[np.uint32_t, ndim=2] output = np.empty(
         (n_arrays, n_elements), dtype='uint32'
     )
 
