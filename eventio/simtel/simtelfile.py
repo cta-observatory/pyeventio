@@ -82,14 +82,41 @@ class WithNextAssert:
                 raise WrongType
 
         o = self._last_obj
-
         if not isinstance(o, object_):
             raise WrongType(f"is:{o}, not:{object_}")
 
         self._last_obj = None
         return o
 
+    def next_type_or_none(self, object_):
+        '''return next object from file, only
+        if it is of type `object_`
+        else return None
+
+        Make sure the object is not lost, but another call to next_assert
+        will see the exact same object
+        '''
+        if not hasattr(self, '_last_obj'):
+            self._last_obj = None
+
+        if self._last_obj is None:
+            try:
+                self._last_obj = next(self)
+            except StopIteration:
+                raise WrongType
+
+        o = self._last_obj
+
+        if not isinstance(o, object_):
+            return None
+
+        self._last_obj = None
+        return o
+
+
 EventIOObject.next_assert = WithNextAssert.next_assert
+EventIOObject.next_type_or_none = WithNextAssert.next_type_or_none
+
 from eventio.iact.objects import CORSIKAInputCard, CORSIKATelescopeData
 from eventio.simtel.objects import (
     History,
@@ -140,22 +167,8 @@ class SimTelFile:
 
         self.header = self.file_.next_assert(SimTelRunHeader)
         self.n_telescopes = self.header.parse_data_field()['n_telescopes']
-        self.mc_header = []
-        while True:
-            try:
-                self.mc_header.append(self.file_.next_assert(SimTelMCRunHeader))
-            except WrongType:
-                break
-
-        self.corsika_input = []
-        while True:
-            try:
-                self.corsika_input.append(self.file_.next_assert(CORSIKAInputCard))
-            except WrongType:
-                break
-
-
-
+        self.mc_header = read_all_of_type(self.file_, SimTelMCRunHeader)
+        self.corsika_input = read_all_of_type(self.file_, CORSIKAInputCard)
         self.telescope_descriptions = [
             telescope_description_from(self.file_)
             for _ in range(self.n_telescopes)
@@ -179,98 +192,46 @@ class SimTelFile:
         except WrongType:
             try:
                 self.shower = self.file_.next_assert(SimTelMCShower)
-                event = self.next_mc_event()
-                return self.shower, event
             except WrongType:
                 raise StopIteration
+
+            event = self.next_mc_event()
+            return self.shower, event
 
     def next_mc_event(self):
         result = {}
 
+        # There is for sure exactly one of these
+        result['mc_event'] = self.file_.next_assert(SimTelMCEvent)
+        result['corsika_tel_data'] = self.file_.next_type_or_none(CORSIKATelescopeData)
 
-        mc_event = []
-        while True:
-            try:
-                mc_event.append(self.file_.next_assert(SimTelMCEvent))
-            except WrongType:
-                break
-
-        if not mc_event:
-            raise WrongType
-        result['mc_event'] = mc_event
-        try:
-            result['corsika_tel_data'] = self.file_.next_assert(CORSIKATelescopeData)
-        except WrongType:
-            pass
-
-        try:
-            result['moni_lascal'] = [
-                (
-                    self.file_.next_assert(SimTelTelMoni),
-                    self.file_.next_assert(SimTelLasCal),
-                )
-                for _ in range(self.n_telescopes)
-            ]
-        except WrongType:
-            pass
-
+        self.moni_lascal = try_to_read_moni_lascal(self.file_, self.n_telescopes)
         try:
             result['pe_sum'] = self.file_.next_assert(SimTelMCPeSum)
-            event_ = self.file_.next_assert(SimTelEvent)
-            result['event'] = self.parse_simtel_event(event_)
         except WrongType:
-            pass
+            return result
+
+        # iff we had a MCPeSum we also must have an Event
+        event_ = self.file_.next_assert(SimTelEvent)
+        result['event'] = parse_event(event_)
 
         return result
 
-    def parse_simtel_event(self, simtel_event):
-        result = {}
-        result['cent_event'] = simtel_event.next_assert(SimTelCentEvent)
 
-        tel_events = []
-        while True:
-            try:
-                tel_event = self.parse_simtel_tel_event(
-                    simtel_event.next_assert(SimTelTelEvent)
-                )
 
-                tel_event['waveform'] = tel_event['adc_samp'].parse_data_field()
-                tel_events.append(tel_event)
-            except WrongType:
-                break
-        result['tel_events'] = tel_events
 
-        track_events = []
-        while True:
-            try:
-                track_events.append(
-                    simtel_event.next_assert(SimTelTrackEvent)
-                )
-            except WrongType:
 
-                break
-        result['track_events'] = track_events
-
-        # result['shower'] = simtel_event.next_assert(SimTelShower)
-
-        return result
-
-    def parse_simtel_tel_event(self, tel_event):
-        header = tel_event.next_assert(SimTelTelEvtHead)
-        adc_samp = tel_event.next_assert(SimTelTelADCSamp)
-        waveform = adc_samp.parse_data_field()
-        pixel_timing = tel_event.next_assert(SimTelPixelTiming)
-        image = tel_event.next_assert(SimTelTelImage)
-        pixel_list = tel_event.next_assert(SimTelPixelList)
-        return {
-            'header': header,
-            'adc_samp': adc_samp,
-            'waveform': waveform,
-            'pixel_timing': pixel_timing,
-            'image': image,
-            'pixel_list': pixel_list,
-
-        }
+def try_to_read_moni_lascal(f, n_telescopes):
+    try:
+        return [
+            (
+                f.next_assert(SimTelTelMoni),
+                f.next_assert(SimTelLasCal),
+            )
+            for _ in range(n_telescopes)
+        ]
+    except WrongType:
+        pass
 
 
 class EventIOFileWithNextAssert(EventIOFile, WithNextAssert):
@@ -288,3 +249,95 @@ def telescope_description_from(file_):
         file_.next_assert(SimTelPointingCor),
     ]
 
+
+def read_all_of_type(f, type_, converter=lambda x: x):
+    result = []
+    while True:
+        try:
+            result.append(
+                converter(
+                    f.next_assert(type_)
+                )
+            )
+        except WrongType:
+            break
+    return result
+
+
+def parse_event(event):
+    '''structure of event:
+        CentEvent[2009]  <-- this knows how many TelEvents
+
+        TelEvent[2202]
+        ...
+        TelEvent[2208]
+
+        TrackEvent[2101]
+        ...
+        TrackEvent[2164]
+
+        Shower[2015]
+
+
+        In words:
+            1 cent event
+            n tel events
+            m track events (n does not need to be == m)
+            1 shower
+    '''
+    result = {}
+    result['cent_event'] = event.next_assert(SimTelCentEvent)
+    result['tel_events'] = read_all_of_type(
+        event,
+        SimTelTelEvent,
+        converter=parse_tel_event,
+    )
+    #assert result['tel_events'], (result, result['cent_event'].header)  # more than zero
+    result['track_events'] = read_all_of_type(event, SimTelTrackEvent)
+    #assert result['track_events'], (result, result['cent_event'].header)  # more than zero
+    result['shower'] = read_all_of_type(event, SimTelShower)
+    return result
+
+
+def parse_tel_event(tel_event):
+    '''structure of tel_event
+    probably: did survive cleaning and hence we have shower information
+     SimTelTelEvent[2204]
+         SimTelTelEvtHead[2011]
+         SimTelTelADCSamp[2013]
+         SimTelPixelTiming[2016]
+         SimTelTelImage[2014]
+         SimTelPixelList[2027]
+
+    probably: did not survive cleaning
+     SimTelTelEvent[2208]
+         SimTelTelEvtHead[2011]
+         SimTelTelADCSamp[2013]
+         SimTelPixelTiming[2016]
+    '''
+
+    # These 3 are sure
+    header = tel_event.next_assert(SimTelTelEvtHead)
+
+    # well could be either ADCSamp or ADCSum
+    adc_stuff = tel_event.next_type_or_none(SimTelTelADCSamp)
+    if adc_stuff is None:
+        adc_stuff = tel_event.next_type_or_none(SimTelTelADCSum)
+        if adc_stuff is None:
+            raise WrongType
+    waveform = adc_stuff.parse_data_field()
+    pixel_timing = tel_event.next_assert(SimTelPixelTiming)
+    result = {
+        'header': header,
+        'waveform': waveform,
+        'pixel_timing': pixel_timing,
+    }
+
+    # these are only sometimes there
+
+    image = tel_event.next_type_or_none(SimTelTelImage)
+    if image is not None:
+        result['image'] = image
+    result['pixel_list'] = tel_event.next_type_or_none(SimTelPixelList)
+
+    return result
