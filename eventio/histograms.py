@@ -9,7 +9,7 @@ class Histograms(EventIOObject):
 
     def parse_data_field(self):
         assert_version_in(self, [1, 2])
-        self.read(0)
+        self.seek(0)
 
         n_histograms = read_short(self)
 
