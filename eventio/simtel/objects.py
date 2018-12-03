@@ -445,6 +445,14 @@ class SimTelCentEvent(EventIOObject):
         super().__init__(header, parent)
         self.global_count = self.header.id
 
+    def __repr__(self):
+        return '{}[{}](shower_event_id={})'.format(
+            self.__class__.__name__,
+            self.header.type,
+            self.header.id,
+        )
+
+
     def parse_data_field(self):
         assert_max_version(self, 2)
         self.seek(0)
@@ -539,12 +547,10 @@ class SimTelTrackEvent(EventIOObject):
         return 2100 + telescope_id % 100 + 1000 * (telescope_id // 100)
 
     def __repr__(self):
-        return '{}[{}](telescope_id={}, size={}, first_byte={})'.format(
+        return '{}[{}](telescope_id={})'.format(
             self.__class__.__name__,
             self.eventio_type,
             self.telescope_id,
-            self.header.length,
-            self.header.data_field_first_byte
         )
 
 
@@ -603,6 +609,14 @@ class SimTelEvent(EventIOObject):
 class SimTelTelEvtHead(TelescopeObject):
     eventio_type = 2011
 
+    def __repr__(self):
+        return '{}[{}](telescope_id={})'.format(
+            self.__class__.__name__,
+            self.header.type,
+            self.header.id,
+        )
+
+
     def parse_data_field(self):
         assert_max_version(self, 2)
 
@@ -643,7 +657,7 @@ class SimTelTelEvtHead(TelescopeObject):
             if self.header.version <= 1:
                 event_head['num_phys_addr'] = struct.unpack('<h', data[pos:pos + 2])
                 pos += 2
-                event_head['phys_addr'] = np.from_buffer(
+                event_head['phys_addr'] = np.frombuffer(
                     data, dtype='<i2', count=event_head['num_phys_addr'], offset=pos
                 )
                 pos += 2 * event_head['num_phys_addr']
@@ -667,6 +681,14 @@ class SimTelTelADCSum(EventIOObject):
             self.telescope_id = (header.id >> 25) & 0x1f
         else:
             self.telescope_id = (header.id >> 12) & 0xffff
+
+    def __repr__(self):
+        return '{}[{}](telescope_id={})'.format(
+            self.__class__.__name__,
+            self.header.type,
+            self.telescope_id,
+        )
+
 
     def parse_data_field(self):
         assert_exact_version(self, 3)
@@ -787,6 +809,18 @@ class SimTelTelADCSamp(EventIOObject):
 class SimTelTelImage(EventIOObject):
     eventio_type = 2014
 
+    def __repr__(self):
+        telescope_id = (
+            (self.header.id & 0xff) | (self.header.id & 0x3f000000) >> 16
+        )
+
+        return '{}[{}](telescope_id={})'.format(
+            self.__class__.__name__,
+            self.header.type,
+            telescope_id,
+        )
+
+
     def parse_data_field(self):
         assert_exact_version(self, supported_version=5)
         self.seek(0)
@@ -852,6 +886,13 @@ class SimTelTelImage(EventIOObject):
 class SimTelShower(EventIOObject):
     eventio_type = 2015
 
+    def __repr__(self):
+        return '{}[{}](result_bits={})'.format(
+            self.__class__.__name__,
+            self.header.type,
+            np.binary_repr(self.header.id, width=12),
+        )
+
     def parse_data_field(self):
         assert_exact_version(self, supported_version=1)
         self.seek(0)
@@ -907,6 +948,13 @@ class SimTelShower(EventIOObject):
 
 class SimTelPixelTiming(EventIOObject):
     eventio_type = 2016
+
+    def __repr__(self):
+        return '{}[{}](telescope_id={})'.format(
+            self.__class__.__name__,
+            self.header.type,
+            self.header.id,
+        )
 
     def parse_data_field(self):
         assert_exact_version(self, supported_version=1)
@@ -1045,6 +1093,16 @@ class SimTelPixelCalib(EventIOObject):
 class SimTelMCShower(EventIOObject):
     eventio_type = 2020
 
+    def __init__(self, header, parent):
+        super().__init__(header, parent)
+
+    def __repr__(self):
+        return '{}[{}](shower_id={})'.format(
+            self.__class__.__name__,
+            self.header.type,
+            self.header.id,
+        )
+
     def parse_data_field(self):
         assert_max_version(self, 2)
 
@@ -1103,6 +1161,13 @@ class MC_Extra_Params(EventIOObject):
 
 class SimTelMCEvent(EventIOObject):
     eventio_type = 2021
+
+    def __repr__(self):
+        return '{}[{}](shower_event_id={})'.format(
+            self.__class__.__name__,
+            self.header.type,
+            self.header.id,
+        )
 
     def parse_data_field(self):
         ''' '''
@@ -1312,6 +1377,14 @@ class SimTelMCRunStat(EventIOObject):
 class SimTelMCPeSum(EventIOObject):
     eventio_type = 2026
 
+    def __repr__(self):
+        return '{}[{}](shower_event_id={})'.format(
+            self.__class__.__name__,
+            self.header.type,
+            self.header.id,
+        )
+
+
     def parse_data_field(self):
         assert_exact_version(self, supported_version=2)
         self.seek(0)
@@ -1360,6 +1433,13 @@ class SimTelMCPeSum(EventIOObject):
 
 class SimTelPixelList(EventIOObject):
     eventio_type = 2027
+
+    def __repr__(self):
+        return '{}[{}](telescope_id={})'.format(
+            self.__class__.__name__,
+            self.header.type,
+            self.header.id,
+        )
 
     def parse_data_field(self):
         # even in the prod3b version of Max N the objects
