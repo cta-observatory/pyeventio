@@ -5,7 +5,7 @@ import logging
 import warnings
 
 from .file_types import is_gzip, is_eventio, is_zstd
-from .bits import parse_header_bytes
+from .bits import parse_header_bytes, get_bits_from_word
 from . import constants
 from .exceptions import WrongTypeException
 
@@ -113,32 +113,34 @@ def read_next_header(eventio, toplevel=True):
     )
 
     (
-        type_int,
-        type_version_field,
+        type_,
+        user,
+        extended,
+        version,
         id_field,
         only_subobjects,
-        length
+        length,
     ) = parse_header_bytes(header_bytes)
-    type_, version, user, extended = type_version_field
 
-    if type_version_field.extended:
+    if extended:
         extension_field = eventio.read(constants.EXTENSION_SIZE)
         check_size_or_stopiteration(extension_field, constants.EXTENSION_SIZE, True)
         length += parse_extension_field(extension_field)
 
     data_field_first_byte = eventio.tell()
 
-    return ObjectHeader(
-        endianness,
-        type_version_field.type,
-        type_version_field.version,
-        type_version_field.user,
-        type_version_field.extended,
-        only_subobjects,
-        length,
-        id_field,
-        data_field_first_byte,
+    header = ObjectHeader(
+        endianness=endianness,
+        type=type_,
+        version=version,
+        user=user,
+        extended=extended,
+        only_subobjects=only_subobjects,
+        length=length,
+        id=id_field,
+        data_field_first_byte=data_field_first_byte,
     )
+    return header
 
 
 def parse_sync_bytes(sync):
@@ -271,23 +273,6 @@ ObjectHeader = namedtuple(
         'data_field_first_byte',
     ]
 )
-
-
-def parse_length_field(length_field):
-    '''parse the "length field"
-
-    The length field contains:
-
-     - only_subobjects: boolean
-        This field tells us if the current object only consists of subobjects
-        and does not contain any data on its own.
-     - length: unsigend 30 bit unsigned integer
-        The length of the data section of this object in bytes.
-    '''
-    word, = struct.unpack('<I', length_field)
-    only_subobjects = bool_bit_from_pos(word, constants.ONLY_SUBOBJECTS_POS)
-    length = get_bits_from_word(word, constants.LENGTH_NUM_BITS, constants.LENGTH_POS)
-    return only_subobjects, length
 
 
 def parse_extension_field(extension_field):

@@ -1,5 +1,5 @@
 # cython: language_level=3
-from cython import view
+import cython
 
 cdef unsigned int OBJECT_HEADER_SIZE = 12
 cdef unsigned int EXTENSION_SIZE = 4
@@ -62,37 +62,37 @@ cdef (unsigned int, unsigned int, bint, bint) parse_type_field(unsigned int word
     return type_, version, user_bit, extended
 
 
+@cython.boundscheck(False)
+@cython.wraparound(False)
 cdef unsigned long unpack_uint32(const unsigned char[:] data):
-    return 5
+    return (
+        (<unsigned long> data[0])
+        + ((<unsigned long> data[1]) << 8)
+        + ((<unsigned long> data[2]) << 16)
+        + ((<unsigned long> data[3]) << 24)
+    )
 
 
 cpdef parse_header_bytes(const unsigned char[:] header_bytes):
     cdef unsigned long type_int
     cdef unsigned long id_field
-    cdef unsigned long* long_ptr
+    cdef unsigned long length_field
 
-    long_ptr = <unsigned long*> &header_bytes[0]
-    type_int = long_ptr[0]
-    type_version_field = parse_type_field(type_int)
-    long_ptr = <unsigned long*> &header_bytes[4]
-    id_field = long_ptr[0]
-    only_subobjects, length = parse_length_field(header_bytes[8:12])
-
-    return type_int, type_version_field, id_field, only_subobjects, length
+    cdef unsigned long type_
+    cdef bint user
+    cdef bint extended
+    cdef unsigned long version
+    cdef bint only_subobjects
+    cdef unsigned long length
 
 
-cdef (bint, unsigned long) parse_length_field(const unsigned char[:] length_field):
-    '''parse the "length field"
+    type_int = unpack_uint32(header_bytes[0:4])
+    type_, version, user, extended = parse_type_field(type_int)
+    id_field = unpack_uint32(header_bytes[4:8])
 
-    The length field contains:
+    length_field = unpack_uint32(header_bytes[8:12])
 
-     - only_subobjects: boolean
-        This field tells us if the current object only consists of subobjects
-        and does not contain any data on its own.
-     - length: unsigend 30 bit unsigned integer
-        The length of the data section of this object in bytes.
-    '''
-    word = unpack_uint32(length_field)
-    only_subobjects = bool_bit_from_pos(word, ONLY_SUBOBJECTS_POS)
-    length = get_bits_from_word(word, LENGTH_NUM_BITS, LENGTH_POS)
-    return only_subobjects, length
+    only_subobjects = bool_bit_from_pos(length_field, ONLY_SUBOBJECTS_POS)
+    length = get_bits_from_word(length_field, LENGTH_NUM_BITS, LENGTH_POS)
+
+    return type_, user, extended, version, id_field, only_subobjects, length
