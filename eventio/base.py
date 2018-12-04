@@ -5,7 +5,7 @@ import logging
 import warnings
 
 from .file_types import is_gzip, is_eventio, is_zstd
-from .bits import bool_bit_from_pos, get_bits_from_word
+from .bits import parse_header_bytes
 from . import constants
 from .exceptions import WrongTypeException
 
@@ -112,9 +112,14 @@ def read_next_header(eventio, toplevel=True):
         header_bytes, constants.OBJECT_HEADER_SIZE, warn_zero=toplevel
     )
 
-    type_version_field = parse_type_field(header_bytes[0:4])
-    id_field, = struct.unpack('<I', header_bytes[4:8])
-    only_subobjects, length = parse_length_field(header_bytes[8:12])
+    (
+        type_int,
+        type_version_field,
+        id_field,
+        only_subobjects,
+        length
+    ) = parse_header_bytes(header_bytes)
+    type_, version, user, extended = type_version_field
 
     if type_version_field.extended:
         extension_field = eventio.read(constants.EXTENSION_SIZE)
@@ -266,21 +271,6 @@ ObjectHeader = namedtuple(
         'data_field_first_byte',
     ]
 )
-
-TypeInfo = namedtuple('TypeInfo', ['type', 'version', 'user', 'extended'])
-
-
-def parse_type_field(type_field):
-    '''parse TypeInfo
-
-    TypeInfo is encoded in a 32bit word.
-    '''
-    word, = struct.unpack('<I', type_field)
-    type_ = get_bits_from_word(word, constants.TYPE_NUM_BITS, constants.TYPE_POS)
-    user_bit = bool_bit_from_pos(word, constants.USER_POS)
-    extended = bool_bit_from_pos(word, constants.EXTENDED_POS)
-    version = get_bits_from_word(word, constants.VERSION_NUM_BITS, constants.VERSION_POS)
-    return TypeInfo(type_, version, user_bit, extended)
 
 
 def parse_length_field(length_field):
