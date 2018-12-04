@@ -237,20 +237,22 @@ class SimTelFile:
         event_ = self.file_.next_type_or_none(SimTelEvent)
         if event_ is not None:
             result['event'] = parse_event(event_)
-        else:
-            result['event'] = event_
 
         return result
 
     def update_moni_lascal(self):
         try:
             for tel_id in range(self.n_telescopes):
-                self.tel_moni[tel_id] = self.file_.next_assert(
+                moni = self.file_.next_assert(
                     SimTelTelMoni
                 ).parse_data_field()
-                self.lascal[tel_id] = self.file_.next_assert(
+                self.tel_moni[moni['telescope_id']] = moni
+
+                lascal = self.file_.next_assert(
                     SimTelLasCal
                 ).parse_data_field()
+                self.lascal[lascal['telescope_id']] = lascal
+
         except WrongType:
             # this is normal .. not every event has updates here
             pass
@@ -362,9 +364,9 @@ def parse_tel_event(tel_event):
          SimTelTelADCSamp[2013]
          SimTelPixelTiming[2016]
     '''
-
+    result = {}
     # These 3 are sure
-    header = tel_event.next_assert(SimTelTelEvtHead).parse_data_field()
+    result['header'] = tel_event.next_assert(SimTelTelEvtHead).parse_data_field()
 
     # well could be either ADCSamp or ADCSum
     adc_stuff = tel_event.next_type_or_none(SimTelTelADCSamp)
@@ -372,16 +374,14 @@ def parse_tel_event(tel_event):
         adc_stuff = tel_event.next_type_or_none(SimTelTelADCSum)
         if adc_stuff is None:
             raise WrongType
-    waveform = adc_stuff.parse_data_field()
-    pixel_timing = tel_event.next_assert(SimTelPixelTiming)
-    result = {
-        'header': header,
-        'waveform': waveform,
-        'pixel_timing': pixel_timing,
-    }
+        waveform = adc_stuff.parse_data_field()[..., None]
+    else:
+        waveform = adc_stuff.parse_data_field()
+
+    result['waveform'] = waveform
+    result['pixel_timing'] = tel_event.next_assert(SimTelPixelTiming)
 
     # these are only sometimes there
-
     image = tel_event.next_type_or_none(SimTelTelImage)
     if image is not None:
         result['image'] = image.parse_data_field()

@@ -715,7 +715,10 @@ class SimTelTelADCSum(EventIOObject):
             data, n_arrays=n_gains, n_elements=n_pixels
         )
 
-        return raw['adc_sums']
+        try:
+            return np.squeeze(raw['adc_sums'], axis=-1)
+        except ValueError:
+            return raw['adc_sums']
 
 
 class SimTelTelADCSamp(EventIOObject):
@@ -750,9 +753,16 @@ class SimTelTelADCSamp(EventIOObject):
             'num_samples': read_short(self),
         }
         if self._zero_sup_mode:
-            return self._parse_in_zero_suppressed_mode(**args)
+            result = self._parse_in_zero_suppressed_mode(**args)
         else:
-            return self._parse_in_not_zero_suppressed_mode(**args)
+            result = self._parse_in_not_zero_suppressed_mode(**args)
+
+        try:
+            result = np.squeeze(result, axis=-1)
+        except ValueError:
+            pass
+
+        return result
 
     def _parse_in_zero_suppressed_mode(
         self,
@@ -1251,6 +1261,8 @@ class SimTelTelMoni(EventIOObject):
         for part_id in range(8):
             part_parser = part_parser_map[what & (1 << part_id)]
             result.update(part_parser(**part_parser_args))
+
+        result['telescope_id'] = self.telescope_id
         return result
 
     def _nothing_changed_here(self, **kwargs):
