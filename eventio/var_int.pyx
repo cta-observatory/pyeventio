@@ -25,7 +25,7 @@ cpdef (unsigned long, unsigned int) unsigned_varint(const unsigned char[:] data,
     return value, length
 
 
-def varint(const unsigned char[:] data, unsigned long offset=0):
+cpdef (long, unsigned int) varint(const unsigned char[:] data, unsigned long offset=0):
     cdef unsigned int length
     cdef unsigned long value
     value, length = unsigned_varint(data, offset)
