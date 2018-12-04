@@ -229,23 +229,23 @@ cpdef unsigned_varint_array_differential(
         pos += 1
 
         if (v0 & 0x80) == 0:  # one byte
-            if (v0 & 1) == 0:  # positive
+            if (v0 & 0x01) == 0:  # positive
                 val += v0 >> 1
             else:  # negative
                 val -= (v0 >> 1) + 1
         elif (v0 & 0xc0) == 0x80:  # two bytes
             v1 = data[pos + offset]
             pos += 1
-            if (v1 & 1) == 0:  # positive
+            if (v1 & 0x01) == 0:  # positive
                 val += ((v0 & 0x3f) << 7) | (v1 >> 1)
             else:  # negative
-                val -= ((v0 & 0x3f) << 7) | ((v1 >> 1) + 1)
+                val -= (((v0 & 0x3f) << 7) | (v1 >> 1)) + 1
         elif (v0 & 0xe0) == 0xc0:  # three bytes
             v1 = data[pos + offset + 0]
             v2 = data[pos + offset + 1]
             pos += 2
 
-            if (v2 & 1) == 0:
+            if (v2 & 0x01) == 0:
                 val += (
                     ((v0 & 0x1f) << 15)
                     | (v1 << 7)
@@ -255,14 +255,14 @@ cpdef unsigned_varint_array_differential(
                 val -= (
                     ((v0 & 0x1f) << 15)
                     | (v1 << 7)
-                    | ((v2 >> 1) + 1)
-                )
+                    | (v2 >> 1)
+                ) + 1
         elif (v0 & 0xf0) == 0xe0:  # four bytes
             v1 = data[pos + offset + 0]
             v2 = data[pos + offset + 1]
             v3 = data[pos + offset + 2]
             pos += 3
-            if (v3 & 1) == 0:
+            if (v3 & 0x01) == 0:
                 val += (
                     ((v0 & 0x0f) << 23)
                     | (v1 << 15)
@@ -274,8 +274,8 @@ cpdef unsigned_varint_array_differential(
                     ((v0 & 0x0f) << 23)
                     | (v1 << 15)
                     | (v2 << 7)
-                    | ((v3 >> 1) + 1)
-                )
+                    | (v3 >> 1)
+                ) + 1
         elif (v0 & 0xf8) == 0xf0:
             v1 = data[pos + offset + 0]
             v2 = data[pos + offset + 1]
@@ -283,7 +283,7 @@ cpdef unsigned_varint_array_differential(
             v4 = data[pos + offset + 3]
             pos += 4
             # The format would allow bits 32 and 33 being set but we ignore this here. */
-            if (v4 & 1) == 0:
+            if (v4 & 0x01) == 0:
                 val += (
                     ((v0 & 0x07) << 31)
                     | (v1 << 23)
@@ -297,8 +297,8 @@ cpdef unsigned_varint_array_differential(
                     | (v1 << 23)
                     | (v2 << 15)
                     | (v3 << 7)
-                    | ((v4 >> 1) + 1)
-                )
+                    | (v4 >> 1)
+                ) + 1
         output[i] = val
 
     return output, pos
