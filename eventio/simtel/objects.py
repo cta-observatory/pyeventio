@@ -668,6 +668,7 @@ class SimTelTelEvtHead(TelescopeObject):
                 )
                 pos += length
 
+        event_head['telescope_id'] = self.header.id
         return event_head
 
 
