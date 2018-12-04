@@ -90,7 +90,8 @@ def read_utf8_like_unsigned_int(f):
     # this is a reimplementation from eventio.c lines 797ff
     var_int_bytes = bytearray(f.read(1))
     var_int_length = get_length_of_varint(var_int_bytes[0])
-    var_int_bytes.extend(f.read(var_int_length - 1))
+    if var_int_length - 1 > 0:
+        var_int_bytes.extend(f.read(var_int_length - 1))
 
     return parse_varint(var_int_bytes)
 
