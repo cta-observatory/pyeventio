@@ -81,10 +81,6 @@ class WithNextAssert:
         if self._last_obj is None:
             try:
                 self._last_obj = next(self)
-                # rint('just, read:', self._last_obj)
-                # rint('size:', self._last_obj.header.length)
-                # rint('tell:', self.tell())
-
             except StopIteration:
                 raise WrongType
 
@@ -113,7 +109,6 @@ class WithNextAssert:
                 raise WrongType
 
         o = self._last_obj
-
         if not isinstance(o, object_):
             return None
 
@@ -239,9 +234,11 @@ class SimTelFile:
         except WrongType:
             return result
 
-        # iff we had a MCPeSum we also must have an Event
-        event_ = self.file_.next_assert(SimTelEvent)
-        result['event'] = parse_event(event_)
+        event_ = self.file_.next_type_or_none(SimTelEvent)
+        if event_ is not None:
+            result['event'] = parse_event(event_)
+        else:
+            result['event'] = event_
 
         return result
 
