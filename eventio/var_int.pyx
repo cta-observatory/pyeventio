@@ -1,5 +1,5 @@
 # cython: language_level=3
-
+import cython
 import numpy as np
 cimport numpy as np
 
@@ -17,6 +17,7 @@ INT64 = np.int64
 ctypedef np.int64_t INT64_t
 
 
+@cython.wraparound(False)  # disable negative indexing
 cpdef (unsigned long, unsigned int) unsigned_varint(const unsigned char[:] data, unsigned long offset=0):
     cdef unsigned int length
     cdef unsigned long value
@@ -25,6 +26,7 @@ cpdef (unsigned long, unsigned int) unsigned_varint(const unsigned char[:] data,
     return value, length
 
 
+@cython.wraparound(False)  # disable negative indexing
 cpdef (long, unsigned int) varint(const unsigned char[:] data, unsigned long offset=0):
     cdef unsigned int length
     cdef unsigned long value
@@ -53,6 +55,8 @@ cpdef unsigned int get_length_of_varint(const unsigned char first_byte):
         return 8
     return 9
 
+
+@cython.wraparound(False)  # disable negative indexing
 cpdef unsigned long parse_varint(const unsigned char[:] var_int_bytes):
     length = var_int_bytes.shape[0]
     cdef unsigned long v[9]
@@ -130,6 +134,7 @@ cpdef unsigned long parse_varint(const unsigned char[:] var_int_bytes):
     )
 
 
+@cython.wraparound(False)  # disable negative indexing
 cpdef unsigned_varint_array(
     const unsigned char[:] data,
     unsigned long n_elements,
@@ -154,6 +159,7 @@ cpdef unsigned_varint_array(
     return output, pos
 
 
+@cython.wraparound(False)  # disable negative indexing
 def varint_array(
     const unsigned char[:] data,
     unsigned long n_elements,
@@ -177,6 +183,7 @@ def varint_array(
     return output, bytes_read
 
 
+@cython.wraparound(False)  # disable negative indexing
 cpdef unsigned_varint_arrays_differential(
     const unsigned char[:] data,
     unsigned long n_arrays,
@@ -203,6 +210,7 @@ cpdef unsigned_varint_arrays_differential(
     return output, bytes_read_total
 
 
+@cython.wraparound(False)  # disable negative indexing
 cpdef unsigned_varint_array_differential(
     const unsigned char[:] data,
     unsigned long n_elements,

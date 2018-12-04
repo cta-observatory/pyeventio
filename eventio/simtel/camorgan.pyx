@@ -1,4 +1,5 @@
 # cython: language_level=3
+import cython
 import numpy as np
 cimport numpy as np
 
@@ -11,6 +12,7 @@ cdef short bytes_to_short(const unsigned char b0, const unsigned char b1):
     return ((<short> b0) << 8) | (<short> b1)
 
 
+@cython.wraparound(False)  # disable negative indexing
 cpdef read_sector_information(
     const unsigned char[:] data,
     unsigned long n_pixels,
