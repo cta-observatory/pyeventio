@@ -1,11 +1,17 @@
-def bool_bit_from_pos(uint32_word, pos):
+# cython: language_level=3
+
+cpdef bint bool_bit_from_pos(unsigned int uint32_word, unsigned int pos):
     '''parse a Python Boolean from a bit a position `pos` in an
     unsigned 32bit integer.
     '''
-    return bool(uint32_word & (1 << pos))
+    return uint32_word & (1 << pos)
 
 
-def get_bits_from_word(uint32_word, num_bits, first):
+cpdef unsigned int get_bits_from_word(
+    unsigned int uint32_word,
+    unsigned int num_bits,
+    unsigned int first,
+):
     '''return `num_bits` bits from the input word
     starting at first
 
