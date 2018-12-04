@@ -1,6 +1,6 @@
 from eventio import EventIOFile, Histograms
 import matplotlib.pyplot as plt
-from eventio.search_utils import collect_toplevel_of_type
+from eventio.search_utils import yield_toplevel_of_type
 import numpy as np
 from argparse import ArgumentParser
 
@@ -16,7 +16,7 @@ args = parser.parse_args()
 inputfile = args.inputfile[0] or default
 
 with EventIOFile(inputfile) as f:
-    for o in  collect_toplevel_of_type(f, Histograms):
+    for o in  yield_toplevel_of_type(f, Histograms):
         hists = o.parse_data_field()
 
         for hist in hists:
