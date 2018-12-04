@@ -55,11 +55,14 @@
 
 
 """
+import logging
 from eventio.base import EventIOFile, EventIOObject
 
 class WrongType(Exception):
     pass
 
+class NoTrackEvents(Exception):
+    pass
 
 class WithNextAssert:
     '''MixIn for EventIoFile adding `next_assert`'''
@@ -165,8 +168,8 @@ class SimTelFile:
             except WrongType:
                 break
 
-        self.header = self.file_.next_assert(SimTelRunHeader)
-        self.n_telescopes = self.header.parse_data_field()['n_telescopes']
+        self.header = self.file_.next_assert(SimTelRunHeader).parse_data_field()
+        self.n_telescopes = self.header['n_telescopes']
         self.mc_header = read_all_of_type(self.file_, SimTelMCRunHeader)
         self.corsika_input = read_all_of_type(self.file_, CORSIKAInputCard)
         self.telescope_descriptions = [
@@ -175,16 +178,36 @@ class SimTelFile:
         ]
 
         self.shower = None
+        self.tel_moni = {}  # tel_id: SimTelTelMoni
+        self.lascal = {}  # tel_id: SimTelLasCal
+
+        self.cam_settings = {}
+        for telescope_description in self.telescope_descriptions:
+            cam_setting = telescope_description[0].parse_data_field()
+            self.cam_settings[cam_setting['telescope_id']] = cam_setting
+
+        self.ref_pulse = {}
+        self.time_slices_per_telescope = {}
+        for telescope_description in self.telescope_descriptions:
+            telescope_id = telescope_description[2].header.id
+            pixel_setting = telescope_description[2].parse_data_field()
+            self.time_slices_per_telescope[telescope_id] = pixel_setting['time_slice']
+            self.ref_pulse[telescope_id] = {
+                'step': pixel_setting['ref_step'],
+                'shape': pixel_setting['refshape']
+            }
 
     def __iter__(self):
         return self
 
     def __next__(self):
         while True:
-            shower, event = self.fetch_next_event()
-            if 'event' in event:
-                return shower, event
-
+            try:
+                shower, event = self.fetch_next_event()
+                if 'event' in event:
+                    return shower, event
+            except NoTrackEvents:
+                logging.warn('skipping event: no TrackEvents')
     def fetch_next_event(self):
         try:
             event = self.next_mc_event()
@@ -203,9 +226,10 @@ class SimTelFile:
 
         # There is for sure exactly one of these
         result['mc_event'] = self.file_.next_assert(SimTelMCEvent)
-        result['corsika_tel_data'] = self.file_.next_type_or_none(CORSIKATelescopeData)
+        result['corsika_tel_data'] = self.file_.next_type_or_none(
+            CORSIKATelescopeData)
 
-        self.moni_lascal = try_to_read_moni_lascal(self.file_, self.n_telescopes)
+        self.update_moni_lascal()
         try:
             result['pe_sum'] = self.file_.next_assert(SimTelMCPeSum)
         except WrongType:
@@ -217,21 +241,19 @@ class SimTelFile:
 
         return result
 
+    def update_moni_lascal(self):
+        try:
+            for tel_id in range(self.n_telescopes):
+                self.tel_moni[tel_id] = self.file_.next_assert(
+                    SimTelTelMoni
+                ).parse_data_field()
+                self.lascal[tel_id] = self.file_.next_assert(
+                    SimTelLasCal
+                ).parse_data_field()
+        except WrongType:
+            # this is normal .. not every event has updates here
+            pass
 
-
-
-
-def try_to_read_moni_lascal(f, n_telescopes):
-    try:
-        return [
-            (
-                f.next_assert(SimTelTelMoni),
-                f.next_assert(SimTelLasCal),
-            )
-            for _ in range(n_telescopes)
-        ]
-    except WrongType:
-        pass
 
 
 class EventIOFileWithNextAssert(EventIOFile, WithNextAssert):
@@ -287,13 +309,33 @@ def parse_event(event):
     '''
     result = {}
     result['cent_event'] = event.next_assert(SimTelCentEvent)
-    result['tel_events'] = read_all_of_type(
+    tel_events = read_all_of_type(
         event,
         SimTelTelEvent,
         converter=parse_tel_event,
     )
     #assert result['tel_events'], (result, result['cent_event'].header)  # more than zero
-    result['track_events'] = read_all_of_type(event, SimTelTrackEvent)
+    track_events = read_all_of_type(event, SimTelTrackEvent)
+
+
+
+    # convert into dicts with key = telescope_id
+    tel_events = {
+        tel_event['header'].header.id: tel_event
+        for tel_event in tel_events
+    }
+    track_events = {
+        track_event.telescope_id: track_event
+        for track_event in track_events
+    }
+
+    # modify tel_events .. append track --> track_event
+    for telescope_id, tel_event in tel_events.items():
+        try:
+            tel_event['track'] = track_events[telescope_id].parse_data_field()
+        except KeyError:
+            raise NoTrackEvents()
+    result['tel_events'] = tel_events
     #assert result['track_events'], (result, result['cent_event'].header)  # more than zero
     result['shower'] = read_all_of_type(event, SimTelShower)
     return result
@@ -335,7 +377,7 @@ def parse_tel_event(tel_event):
 
     # these are only sometimes there
 
-    image = tel_event.next_type_or_none(SimTelTelImage)
+    image = tel_event.next_type_or_none(SimTelTelImage).parse_data_field()
     if image is not None:
         result['image'] = image
     result['pixel_list'] = tel_event.next_type_or_none(SimTelPixelList)

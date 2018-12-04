@@ -709,7 +709,7 @@ class SimTelTelADCSum(EventIOObject):
             data, n_arrays=n_gains, n_elements=n_pixels
         )
 
-        return raw
+        return raw['adc_sums']
 
 
 class SimTelTelADCSamp(EventIOObject):
@@ -1180,14 +1180,24 @@ class SimTelMCEvent(EventIOObject):
 class SimTelTelMoni(EventIOObject):
     eventio_type = 2022
 
-    def parse_data_field(self):
-        assert_exact_version(self, supported_version=0)
-        self.seek(0)
+    def __init__(self, header, parent):
+        super().__init__(header, parent)
 
-        telescope_id = (
+        self.telescope_id = (
             (self.header.id & 0xff)
             | ((self.header.id & 0x3f000000) >> 16)
         )
+
+    def __repr__(self):
+        return '{}[{}](telescope_id={})'.format(
+            self.__class__.__name__,
+            self.header.type,
+            self.telescope_id,
+        )
+
+    def parse_data_field(self):
+        assert_exact_version(self, supported_version=0)
+        self.seek(0)
 
         # what: denotes what has changed (since last report?)
         what = ((self.header.id & 0xffff00) >> 8) & 0xffff
@@ -1206,7 +1216,7 @@ class SimTelTelMoni(EventIOObject):
         # ng = read_utf8_like_signed_int(self)
 
         result = {
-            'telescope_id': telescope_id,
+            'telescope_id': self.telescope_id,
             'what': what,
             'known': known,
             'new_parts': new_parts,
