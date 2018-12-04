@@ -39,7 +39,7 @@ with open('README.rst') as f:
 
 setup(
     name='eventio',
-    version='0.7.1',
+    version='0.8.0',
     description='Python read-only implementation of the EventIO file format',
     long_description=long_description,
     url='https://github.com/fact-project/pyeventio',
@@ -56,6 +56,13 @@ setup(
     install_requires=[
         'numpy',
     ],
+    entry_points={
+        'console_scripts': [
+            'eventio_print_structure = eventio.scripts.print_structure:main',
+            'eventio_plot_histograms = eventio.scripts.plot_hists:main',
+            'eventio_print_object_information = eventio.scripts.print_object_information:main',
+        ]
+    },
     setup_requires=['pytest-runner', 'numpy'],
     tests_require=['pytest>=3.0.0'],
     classifiers=[
