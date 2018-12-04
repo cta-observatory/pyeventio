@@ -21,7 +21,7 @@ cpdef read_sector_information(
     cdef unsigned long pos = 0
     cdef unsigned long i
     cdef short n = 0
-    cdef sector = np.ndarray[INT32_t, ndim=1]
+    cdef np.ndarray[INT32_t, ndim=1] sector
     cdef list sectors = []
 
     for i in range(n_pixels):

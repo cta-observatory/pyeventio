@@ -140,7 +140,7 @@ cpdef unsigned_varint_array(
     unsigned long n_elements,
     unsigned long offset = 0,
 ):
-    cdef np.ndarray[UINT64_t, ndim=1] output = np.empty(n_elements, dtype=INT64)
+    cdef np.ndarray[UINT64_t, ndim=1] output = np.empty(n_elements, dtype=UINT64)
 
     cdef int val
     cdef unsigned long i
