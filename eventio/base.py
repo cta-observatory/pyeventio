@@ -176,6 +176,9 @@ class EventIOObject:
 
         self.parent = parent
         self.header = header
+        self.first_byte = self.header.data_field_first_byte
+        self.length = self.header.length
+        self.only_subobjects = self.header.only_subobjects
         self._next_header_pos = 0
 
     def read(self, size=-1):
@@ -190,8 +193,8 @@ class EventIOObject:
         pos = self.tell()
 
         # read all remaining bytes.
-        if size == -1 or size > self.header.length - pos:
-            size = self.header.length - pos
+        if size == -1 or size > self.length - pos:
+            size = self.length - pos
 
         data = self.parent.read(size=size)
 
@@ -206,7 +209,7 @@ class EventIOObject:
         return self
 
     def __next__(self):
-        if not self.header.only_subobjects:
+        if not self.only_subobjects:
             raise ValueError(
                 'Only EventIOObjects that contain just subobjects are iterable'
             )
@@ -220,16 +223,16 @@ class EventIOObject:
         return KNOWN_OBJECTS.get(header.type, EventIOObject)(header, parent=self)
 
     def seek(self, offset, whence=0):
-        first = self.header.data_field_first_byte
+        first = self.first_byte
         if whence == 0:
             assert offset >= 0
             self.parent.seek(first + offset, whence)
         elif whence == 1:
             self.parent.seek(offset, whence)
         elif whence == 2:
-            if offset > self.header.length:
-                offset = self.header.length
-            self._position = self.parent.seek(first + self.header.length - offset, 0)
+            if offset > self.length:
+                offset = self.length
+            self._position = self.parent.seek(first + self.length - offset, 0)
         else:
             raise ValueError(
                 'invalid whence ({}, should be 0, 1 or 2)'.format(whence)
@@ -237,7 +240,7 @@ class EventIOObject:
         return self.tell()
 
     def tell(self):
-        return self.parent.tell() - self.header.data_field_first_byte
+        return self.parent.tell() - self.first_byte
 
     def __repr__(self):
         return '{}[{}](size={}, only_subobjects={}, first_byte={})'.format(
