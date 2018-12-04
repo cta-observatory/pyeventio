@@ -64,7 +64,7 @@ class Histograms(EventIOObject):
                     hist['data'] = np.zeros(n_counts)
 
             if hist['n_bins_y'] > 0:
-                hist['data'] = hist['data'].reshape((hist['n_bins_x'], hist['n_bins_y']))
+                hist['data'] = hist['data'].reshape((hist['n_bins_y'], hist['n_bins_x']))
 
             histograms.append(hist)
 
