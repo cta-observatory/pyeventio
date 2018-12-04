@@ -3,6 +3,20 @@
 import numpy as np
 cimport numpy as np
 
+
+UINT32 = np.uint32
+ctypedef np.uint32_t UINT32_t
+
+INT32 = np.int32
+ctypedef np.int32_t INT32_t
+
+UINT64 = np.uint64
+ctypedef np.uint64_t UINT64_t
+
+INT64 = np.int64
+ctypedef np.int64_t INT64_t
+
+
 cpdef (unsigned long, unsigned int) unsigned_varint(const unsigned char[:] data, unsigned long offset=0):
     cdef unsigned int length
     cdef unsigned long value
@@ -121,7 +135,7 @@ cpdef unsigned_varint_array(
     unsigned long n_elements,
     unsigned long offset = 0,
 ):
-    cdef np.ndarray[np.uint64_t, ndim=1] output = np.empty(n_elements, dtype='uint64')
+    cdef np.ndarray[UINT64_t, ndim=1] output = np.empty(n_elements, dtype=INT64)
 
     cdef int val
     cdef unsigned long i
@@ -146,8 +160,8 @@ def varint_array(
     unsigned long offset = 0,
 ):
     cdef unsigned long bytes_read
-    cdef np.ndarray[np.uint64_t, ndim=1] unsigned_output
-    cdef np.ndarray[np.int64_t, ndim=1] output = np.empty(n_elements, dtype='int64')
+    cdef np.ndarray[UINT64_t, ndim=1] unsigned_output
+    cdef np.ndarray[INT64_t, ndim=1] output = np.empty(n_elements, dtype=INT64)
 
     unsigned_output, bytes_read = unsigned_varint_array(data, n_elements, offset)
 
@@ -174,10 +188,9 @@ cpdef unsigned_varint_arrays_differential(
     cdef unsigned long bytes_read_total = 0
     cdef unsigned long i
     cdef unsigned long j
+    cdef (unsigned long, unsigned long) shape = (n_arrays, n_elements)
 
-    cdef np.ndarray[np.uint32_t, ndim=2] output = np.empty(
-        (n_arrays, n_elements), dtype='uint32'
-    )
+    cdef np.ndarray[UINT32_t, ndim=2] output = np.zeros(shape, dtype=UINT32)
 
     for i in range(n_arrays):
 
@@ -196,7 +209,7 @@ cpdef unsigned_varint_array_differential(
     unsigned long offset = 0,
 ):
 
-    cdef np.ndarray[np.uint32_t, ndim=1] output = np.empty(n_elements, dtype='uint32')
+    cdef np.ndarray[UINT32_t, ndim=1] output = np.empty(n_elements, dtype=UINT32)
 
     cdef int val = 0
     cdef unsigned long i
