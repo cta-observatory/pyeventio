@@ -81,6 +81,10 @@ class WithNextAssert:
         if self._last_obj is None:
             try:
                 self._last_obj = next(self)
+                # rint('just, read:', self._last_obj)
+                # rint('size:', self._last_obj.header.length)
+                # rint('tell:', self.tell())
+
             except StopIteration:
                 raise WrongType
 
@@ -183,14 +187,14 @@ class SimTelFile:
 
         self.cam_settings = {}
         for telescope_description in self.telescope_descriptions:
-            cam_setting = telescope_description[0].parse_data_field()
+            cam_setting = telescope_description[0]
             self.cam_settings[cam_setting['telescope_id']] = cam_setting
 
         self.ref_pulse = {}
         self.time_slices_per_telescope = {}
         for telescope_description in self.telescope_descriptions:
-            telescope_id = telescope_description[2].header.id
-            pixel_setting = telescope_description[2].parse_data_field()
+            pixel_setting = telescope_description[2]
+            telescope_id = pixel_setting['telescope_id']
             self.time_slices_per_telescope[telescope_id] = pixel_setting['time_slice']
             self.ref_pulse[telescope_id] = {
                 'step': pixel_setting['ref_step'],
@@ -262,9 +266,9 @@ class EventIOFileWithNextAssert(EventIOFile, WithNextAssert):
 
 def telescope_description_from(file_):
     return [
-        file_.next_assert(SimTelCamSettings),
+        file_.next_assert(SimTelCamSettings).parse_data_field(),
         file_.next_assert(SimTelCamOrgan),
-        file_.next_assert(SimTelPixelset),
+        file_.next_assert(SimTelPixelset).parse_data_field(),
         file_.next_assert(SimTelPixelDisable),
         file_.next_assert(SimTelCamsoftset),
         file_.next_assert(SimTelTrackSet),
@@ -315,7 +319,11 @@ def parse_event(event):
         converter=parse_tel_event,
     )
     #assert result['tel_events'], (result, result['cent_event'].header)  # more than zero
-    track_events = read_all_of_type(event, SimTelTrackEvent)
+    track_events = read_all_of_type(
+        event,
+        SimTelTrackEvent,
+        converter=lambda x: x.parse_data_field()
+    )
 
 
 
@@ -325,14 +333,14 @@ def parse_event(event):
         for tel_event in tel_events
     }
     track_events = {
-        track_event.telescope_id: track_event
+        track_event['telescope_id']: track_event
         for track_event in track_events
     }
 
     # modify tel_events .. append track --> track_event
     for telescope_id, tel_event in tel_events.items():
         try:
-            tel_event['track'] = track_events[telescope_id].parse_data_field()
+            tel_event['track'] = track_events[telescope_id]
         except KeyError:
             raise NoTrackEvents()
     result['tel_events'] = tel_events

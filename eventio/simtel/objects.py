@@ -306,7 +306,9 @@ class SimTelPixelset(TelescopeObject):
             dt4 = SimTelPixelset.build_dt4(nrefshape, lrefshape)
             parts.append(read_array(self, dtype=dt4, count=1)[0])
 
-        return merge_structured_arrays_into_dict(parts)
+        D = merge_structured_arrays_into_dict(parts)
+        D['telescope_id'] = self.header.id
+        return D
 
 
 class SimTelPixelDisable(EventIOObject):
@@ -524,7 +526,10 @@ class SimTelTrackEvent(EventIOObject):
             dt.extend([('azimuth_raw', '<f4'), ('altitude_raw', '<f4')])
         if self.has_cor:
             dt.extend([('azimuth_cor', '<f4'), ('altitude_cor', '<f4')])
-        return read_array(self, count=1, dtype=dt)[0]
+        A = read_array(self, count=1, dtype=dt)[0]
+        D = merge_structured_arrays_into_dict([A])
+        D['telescope_id'] = self.telescope_id
+        return D
 
     @staticmethod
     def id_to_telid(eventio_id):

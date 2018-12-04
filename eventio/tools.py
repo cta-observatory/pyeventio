@@ -31,6 +31,8 @@ def read_float(f):
 def read_array(f, dtype, count):
     '''Read a numpy array with `dtype` of length `count` from file-like `f`'''
     dt = np.dtype(dtype)
+    if count == 0:
+        return np.array((), dtype=dtype)
     return np.frombuffer(f.read(count * dt.itemsize), count=count, dtype=dt)
 
 

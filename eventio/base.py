@@ -192,7 +192,6 @@ class EventIOObject:
         # read all remaining bytes.
         if size == -1 or size > self.header.length - pos:
             size = self.header.length - pos
-
         data = self.parent.read(size=size)
 
         return data
