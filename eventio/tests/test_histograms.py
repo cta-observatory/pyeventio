@@ -25,7 +25,9 @@ def test_histograms():
     from eventio import Histograms, EventIOFile
 
     with EventIOFile(prod4b_sst1m_file) as f:
+
         objects = collect_toplevel_of_type(f, Histograms)
+        assert len(objects) > 0
 
         for obj in objects:
             hists = obj.parse_data_field()

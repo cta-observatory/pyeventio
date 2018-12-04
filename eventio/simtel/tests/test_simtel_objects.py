@@ -4,7 +4,7 @@ from pytest import approx
 import numpy as np
 from eventio import EventIOFile
 from eventio.search_utils import (
-    collect_toplevel_of_type,
+    yield_toplevel_of_type,
     yield_n_subobjects,
 )
 
@@ -263,9 +263,11 @@ def test_2010():
     from eventio.simtel.objects import SimTelEvent
 
     with EventIOFile(prod2_file) as f:
-        events = collect_toplevel_of_type(f, SimTelEvent)
-        for event in events:
+        n_events = 0
+        for event in yield_toplevel_of_type(f, SimTelEvent):
             assert isinstance(next(event), SimTelCentEvent)
+            n_events += 1
+        assert n_events > 0
 
 
 def test_2011_3_objects():

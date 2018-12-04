@@ -13,13 +13,13 @@ def find_type(f, eventio_type):
 
 
 def collect_toplevel_of_type(f, eventio_type):
-    classes_under_test = [
-        o for o in f
-        if isinstance(o, eventio_type)
-    ]
-    # make sure we found some
-    assert classes_under_test
-    return classes_under_test
+    return list(yield_toplevel_of_type(f, eventio_type))
+
+
+def yield_toplevel_of_type(f, eventio_type):
+    for o in f:
+        if isinstance(o, eventio_type):
+            yield o
 
 
 def find_all_subobjects(f, structure, level=0):
