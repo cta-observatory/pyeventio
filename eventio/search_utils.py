@@ -39,6 +39,21 @@ def find_all_subobjects(f, structure, level=0):
     return objects
 
 
+def yield_all_subobjects(f, structure, level=0):
+    '''
+    Find all subobjects expected in structure.
+    So if you want all AdcSums, use
+    structure = [SimTelEvent, SimTelTelEvent, SimTelTelADCSum]
+    '''
+    elem = structure[level]
+
+    for o in f:
+        if isinstance(o, structure[-1]):
+            yield o
+        elif isinstance(o, elem):
+            yield from yield_all_subobjects(o, structure, level + 1)
+
+
 def yield_all_objects_depth_first(f, level=0):
     '''yield subobjects of type, regardless of structure'''
 
