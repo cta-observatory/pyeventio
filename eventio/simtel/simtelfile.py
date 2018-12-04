@@ -218,7 +218,7 @@ class SimTelFile:
             return self.shower, event
         except WrongType:
             try:
-                self.shower = self.file_.next_assert(SimTelMCShower)
+                self.shower = self.file_.next_assert(SimTelMCShower).parse_data_field()
             except WrongType:
                 raise StopIteration
 
@@ -229,13 +229,13 @@ class SimTelFile:
         result = {}
 
         # There is for sure exactly one of these
-        result['mc_event'] = self.file_.next_assert(SimTelMCEvent)
+        result['mc_event'] = self.file_.next_assert(SimTelMCEvent).parse_data_field()
         result['corsika_tel_data'] = self.file_.next_type_or_none(
             CORSIKATelescopeData)
 
         self.update_moni_lascal()
         try:
-            result['pe_sum'] = self.file_.next_assert(SimTelMCPeSum)
+            result['pe_sum'] = self.file_.next_assert(SimTelMCPeSum).parse_data_field()
         except WrongType:
             return result
 
@@ -312,7 +312,7 @@ def parse_event(event):
             1 shower
     '''
     result = {}
-    result['cent_event'] = event.next_assert(SimTelCentEvent)
+    result['cent_event'] = event.next_assert(SimTelCentEvent).parse_data_field()
     tel_events = read_all_of_type(
         event,
         SimTelTelEvent,
@@ -329,7 +329,7 @@ def parse_event(event):
 
     # convert into dicts with key = telescope_id
     tel_events = {
-        tel_event['header'].header.id: tel_event
+        tel_event['header']['telescope_id']: tel_event
         for tel_event in tel_events
     }
     track_events = {
@@ -367,7 +367,7 @@ def parse_tel_event(tel_event):
     '''
 
     # These 3 are sure
-    header = tel_event.next_assert(SimTelTelEvtHead)
+    header = tel_event.next_assert(SimTelTelEvtHead).parse_data_field()
 
     # well could be either ADCSamp or ADCSum
     adc_stuff = tel_event.next_type_or_none(SimTelTelADCSamp)
@@ -385,9 +385,11 @@ def parse_tel_event(tel_event):
 
     # these are only sometimes there
 
-    image = tel_event.next_type_or_none(SimTelTelImage).parse_data_field()
+    image = tel_event.next_type_or_none(SimTelTelImage)
     if image is not None:
-        result['image'] = image
-    result['pixel_list'] = tel_event.next_type_or_none(SimTelPixelList)
+        result['image'] = image.parse_data_field()
+    pixel_list = tel_event.next_type_or_none(SimTelPixelList)
+    if pixel_list is not None:
+        result['pixel_list'] = pixel_list.parse_data_field()
 
     return result
