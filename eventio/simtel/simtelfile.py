@@ -86,7 +86,9 @@ class WithNextAssert:
 
         o = self._last_obj
         if not isinstance(o, object_):
-            raise WrongType(f"is:{o}, not:{object_}")
+            raise WrongType("is:{o}, not:{object_}".format(
+                o=o, object_=object_)
+            )
 
         self._last_obj = None
         return o
