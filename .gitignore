@@ -1,9 +1,9 @@
 # Cython extensions
-bits.c
+header.c
 var_int.c
 camorgan.c
 # cython html profiling
-bits.html
+header.html
 var_int.html
 camorgan.html
 # Byte-compiled / optimized / DLL files

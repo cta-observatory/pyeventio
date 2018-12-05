@@ -1,11 +1,10 @@
 import struct
-from collections import namedtuple
 import gzip
 import logging
 import warnings
 
 from .file_types import is_gzip, is_eventio, is_zstd
-from .bits import parse_header_bytes, get_bits_from_word
+from .header import parse_header_bytes, get_bits_from_word
 from . import constants
 from .exceptions import WrongTypeException
 
@@ -112,34 +111,16 @@ def read_next_header(eventio, toplevel=True):
         header_bytes, constants.OBJECT_HEADER_SIZE, warn_zero=toplevel
     )
 
-    (
-        type_,
-        user,
-        extended,
-        version,
-        id_field,
-        only_subobjects,
-        length,
-    ) = parse_header_bytes(header_bytes)
+    header = parse_header_bytes(header_bytes)
+    header.endianness = endianness
 
-    if extended:
+    if header.extended:
         extension_field = eventio.read(constants.EXTENSION_SIZE)
         check_size_or_stopiteration(extension_field, constants.EXTENSION_SIZE, True)
-        length += parse_extension_field(extension_field)
+        header.length += parse_extension_field(extension_field)
 
-    data_field_first_byte = eventio.tell()
+    header.data_field_first_byte = eventio.tell()
 
-    header = ObjectHeader(
-        endianness=endianness,
-        type=type_,
-        version=version,
-        user=user,
-        extended=extended,
-        only_subobjects=only_subobjects,
-        length=length,
-        id=id_field,
-        data_field_first_byte=data_field_first_byte,
-    )
     return header
 
 
@@ -257,22 +238,6 @@ class EventIOObject:
             self.header.only_subobjects,
             self.header.data_field_first_byte
         )
-
-
-ObjectHeader = namedtuple(
-    'ObjectHeader',
-    [
-        'endianness',
-        'type',
-        'version',
-        'user',
-        'extended',
-        'only_subobjects',
-        'length',
-        'id',
-        'data_field_first_byte',
-    ]
-)
 
 
 def parse_extension_field(extension_field):

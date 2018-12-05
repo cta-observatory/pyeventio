@@ -25,6 +25,30 @@ cdef unsigned int LENGTH_POS = 0
 cdef unsigned int EXTENSION_NUM_BITS = 12
 cdef unsigned int EXTENSION_POS = 0
 
+cdef class ObjectHeader:
+    cdef public str endianness
+    cdef readonly unsigned int type
+    cdef readonly unsigned int version
+    cdef readonly bint user
+    cdef readonly bint extended
+    cdef readonly bint only_subobjects
+    cdef public unsigned long length
+    cdef readonly unsigned long id
+    cdef public unsigned long data_field_first_byte
+
+    def __repr__(self):
+        return (
+            'Header[{}]('.format(self.type)
+            + 'endianness={}, '.format(self.endianness)
+            + 'version={}, '.format(self.version)
+            + 'id={}, '.format(self.id)
+            + 'user={}, '.format(self.user)
+            + 'extended={}, '.format(self.extended)
+            + 'only_subobjects={}, '.format(self.only_subobjects)
+            + 'length={}, '.format(self.length)
+            + 'first_byte={})'.format(self.data_field_first_byte)
+        )
+
 
 cpdef bint bool_bit_from_pos(unsigned int uint32_word, unsigned int pos):
     '''parse a Python Boolean from a bit a position `pos` in an
@@ -73,7 +97,7 @@ cdef unsigned long unpack_uint32(const unsigned char[:] data):
     )
 
 
-cpdef parse_header_bytes(const unsigned char[:] header_bytes):
+cpdef ObjectHeader parse_header_bytes(const unsigned char[:] header_bytes):
     cdef unsigned long type_int
     cdef unsigned long id_field
     cdef unsigned long length_field
@@ -95,4 +119,13 @@ cpdef parse_header_bytes(const unsigned char[:] header_bytes):
     only_subobjects = bool_bit_from_pos(length_field, ONLY_SUBOBJECTS_POS)
     length = get_bits_from_word(length_field, LENGTH_NUM_BITS, LENGTH_POS)
 
-    return type_, user, extended, version, id_field, only_subobjects, length
+    header = ObjectHeader()
+    header.type = type_
+    header.user = user
+    header.extended = extended
+    header.version = version
+    header.id = id_field
+    header.only_subobjects = only_subobjects
+    header.length = length
+
+    return header
