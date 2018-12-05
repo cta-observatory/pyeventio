@@ -3,6 +3,8 @@ import cython
 import numpy as np
 cimport numpy as np
 
+INT16 = np.int16
+ctypedef np.int16_t INT16_t
 
 UINT32 = np.uint32
 ctypedef np.uint32_t UINT32_t
@@ -10,14 +12,13 @@ ctypedef np.uint32_t UINT32_t
 INT32 = np.int32
 ctypedef np.int32_t INT32_t
 
-INT16 = np.int16
-ctypedef np.int16_t INT16_t
-
 UINT64 = np.uint64
 ctypedef np.uint64_t UINT64_t
 
 INT64 = np.int64
 ctypedef np.int64_t INT64_t
+
+cdef F32 = np.float32
 
 
 @cython.wraparound(False)  # disable negative indexing
@@ -362,3 +363,75 @@ def simtel_pixel_timing_parse_list_type_2(
         'pulse_sum_glob': pulse_sum_glob,
         'pulse_sum_loc': pulse_sum_loc,
     }, pos
+
+
+
+def parse_1208(
+    const unsigned char[:] data,
+    int n_pixels,
+    int nonempty,
+    int version,
+    unsigned int flags
+):
+
+    cdef unsigned int length
+    cdef INT32_t* int_ptr
+    cdef INT16_t* short_ptr
+    cdef float* float_ptr
+
+    cdef np.ndarray[float, ndim=1] photoelectrons = np.zeros(n_pixels, dtype=F32)
+    cdef np.ndarray[INT32_t, ndim=1] photon_counts = None
+    cdef list time = [[] for _ in range(n_pixels)]
+    cdef list amplitude
+
+    if flags & 1:
+        amplitude = [[] for _ in range(n_pixels)]
+    else:
+        amplitude = None
+
+    cdef unsigned long pos = 0
+    cdef int i, j
+
+    for i in range(nonempty):
+        if version > 2:
+            pix_id, length = varint(data, offset=pos)
+        else:
+            short_ptr = <INT16_t*> &data[pos]
+            pix_id = short_ptr[0]
+            length = 2
+
+        pos += length
+
+        int_ptr = <INT32_t*> &data[pos]
+        n_pe = int_ptr[0]
+        pos += 4
+
+        photoelectrons[pix_id] = n_pe
+        for j in range(n_pe):
+            float_ptr = <float*> &data[pos]
+            time[pix_id].append(float_ptr[0])
+            pos += 4
+
+        if flags & 1:
+            for j in range(n_pe):
+                float_ptr = <float*> &data[pos]
+                amplitude[pix_id].append(float_ptr[0])
+                pos += 4
+
+    if flags & 4:
+        photon_counts = np.zeros(n_pixels, dtype=INT32)
+
+        int_ptr = <INT32_t*> &data[pos]
+        nonempty = int_ptr[0]
+        pos += 4
+
+        for i in range(nonempty):
+            short_ptr = <INT16_t*> &data[pos]
+            pix_id = short_ptr[0]
+            pos += 2
+
+            int_ptr = <INT32_t*> &data[pos]
+            photon_counts[pix_id] = int_ptr[0]
+            pos += 4
+
+    return photoelectrons, time, amplitude, photon_counts
