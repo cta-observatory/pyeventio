@@ -5,7 +5,7 @@ import logging
 import warnings
 
 from .file_types import is_gzip, is_eventio, is_zstd
-from .bits import bool_bit_from_pos, get_bits_from_word
+from .bits import parse_header_bytes, get_bits_from_word
 from . import constants
 from .exceptions import WrongTypeException
 
@@ -112,28 +112,35 @@ def read_next_header(eventio, toplevel=True):
         header_bytes, constants.OBJECT_HEADER_SIZE, warn_zero=toplevel
     )
 
-    type_version_field = parse_type_field(header_bytes[0:4])
-    id_field, = struct.unpack('<I', header_bytes[4:8])
-    only_subobjects, length = parse_length_field(header_bytes[8:12])
+    (
+        type_,
+        user,
+        extended,
+        version,
+        id_field,
+        only_subobjects,
+        length,
+    ) = parse_header_bytes(header_bytes)
 
-    if type_version_field.extended:
+    if extended:
         extension_field = eventio.read(constants.EXTENSION_SIZE)
         check_size_or_stopiteration(extension_field, constants.EXTENSION_SIZE, True)
         length += parse_extension_field(extension_field)
 
     data_field_first_byte = eventio.tell()
 
-    return ObjectHeader(
-        endianness,
-        type_version_field.type,
-        type_version_field.version,
-        type_version_field.user,
-        type_version_field.extended,
-        only_subobjects,
-        length,
-        id_field,
-        data_field_first_byte,
+    header = ObjectHeader(
+        endianness=endianness,
+        type=type_,
+        version=version,
+        user=user,
+        extended=extended,
+        only_subobjects=only_subobjects,
+        length=length,
+        id=id_field,
+        data_field_first_byte=data_field_first_byte,
     )
+    return header
 
 
 def parse_sync_bytes(sync):
@@ -176,6 +183,9 @@ class EventIOObject:
 
         self.parent = parent
         self.header = header
+        self.first_byte = self.header.data_field_first_byte
+        self.length = self.header.length
+        self.only_subobjects = self.header.only_subobjects
         self._next_header_pos = 0
 
     def read(self, size=-1):
@@ -190,8 +200,8 @@ class EventIOObject:
         pos = self.tell()
 
         # read all remaining bytes.
-        if size == -1 or size > self.header.length - pos:
-            size = self.header.length - pos
+        if size == -1 or size > self.length - pos:
+            size = self.length - pos
 
         data = self.parent.read(size=size)
 
@@ -206,7 +216,7 @@ class EventIOObject:
         return self
 
     def __next__(self):
-        if not self.header.only_subobjects:
+        if not self.only_subobjects:
             raise ValueError(
                 'Only EventIOObjects that contain just subobjects are iterable'
             )
@@ -220,16 +230,16 @@ class EventIOObject:
         return KNOWN_OBJECTS.get(header.type, EventIOObject)(header, parent=self)
 
     def seek(self, offset, whence=0):
-        first = self.header.data_field_first_byte
+        first = self.first_byte
         if whence == 0:
             assert offset >= 0
             self.parent.seek(first + offset, whence)
         elif whence == 1:
             self.parent.seek(offset, whence)
         elif whence == 2:
-            if offset > self.header.length:
-                offset = self.header.length
-            self._position = self.parent.seek(first + self.header.length - offset, 0)
+            if offset > self.length:
+                offset = self.length
+            self._position = self.parent.seek(first + self.length - offset, 0)
         else:
             raise ValueError(
                 'invalid whence ({}, should be 0, 1 or 2)'.format(whence)
@@ -237,7 +247,7 @@ class EventIOObject:
         return self.tell()
 
     def tell(self):
-        return self.parent.tell() - self.header.data_field_first_byte
+        return self.parent.tell() - self.first_byte
 
     def __repr__(self):
         return '{}[{}](size={}, only_subobjects={}, first_byte={})'.format(
@@ -263,38 +273,6 @@ ObjectHeader = namedtuple(
         'data_field_first_byte',
     ]
 )
-
-TypeInfo = namedtuple('TypeInfo', ['type', 'version', 'user', 'extended'])
-
-
-def parse_type_field(type_field):
-    '''parse TypeInfo
-
-    TypeInfo is encoded in a 32bit word.
-    '''
-    word, = struct.unpack('<I', type_field)
-    type_ = get_bits_from_word(word, constants.TYPE_NUM_BITS, constants.TYPE_POS)
-    user_bit = bool_bit_from_pos(word, constants.USER_POS)
-    extended = bool_bit_from_pos(word, constants.EXTENDED_POS)
-    version = get_bits_from_word(word, constants.VERSION_NUM_BITS, constants.VERSION_POS)
-    return TypeInfo(type_, version, user_bit, extended)
-
-
-def parse_length_field(length_field):
-    '''parse the "length field"
-
-    The length field contains:
-
-     - only_subobjects: boolean
-        This field tells us if the current object only consists of subobjects
-        and does not contain any data on its own.
-     - length: unsigend 30 bit unsigned integer
-        The length of the data section of this object in bytes.
-    '''
-    word, = struct.unpack('<I', length_field)
-    only_subobjects = bool_bit_from_pos(word, constants.ONLY_SUBOBJECTS_POS)
-    length = get_bits_from_word(word, constants.LENGTH_NUM_BITS, constants.LENGTH_POS)
-    return only_subobjects, length
 
 
 def parse_extension_field(extension_field):
