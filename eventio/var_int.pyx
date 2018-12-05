@@ -198,11 +198,16 @@ cpdef unsigned_varint_arrays_differential(
     cdef (unsigned long, unsigned long) shape = (n_arrays, n_elements)
 
     cdef np.ndarray[UINT32_t, ndim=2] output = np.zeros(shape, dtype=UINT32)
+    cdef UINT32_t[:, :] output_view = output
+    cdef UINT32_t[:] output_view_1d
 
     for i in range(n_arrays):
 
+        with cython.boundscheck(False):
+            output_view_1d = output_view[i]
+
         bytes_read = unsigned_varint_array_differential(
-            data, output=output[i], offset=offset
+            data, output=output_view_1d, offset=offset
         )
         offset += bytes_read
         bytes_read_total += bytes_read
@@ -213,7 +218,7 @@ cpdef unsigned_varint_arrays_differential(
 @cython.wraparound(False)  # disable negative indexing
 cdef unsigned long unsigned_varint_array_differential(
     const unsigned char[:] data,
-    np.ndarray[UINT32_t, ndim=1] output,
+    UINT32_t[:] output,
     unsigned long offset = 0,
 ):
 
