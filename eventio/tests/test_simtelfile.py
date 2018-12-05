@@ -114,7 +114,6 @@ def test_show_event_is_not_empty_and_has_some_members_for_sure():
                     'pixel_list',
                     'track'
                 }
-                assert tel_event['waveform']  # never empty
 
             break
 
