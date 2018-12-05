@@ -8,6 +8,22 @@ testfile = pkg_resources.resource_filename(
     'eventio', path.join('resources', 'one_shower.dat')
 )
 
+prod4_simtel = pkg_resources.resource_filename(
+    'eventio', path.join('resources', 'gamma_20deg_0deg_run103___cta-prod4-sst-astri_desert-2150m-Paranal-sst-astri.simtel.gz')
+)
+
+
+def test_photo_electrons():
+    from eventio import EventIOFile
+    from eventio.iact import IACTPhotoElectrons
+    from eventio.search_utils import yield_n_subobjects
+
+    with EventIOFile(prod4_simtel) as f:
+        for o in yield_n_subobjects(f, IACTPhotoElectrons):
+            o.parse_data_field()
+            not_read = o.read()
+            assert len(not_read) == 0 or all(b == 0 for b in not_read)
+
 
 def test_file_has_run_header():
     from eventio.iact import CORSIKARunHeader
