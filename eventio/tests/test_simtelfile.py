@@ -121,7 +121,7 @@ def test_show_event_is_not_empty_and_has_some_members_for_sure():
                 assert expected_keys.issubset(found_keys)
 
                 extra_keys = found_keys.difference(expected_keys)
-                assert found_keys.issubset(allowed_keys)
+                assert extra_keys.issubset(allowed_keys)
 
             break
 
