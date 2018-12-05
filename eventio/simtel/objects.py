@@ -900,6 +900,7 @@ class SimTelShower(EventIOObject):
 class SimTelPixelTiming(EventIOObject):
     eventio_type = 2016
 
+    from ..var_int import simtel_pixel_timing_parse_list_type_1 as _parse_list_type_1
     from ..var_int import simtel_pixel_timing_parse_list_type_2 as _parse_list_type_2
 
     def parse_data_field(self):
@@ -937,10 +938,19 @@ class SimTelPixelTiming(EventIOObject):
         pixel_timing['granularity'] = read_float(self)
         pixel_timing['peak_global'] = read_float(self)
 
+        data = self.read()
         if list_type == 1:
-            pixel_timing.update(self._parse_list_type_1(**pixel_timing))
+            result, bytes_read = SimTelPixelTiming._parse_list_type_1(
+                data,
+                pixel_list=pixel_timing['pixel_list'],
+                num_gains=pixel_timing['num_gains'],
+                num_pixels=pixel_timing['num_pixels'],
+                num_types=pixel_timing['num_types'],
+                with_sum=pixel_timing['with_sum'],
+                glob_only_selected=pixel_timing['glob_only_selected'],
+                granularity=pixel_timing['granularity'],
+            )
         else:
-            data = self.read()
             result, bytes_read = SimTelPixelTiming._parse_list_type_2(
                 data,
                 pixel_list=pixel_timing['pixel_list'].reshape(-1, 2),
@@ -951,57 +961,8 @@ class SimTelPixelTiming(EventIOObject):
                 glob_only_selected=pixel_timing['glob_only_selected'],
                 granularity=pixel_timing['granularity'],
             )
-            pixel_timing.update(result)
-
-    def _parse_list_type_1(
-        self,
-        pixel_list,
-        num_types,
-        num_gains,
-        granularity,
-        num_pixels,
-        with_sum,
-        glob_only_selected,
-        **kwargs
-    ):
-        timval = np.zeros((num_pixels, num_types), dtype='f4')
-        # The first timing element is always initialised to indicate unknown.
-        timval[:, 0] = -1
-
-        pulse_sum_loc = np.zeros((num_gains, num_pixels), dtype='i4')
-        pulse_sum_glob = np.zeros((num_gains, num_pixels), dtype='i4')
-
-        data = self.read()
-        pos = 0
-
-        for i_pix in pixel_list:
-            timval[i_pix, :] = granularity * np.frombuffer(
-                data, count=num_types, dtype='<i2', offset=pos,
-            )
-            pos += num_types * 2
-
-            if with_sum:
-                pulse_sum_loc[:, i_pix], length = varint_array(
-                    data, n_elements=num_gains, offset=pos
-                )
-                pos += length
-
-                if glob_only_selected:
-                    pulse_sum_glob[:, i_pix], length = varint_array(
-                        data, n_elements=num_gains, offset=pos
-                    )
-                    pos += length
-
-        if with_sum and len(pixel_list) > 0 and not glob_only_selected:
-            pulse_sum_glob = varint_array(
-                data, n_elements=num_gains * num_pixels, offset=pos,
-            ).reshape(num_gains, num_pixels)
-
-        return {
-            'timval': timval,
-            'pulse_sum_glob': pulse_sum_glob,
-            'pulse_sum_loc': pulse_sum_loc,
-        }
+        pixel_timing.update(result)
+        return pixel_timing
 
 
 class SimTelPixelCalib(EventIOObject):
