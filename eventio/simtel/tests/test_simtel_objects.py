@@ -439,7 +439,7 @@ def test_2021_3_objects():
         for i, o in enumerate(yield_n_and_assert(f, SimTelMCEvent, n=3)):
             d = parse_and_assert_consumption(o, limit=0)
 
-            assert d['shower_num'] == d['event'] // 100
+            assert d['shower_num'] == o.header.id // 100
             '''
             {
                 'event': 11909,

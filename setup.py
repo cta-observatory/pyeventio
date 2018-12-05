@@ -30,7 +30,7 @@ extensions = [
     Extension(
         'eventio.simtel.camorgan',
         sources=['eventio/simtel/camorgan' + ext]
-    )
+    ),
 ]
 cmdclass = {'build_ext': build_ext}
 
