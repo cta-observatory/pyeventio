@@ -164,7 +164,7 @@ cpdef unsigned_varint_array(
 
 
 @cython.wraparound(False)  # disable negative indexing
-def varint_array(
+cpdef varint_array(
     const unsigned char[:] data,
     unsigned long n_elements,
     unsigned long offset = 0,
@@ -365,7 +365,6 @@ def simtel_pixel_timing_parse_list_type_2(
     }, pos
 
 
-
 def parse_1208(
     const unsigned char[:] data,
     int n_pixels,
@@ -435,3 +434,66 @@ def parse_1208(
             pos += 4
 
     return photoelectrons, time, amplitude, photon_counts
+
+
+cpdef simtel_pixel_timing_parse_list_type_1(
+    const unsigned char[:] data,
+    const INT16_t[:] pixel_list,
+    int num_gains,
+    int num_pixels,
+    int num_types,
+    bint with_sum,
+    bint glob_only_selected,
+    float granularity,
+):
+    cdef int start, stop, list_index
+    cdef long pixel_list_length = pixel_list.shape[0]
+    cdef int i, j, i_pix
+    cdef unsigned long pos = 0
+    cdef unsigned int length = 0
+    cdef np.ndarray[INT64_t, ndim=1] result
+
+    cdef np.ndarray[float, ndim=2] timval = np.zeros((num_pixels, num_types), dtype=np.float32)
+    # The first timing element is always initialised to indicate unknown.
+    for i in range(num_pixels):
+        timval[i, 0] = -1
+
+    cdef np.ndarray[INT32_t, ndim=2] pulse_sum_loc = np.zeros((num_gains, num_pixels), dtype=INT32)
+    cdef np.ndarray[INT32_t, ndim=2] pulse_sum_glob = np.zeros((num_gains, num_pixels), dtype=INT32)
+
+    cdef short* short_ptr
+
+    for i in range(pixel_list_length):
+        i_pix = pixel_list[i]
+        for j in range(num_types):
+            short_ptr = <short*> &(data[pos])
+            timval[i_pix, j] = granularity * (short_ptr[0])
+            pos += 2
+
+        if with_sum:
+            result, length = varint_array(
+                data, n_elements=num_gains, offset=pos
+            )
+            pos += length
+
+            for j in range(num_gains):
+                pulse_sum_loc[j, i_pix] = result[j]
+
+            if glob_only_selected:
+                result, length = varint_array(
+                    data, n_elements=num_gains, offset=pos
+                )
+                for j in range(num_gains):
+                    pulse_sum_glob[j, i_pix] = result[j]
+                pos += length
+
+    if with_sum and len(pixel_list) > 0 and not glob_only_selected:
+        pulse_sum_glob, length = varint_array(
+            data, n_elements=num_gains * num_pixels, offset=pos,
+        ).reshape(num_gains, num_pixels)
+
+    return {
+        'timval': timval,
+        'pulse_sum_glob': pulse_sum_glob,
+        'pulse_sum_loc': pulse_sum_loc,
+    }, pos
