@@ -66,5 +66,4 @@ def test_iterate_complete_file():
                 pass
         except (EOFError, IndexError):  # truncated files might raise these...
             pass
-        print(path, counter)
         assert counter == expected_counter_values[path]
