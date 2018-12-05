@@ -16,7 +16,7 @@ with EventIOFile(path) as f:
 
 pr.disable()
 s = StringIO()
-ps = pstats.Stats(pr, stream=s).sort_stats('cumtime')
+ps = pstats.Stats(pr, stream=s).sort_stats('tottime')
 
-ps.print_stats()
+ps.print_stats(50)
 print(s.getvalue())
