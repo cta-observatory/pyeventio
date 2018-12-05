@@ -52,6 +52,72 @@ def test_at_least_one_event_found():
             break
         assert one_found, path
 
+def test_show_we_get_a_tuple_of_shower_and_event():
+    expected_counter_values = {
+        prod2_path: 8,
+        prod3_path: 5,
+        prod4_path: 28,
+        prod4_zst_path: 28,  # the same of course
+    }
+    for path in test_paths:
+        for shower, event in SimTelFile(path):
+            assert shower
+            assert event
+            break
+
+
+def test_show_event_is_not_empty_and_has_some_members_for_sure():
+    expected_counter_values = {
+        prod2_path: 8,
+        prod3_path: 5,
+        prod4_path: 28,
+        prod4_zst_path: 28,  # the same of course
+    }
+    for path in test_paths:
+        for shower, event in SimTelFile(path):
+            assert shower.keys() == {
+                'shower',
+                'primary_id',
+                'energy',
+                'azimuth',
+                'altitude',
+                'depth_start',
+                'h_first_int',
+                'xmax',
+                'hmax',
+                'emax',
+                'cmax',
+                'n_profiles',
+                'profiles'
+            }
+
+            assert event.keys() == {
+                'mc_event',
+                'corsika_tel_data',
+                'pe_sum',
+                'event'
+            }
+
+            inner_event = event['event']
+            assert inner_event.keys() == {'cent_event', 'tel_events', 'shower'}
+
+            tel_events = inner_event['tel_events']
+
+            assert tel_events  # never empty!
+
+            for tel_event in tel_events.values():
+                assert tel_event.keys() == {
+                    'header',
+                    'waveform',
+                    'pixel_timing',
+                    'image',
+                    'pixel_list',
+                    'track'
+                }
+                assert tel_event['waveform']  # never empty
+
+            break
+
 
 def test_iterate_complete_file():
     expected_counter_values = {
@@ -67,3 +133,5 @@ def test_iterate_complete_file():
         except (EOFError, IndexError):  # truncated files might raise these...
             pass
         assert counter == expected_counter_values[path]
+
+
