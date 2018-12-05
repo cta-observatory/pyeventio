@@ -377,7 +377,6 @@ cpdef simtel_pixel_timing_parse_list_type_1(
     cdef int start, stop, list_index
     cdef long pixel_list_length = pixel_list.shape[0]
     cdef int i, j, i_pix
-    cdef unsigned long pos = 0
     cdef unsigned int length = 0
     cdef np.ndarray[INT64_t, ndim=1] result
 
@@ -391,34 +390,33 @@ cpdef simtel_pixel_timing_parse_list_type_1(
 
     cdef short* short_ptr
 
+    cdef unsigned long pos = 0
+    print(with_sum)
     for i in range(pixel_list_length):
         i_pix = pixel_list[i]
+
         for j in range(num_types):
             short_ptr = <short*> &(data[pos])
             timval[i_pix, j] = granularity * (short_ptr[0])
             pos += 2
 
         if with_sum:
-            result, length = varint_array(
-                data, n_elements=num_gains, offset=pos
-            )
-            pos += length
-
             for j in range(num_gains):
-                pulse_sum_loc[j, i_pix] = result[j]
-
-            if glob_only_selected:
-                result, length = varint_array(
-                    data, n_elements=num_gains, offset=pos
-                )
-                for j in range(num_gains):
-                    pulse_sum_glob[j, i_pix] = result[j]
+                pulse_sum_loc[j, i_pix], length = varint(data, offset=pos)
                 pos += length
 
+            if glob_only_selected:
+                for j in range(num_gains):
+                    pulse_sum_glob[j, i_pix], length = varint(data, offset=pos)
+                    pos += length
+
     if with_sum and len(pixel_list) > 0 and not glob_only_selected:
-        pulse_sum_glob, length = varint_array(
-            data, n_elements=num_gains * num_pixels, offset=pos,
-        ).reshape(num_gains, num_pixels)
+        for j in range(num_gains):
+            for i_pix in range(num_pixels):
+                pulse_sum_glob[j, i_pix], length = varint(
+                    data, offset=pos,
+                )
+                pos += length
 
     return {
         'timval': timval,
