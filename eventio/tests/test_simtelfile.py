@@ -106,14 +106,22 @@ def test_show_event_is_not_empty_and_has_some_members_for_sure():
             assert tel_events  # never empty!
 
             for tel_event in tel_events.values():
-                assert tel_event.keys() == {
+                expected_keys = {
                     'header',
                     'waveform',
                     'pixel_timing',
+                    'track',
+                }
+                allowed_keys = {
                     'image',
                     'pixel_list',
-                    'track'
                 }
+
+                found_keys = set(tel_event.keys())
+                assert expected_keys.issubset(found_keys)
+
+                extra_keys = found_keys.difference(expected_keys)
+                assert found_keys.issubset(allowed_keys)
 
             break
 
