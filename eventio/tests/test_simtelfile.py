@@ -28,7 +28,17 @@ prod4_path = pkg_resources.resource_filename(
         'gamma_20deg_0deg_run102___cta-prod4-sst-1m_desert-2150m-Paranal-sst-1m.simtel.gz')
 )
 
-test_paths = [prod2_path, prod3_path, prod4_path]
+# using a zstd file ensures SimTelFile is not seeking back, when reading
+# a file
+prod4_zst_path = pkg_resources.resource_filename(
+    'eventio',
+    os.path.join(
+        'resources',
+        'gamma_20deg_0deg_run102___cta-prod4-sst-1m_desert-2150m-Paranal-sst-1m.simtel.zst')
+)
+
+
+test_paths = [prod2_path, prod3_path, prod4_path, prod4_zst_path]
 
 def test_can_open():
     for path in test_paths:
@@ -48,6 +58,7 @@ def test_iterate_complete_file():
         prod2_path: 8,
         prod3_path: 5,
         prod4_path: 28,
+        prod4_zst_path: 28,  # the same of course
     }
     for path in test_paths:
         try:
