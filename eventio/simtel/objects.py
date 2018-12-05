@@ -956,6 +956,7 @@ class SimTelShower(EventIOObject):
 
 class SimTelPixelTiming(EventIOObject):
     eventio_type = 2016
+    from ..var_int import simtel_pixel_timing_parse_list_type_2 as _parse_list_type_2
 
     def __repr__(self):
         return '{}[{}](telescope_id={})'.format(
@@ -983,15 +984,18 @@ class SimTelPixelTiming(EventIOObject):
         assert list_type in (1, 2), "list_type has to be 1 or 2"
         list_size = read_short(self)
         pixel_timing['pixel_list'] = read_array(
-            self, 'i2', list_size * list_type)
+            self, dtype='i2', count=list_size * list_type
+        )
         pixel_timing['threshold'] = read_short(self)
         pixel_timing['glob_only_selected'] = pixel_timing['threshold'] < 0
         pixel_timing['num_types'] = read_short(self)
 
         pixel_timing['time_type'] = read_array(
-            self, 'i2', pixel_timing['num_types'])
+            self, 'i2', count=pixel_timing['num_types']
+        )
         pixel_timing['time_level'] = read_array(
-            self, 'f4', pixel_timing['num_types'])
+            self, 'f4', count=pixel_timing['num_types']
+        )
 
         pixel_timing['granularity'] = read_float(self)
         pixel_timing['peak_global'] = read_float(self)
@@ -999,7 +1003,18 @@ class SimTelPixelTiming(EventIOObject):
         if list_type == 1:
             pixel_timing.update(self._parse_list_type_1(**pixel_timing))
         else:
-            pixel_timing.update(self._parse_list_type_2(**pixel_timing))
+            data = self.read()
+            result, bytes_read = SimTelPixelTiming._parse_list_type_2(
+                data,
+                pixel_list=pixel_timing['pixel_list'].reshape(-1, 2),
+                num_gains=pixel_timing['num_gains'],
+                num_pixels=pixel_timing['num_pixels'],
+                num_types=pixel_timing['num_types'],
+                with_sum=pixel_timing['with_sum'],
+                glob_only_selected=pixel_timing['glob_only_selected'],
+                granularity=pixel_timing['granularity'],
+            )
+            pixel_timing.update(result)
 
     def _parse_list_type_1(
         self,
@@ -1044,48 +1059,6 @@ class SimTelPixelTiming(EventIOObject):
             pulse_sum_glob = varint_array(
                 data, n_elements=num_gains * num_pixels, offset=pos,
             ).reshape(num_gains, num_pixels)
-
-        return {
-            'timval': timval,
-            'pulse_sum_glob': pulse_sum_glob,
-            'pulse_sum_loc': pulse_sum_loc,
-        }
-
-    def _parse_list_type_2(
-        self,
-        pixel_list,
-        num_types,
-        num_gains,
-        num_pixels,
-        with_sum,
-        glob_only_selected,
-        granularity,
-        **kwargs
-    ):
-        timval = np.zeros((num_pixels, num_types), dtype='f4')
-        # The first timing element is always initialised to indicate unknown.
-        timval[:, 0] = -1
-
-        pulse_sum_loc = np.zeros((num_gains, num_pixels), dtype='i4')
-        pulse_sum_glob = np.zeros((num_gains, num_pixels), dtype='i4')
-
-        for start, stop in np.array(pixel_list).reshape(-1, 2):
-            for i_pix in range(start, stop + 1):
-                for i_type in range(num_types):
-                    timval[i_pix, i_type] = granularity * read_short(self)
-
-                if with_sum:
-                    for i_gain in range(num_gains):
-                        pulse_sum_loc[i_gain, i_pix] = read_utf8_like_signed_int(self)
-
-                    if glob_only_selected:
-                        for i_gain in range(num_gains):
-                            pulse_sum_glob[i_gain, i_pix] = read_utf8_like_signed_int(self)
-
-        if with_sum and len(pixel_list) > 0 and not glob_only_selected:
-            for i_gain in range(num_gains):
-                for i_pix in range(num_pixels):
-                    pulse_sum_glob[i_gain, i_pix] = read_utf8_like_signed_int(self)
 
         return {
             'timval': timval,
@@ -1169,6 +1142,15 @@ class MC_Extra_Params(EventIOObject):
 
 class SimTelMCEvent(EventIOObject):
     eventio_type = 2021
+    dtypes = {
+        1: np.dtype([('shower_num', 'i4'), ('xcore', 'f4'), ('ycore', 'f4')]),
+        2: np.dtype([
+            ('shower_num', 'i4'),
+            ('xcore', 'f4'),
+            ('ycore', 'f4'),
+            ('aweight', 'f4')
+        ]),
+    }
 
     def __repr__(self):
         return '{}[{}](shower_event_id={})'.format(
@@ -1179,16 +1161,12 @@ class SimTelMCEvent(EventIOObject):
 
     def parse_data_field(self):
         ''' '''
-        assert_exact_version(self, supported_version=1)
+        assert_version_in(self, (1, 2))
         self.seek(0)
-
-        return {
-            'event': self.header.id,
-            'shower_num': read_int(self),
-            'xcore': read_float(self),
-            'ycore': read_float(self),
-            # 'aweight': read_float(self),  # only in version 2
-        }
+        array = read_array(
+            self, dtype=self.dtypes[self.header.version], count=1
+        )[0]
+        return array
 
 
 class SimTelTelMoni(EventIOObject):

@@ -10,6 +10,9 @@ ctypedef np.uint32_t UINT32_t
 INT32 = np.int32
 ctypedef np.int32_t INT32_t
 
+INT16 = np.int16
+ctypedef np.int16_t INT16_t
+
 UINT64 = np.uint64
 ctypedef np.uint64_t UINT64_t
 
@@ -198,11 +201,15 @@ cpdef unsigned_varint_arrays_differential(
     cdef (unsigned long, unsigned long) shape = (n_arrays, n_elements)
 
     cdef np.ndarray[UINT32_t, ndim=2] output = np.zeros(shape, dtype=UINT32)
+    cdef UINT32_t[:, :] output_view = output
+    cdef UINT32_t[:] output_view_1d
 
     for i in range(n_arrays):
 
-        output[i], bytes_read = unsigned_varint_array_differential(
-            data, n_elements, offset=offset
+        output_view_1d = output_view[i]
+
+        bytes_read = unsigned_varint_array_differential(
+            data, output=output_view_1d, offset=offset
         )
         offset += bytes_read
         bytes_read_total += bytes_read
@@ -211,14 +218,13 @@ cpdef unsigned_varint_arrays_differential(
 
 
 @cython.wraparound(False)  # disable negative indexing
-cpdef unsigned_varint_array_differential(
+cdef unsigned long unsigned_varint_array_differential(
     const unsigned char[:] data,
-    unsigned long n_elements,
+    UINT32_t[:] output,
     unsigned long offset = 0,
 ):
 
-    cdef np.ndarray[UINT32_t, ndim=1] output = np.empty(n_elements, dtype=UINT32)
-
+    cdef unsigned long n_elements = output.shape[0]
     cdef int val = 0
     cdef unsigned long i
     cdef unsigned long pos = 0
@@ -301,4 +307,58 @@ cpdef unsigned_varint_array_differential(
                 ) + 1
         output[i] = val
 
-    return output, pos
+    return pos
+
+
+
+def simtel_pixel_timing_parse_list_type_2(
+    const unsigned char[:] data,
+    const INT16_t[:, :] pixel_list,
+    int num_gains,
+    int num_pixels,
+    int num_types,
+    bint with_sum,
+    bint glob_only_selected,
+    float granularity,
+):
+    cdef int start, stop, list_index
+    cdef int i_pix, i_type
+    cdef unsigned long pos = 0
+    cdef unsigned int length = 0
+
+    cdef np.ndarray[float, ndim=2] timval = np.zeros((num_pixels, num_types), dtype=np.float32)
+    # The first timing element is always initialised to indicate unknown.
+    timval[:, 0] = -1
+
+    cdef np.ndarray[INT32_t, ndim=2] pulse_sum_loc = np.zeros((num_gains, num_pixels), dtype=INT32)
+    cdef np.ndarray[INT32_t, ndim=2] pulse_sum_glob = np.zeros((num_gains, num_pixels), dtype=INT32)
+
+    for list_index in range(pixel_list.shape[0]):
+        start = pixel_list[list_index][0]
+        stop = pixel_list[list_index][1]
+        for i_pix in range(start, stop + 1):
+            for i_type in range(num_types):
+                timval[i_pix, i_type] = granularity # * read_short(self)
+                pos += 2
+
+            if with_sum:
+                for i_gain in range(num_gains):
+                    pulse_sum_loc[i_gain, i_pix], length = varint(data, offset=pos)
+                    pos += length
+
+                if glob_only_selected:
+                    for i_gain in range(num_gains):
+                        pulse_sum_glob[i_gain, i_pix], length = varint(data, offset=pos)
+                        pos += length
+
+    if with_sum and pixel_list.shape[0] > 0 and not glob_only_selected:
+        for i_gain in range(num_gains):
+            for i_pix in range(num_pixels):
+                pulse_sum_glob[i_gain, i_pix], length = varint(data, offset=pos)
+                pos += length
+
+    return {
+        'timval': timval,
+        'pulse_sum_glob': pulse_sum_glob,
+        'pulse_sum_loc': pulse_sum_loc,
+    }, pos
