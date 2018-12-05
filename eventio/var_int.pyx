@@ -203,8 +203,7 @@ cpdef unsigned_varint_arrays_differential(
 
     for i in range(n_arrays):
 
-        with cython.boundscheck(False):
-            output_view_1d = output_view[i]
+        output_view_1d = output_view[i]
 
         bytes_read = unsigned_varint_array_differential(
             data, output=output_view_1d, offset=offset
