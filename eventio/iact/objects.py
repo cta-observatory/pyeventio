@@ -4,7 +4,8 @@ import numpy as np
 from numpy.lib.recfunctions import append_fields
 
 from ..tools import (
-    read_short, read_int, read_float, read_from, read_eventio_string
+    read_short, read_int, read_float, read_from, read_eventio_string,
+    read_utf8_like_unsigned_int, read_array
 )
 from ..base import EventIOObject
 from ..exceptions import WrongSizeException
@@ -12,6 +13,7 @@ from .parse_corsika_data import (
     parse_corsika_event_header,
     parse_corsika_run_header,
 )
+from ..version_handling import assert_version_in
 
 
 __all__ = [
@@ -293,6 +295,52 @@ class IACTTriggerTime(EventIOObject):
 
 class IACTPhotoElectrons(EventIOObject):
     eventio_type = 1208
+
+    def __init__(self, header, parent):
+        super().__init__(header, parent)
+        self.array_id = header.id // 1000
+        self.telescope_id = header.id % 1000
+
+    def parse_data_field(self):
+        assert_version_in(self, [1, 2])
+        self.seek(0)
+
+        pe = {}
+        pe['n_pe'] = read_int(self)
+        pe['n_pixels'] = read_int(self)
+        if self.header.version > 1:
+            flags = read_short(self)
+        else:
+            flags = 0
+
+        pe['non_empty'] = read_int(self)
+        pe['photoelectrons'] = np.zeros(pe['n_pixels'])
+        pe['time'] = [[] for _ in range(pe['n_pixels'])]
+        if flags & 1:
+            pe['amplitude'] = [[] for _ in range(pe['n_pixels'])]
+
+        if self.header.version > 2:
+            read_pixid = read_utf8_like_unsigned_int
+        else:
+            read_pixid = read_short
+
+        for i in range(pe['non_empty']):
+            pix_id = read_pixid(self)
+            n_pe = read_int(self)
+            pe['photoelectrons'][pix_id] = n_pe
+            pe['time'][pix_id] = read_array(self, dtype='<f4', count=n_pe)
+
+            if flags & 1:
+                pe['amplitude'][pix_id] = read_array(self, dtype='<f4', count=n_pe)
+
+        if flags & 4:
+            pe['photon_counts'] = np.zeros(pe['n_pixels'])
+            nonempty = read_int(self)
+            for i in range(nonempty):
+                pix_id = read_short(self)
+                pe['photon_counts'][pix_id] = read_int(self)
+
+        return pe
 
 
 class CORSIKAEventEndBlock(EventIOObject):
