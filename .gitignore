@@ -1,6 +1,11 @@
 # Cython extensions
+bits.c
 var_int.c
 camorgan.c
+# cython html profiling
+bits.html
+var_int.html
+camorgan.html
 # Byte-compiled / optimized / DLL files
 __pycache__/
 *.py[cod]

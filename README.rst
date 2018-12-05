@@ -87,10 +87,78 @@ have a look into
 
 It might look similar to this picture:
 
-.. figure:: https://raw.githubusercontent.com/fact-project/pyeventio/master/a_shower.png
+.. figure:: https://raw.githubusercontent.com/fact-project/pyeventio/master/shower.png
    :alt: an example shower
 
    an example shower
+
+
+Commandline Tools
+-----------------
+
+We provide three commandline tools, to look into eventio files.
+
+To get an overview over the structure of a file, use ``eventio_print_structure``,
+for larger files, you might want to pipe its output into e.g. ``less``:
+
+.. code:: shell
+    
+    $ eventio_print_structure eventio/resources/gamma_test.simtel.gz
+    History[70](size=11960, only_subobjects=True, first_byte=16)
+        HistoryCommandLine[71](size=668, only_subobjects=False, first_byte=12)
+        HistoryConfig[72](size=120, only_subobjects=False, first_byte=692)
+        HistoryConfig[72](size=172, only_subobjects=False, first_byte=824)
+        HistoryConfig[72](size=180, only_subobjects=False, first_byte=1008)
+        HistoryConfig[72](size=176, only_subobjects=False, first_byte=1200)
+        HistoryConfig[72](size=72, only_subobjects=False, first_byte=1388)
+        And 124 objects more of the same type
+        .
+        .
+        .
+
+
+To get table of all object versions and counts in a file,
+use ``eventio_print_object_information``, it can also print json if given the 
+``--json`` option
+
+.. code:: shell
+    
+    $ eventio_print_object_information eventio/resources/gamma_test.simtel.gz
+     Type | Version | #Objects
+    --------------------------
+       70 |       1 |        3
+       71 |       1 |        3
+       72 |       1 |    32840
+     1212 |       0 |        2
+     2000 |       2 |        1
+     2001 |       4 |        2
+     2002 |       2 |       98
+     2002 |       3 |       28
+     2003 |       1 |      126
+     2004 |       2 |      126
+     2005 |       0 |      126
+     2006 |       0 |      126
+     2007 |       0 |      126
+     2008 |       0 |      126
+     2009 |       2 |       10
+    .
+    .
+    .
+
+
+To plot histograms stored in an eventio file (Type 100),
+use ``eventio_plot_histograms``.
+
+.. code:: shell
+    
+    $ eventio_plot_histograms gamma_20deg_180deg_run99___cta-prod3_desert-2150m-Paranal-merged_cone10.simtel.gz
+
+
+.. figure:: https://raw.githubusercontent.com/fact-project/pyeventio/master/first_hist.png
+   :alt: First histogram of a prod3b file
+
+   Histogram of Impact distance vs log10(E / TeV)
+
 
 Low level access
 ----------------
@@ -119,34 +187,6 @@ This is how our test file looks like in the low level view:
         IACTPhotons(length=6124, n_bunches=382)
     CORSIKAEventEndBlock[1209](size=1096, only_subobjects=False, first_byte=8924)
     CORSIKARunEndBlock[1210](size=16, only_subobjects=False, first_byte=10036)
-
-
-And this is how a ``sim_telarray`` file looks like
-
-:: 
-
-    In [4]: with EventIOFile('eventio/resources/gamma_test.simtel.gz') as f: 
-       ...:     for obj in f: 
-       ...:         print(obj)                                                                                                                                     
-    History[70](size=11960, only_subobjects=True, first_byte=16)
-    History[70](size=1744732, only_subobjects=True, first_byte=11992)
-    History[70](size=838000, only_subobjects=True, first_byte=1756740)
-    SimTelRunHeader[2000](size=1876, only_subobjects=False, first_byte=2594756)
-    SimTelMCRunHeader[2001](size=140, only_subobjects=False, first_byte=2596648)
-    SimTelMCRunHeader[2001](size=140, only_subobjects=False, first_byte=2596804)
-    CORSIKAInputCard[1212](size=31408, only_subobjects=False, first_byte=2596960)
-    CORSIKAInputCard[1212](size=31376, only_subobjects=False, first_byte=2628384)
-    SimTelCamSettings[2002](telescope_id=1, size=29700, first_byte=2659776)
-    SimTelCamOrgan[2003](telescope_id=1, size=108896, first_byte=2689492)
-    SimTelPixelset[2004](telescope_id=1, size=10060, first_byte=2798404)
-    SimTelPixelDisable[2005](size=8, only_subobjects=False, first_byte=2808480)
-    SimTelCamsoftset[2006](size=60, only_subobjects=False, first_byte=2808504)
-    SimTelTrackSet[2008](telescope_id=1, size=52, first_byte=2808580)
-    SimTelPointingCor[2007](telescope_id=1, size=8, first_byte=2808648)
-    SimTelCamSettings[2002](telescope_id=2, size=29700, first_byte=2808672)
-    .
-    .
-    .
 
 
 

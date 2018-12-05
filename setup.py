@@ -25,6 +25,7 @@ class build_ext(_build_ext):
 # if we have cython, use the cython file if not the c file
 ext = '.pyx' if USE_CYTHON else '.c'
 extensions = [
+    Extension('eventio.bits', sources=['eventio/bits' + ext]),
     Extension('eventio.var_int', sources=['eventio/var_int' + ext]),
     Extension(
         'eventio.simtel.camorgan',
@@ -39,7 +40,7 @@ with open('README.rst') as f:
 
 setup(
     name='eventio',
-    version='0.8.0',
+    version='0.8.2',
     description='Python read-only implementation of the EventIO file format',
     long_description=long_description,
     url='https://github.com/fact-project/pyeventio',
@@ -56,6 +57,13 @@ setup(
     install_requires=[
         'numpy',
     ],
+    entry_points={
+        'console_scripts': [
+            'eventio_print_structure = eventio.scripts.print_structure:main',
+            'eventio_plot_histograms = eventio.scripts.plot_hists:main',
+            'eventio_print_object_information = eventio.scripts.print_object_information:main',
+        ]
+    },
     setup_requires=['pytest-runner', 'numpy'],
     tests_require=['pytest>=3.0.0'],
     classifiers=[
@@ -63,8 +71,6 @@ setup(
         'Intended Audience :: Science/Research',
         'License :: OSI Approved :: MIT License',
         'Natural Language :: English',
-        'Operating System :: MacOS :: MacOS 9',
-        'Operating System :: MacOS :: MacOS X',
         'Operating System :: OS Independent',
         'Programming Language :: Python',
         'Programming Language :: Python :: 3.5',

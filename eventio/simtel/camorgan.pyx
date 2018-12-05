@@ -1,12 +1,18 @@
+# cython: language_level=3
+import cython
 import numpy as np
 cimport numpy as np
 
+
+INT32 = np.int32
+ctypedef np.int32_t INT32_t
 
 
 cdef short bytes_to_short(const unsigned char b0, const unsigned char b1):
     return ((<short> b0) << 8) | (<short> b1)
 
 
+@cython.wraparound(False)  # disable negative indexing
 cpdef read_sector_information(
     const unsigned char[:] data,
     unsigned long n_pixels,
@@ -15,14 +21,14 @@ cpdef read_sector_information(
     cdef unsigned long pos = 0
     cdef unsigned long i
     cdef short n = 0
-    cdef unsigned char* n_ptr = <unsigned char*> &n
+    cdef np.ndarray[INT32_t, ndim=1] sector
     cdef list sectors = []
 
     for i in range(n_pixels):
         n = bytes_to_short(data[pos + offset + 1], data[pos + offset])
         pos += 2
 
-        sector = np.frombuffer(data, dtype='i2', count=n, offset=offset + pos)
+        sector = np.frombuffer(data, dtype=INT32, count=n, offset=offset + pos)
         pos += 2 * n
 
         # FIXME:

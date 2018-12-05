@@ -4,7 +4,7 @@ from pytest import approx
 import numpy as np
 from eventio import EventIOFile
 from eventio.search_utils import (
-    collect_toplevel_of_type,
+    yield_toplevel_of_type,
     yield_n_subobjects,
 )
 
@@ -245,8 +245,8 @@ def test_2100_3_objects():
         for i, o in enumerate(yield_n_and_assert(f, SimTelTrackEvent, n=3)):
             pointing = parse_and_assert_consumption(o, limit=0)
 
-            assert 'azimuth_raw' in pointing.dtype.names
-            assert 'altitude_raw' in pointing.dtype.names
+            assert 'azimuth_raw' in pointing
+            assert 'altitude_raw' in pointing
 
 
 def test_2200():
@@ -263,9 +263,11 @@ def test_2010():
     from eventio.simtel.objects import SimTelEvent
 
     with EventIOFile(prod2_file) as f:
-        events = collect_toplevel_of_type(f, SimTelEvent)
-        for event in events:
+        n_events = 0
+        for event in yield_toplevel_of_type(f, SimTelEvent):
             assert isinstance(next(event), SimTelCentEvent)
+            n_events += 1
+        assert n_events > 0
 
 
 def test_2011_3_objects():

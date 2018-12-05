@@ -1,6 +1,23 @@
+# cython: language_level=3
+import cython
 import numpy as np
 cimport numpy as np
 
+
+UINT32 = np.uint32
+ctypedef np.uint32_t UINT32_t
+
+INT32 = np.int32
+ctypedef np.int32_t INT32_t
+
+UINT64 = np.uint64
+ctypedef np.uint64_t UINT64_t
+
+INT64 = np.int64
+ctypedef np.int64_t INT64_t
+
+
+@cython.wraparound(False)  # disable negative indexing
 cpdef (unsigned long, unsigned int) unsigned_varint(const unsigned char[:] data, unsigned long offset=0):
     cdef unsigned int length
     cdef unsigned long value
@@ -9,7 +26,8 @@ cpdef (unsigned long, unsigned int) unsigned_varint(const unsigned char[:] data,
     return value, length
 
 
-def varint(const unsigned char[:] data, unsigned long offset=0):
+@cython.wraparound(False)  # disable negative indexing
+cpdef (long, unsigned int) varint(const unsigned char[:] data, unsigned long offset=0):
     cdef unsigned int length
     cdef unsigned long value
     value, length = unsigned_varint(data, offset)
@@ -37,6 +55,8 @@ cpdef unsigned int get_length_of_varint(const unsigned char first_byte):
         return 8
     return 9
 
+
+@cython.wraparound(False)  # disable negative indexing
 cpdef unsigned long parse_varint(const unsigned char[:] var_int_bytes):
     length = var_int_bytes.shape[0]
     cdef unsigned long v[9]
@@ -114,12 +134,13 @@ cpdef unsigned long parse_varint(const unsigned char[:] var_int_bytes):
     )
 
 
+@cython.wraparound(False)  # disable negative indexing
 cpdef unsigned_varint_array(
     const unsigned char[:] data,
     unsigned long n_elements,
     unsigned long offset = 0,
 ):
-    cdef np.ndarray[np.uint64_t, ndim=1] output = np.empty(n_elements, dtype='uint64')
+    cdef np.ndarray[UINT64_t, ndim=1] output = np.empty(n_elements, dtype=UINT64)
 
     cdef int val
     cdef unsigned long i
@@ -138,14 +159,15 @@ cpdef unsigned_varint_array(
     return output, pos
 
 
+@cython.wraparound(False)  # disable negative indexing
 def varint_array(
     const unsigned char[:] data,
     unsigned long n_elements,
     unsigned long offset = 0,
 ):
     cdef unsigned long bytes_read
-    cdef np.ndarray[np.uint64_t, ndim=1] unsigned_output
-    cdef np.ndarray[np.int64_t, ndim=1] output = np.empty(n_elements, dtype='int64')
+    cdef np.ndarray[UINT64_t, ndim=1] unsigned_output
+    cdef np.ndarray[INT64_t, ndim=1] output = np.empty(n_elements, dtype=INT64)
 
     unsigned_output, bytes_read = unsigned_varint_array(data, n_elements, offset)
 
@@ -161,6 +183,7 @@ def varint_array(
     return output, bytes_read
 
 
+@cython.wraparound(False)  # disable negative indexing
 cpdef unsigned_varint_arrays_differential(
     const unsigned char[:] data,
     unsigned long n_arrays,
@@ -172,10 +195,9 @@ cpdef unsigned_varint_arrays_differential(
     cdef unsigned long bytes_read_total = 0
     cdef unsigned long i
     cdef unsigned long j
+    cdef (unsigned long, unsigned long) shape = (n_arrays, n_elements)
 
-    cdef np.ndarray[np.uint32_t, ndim=2] output = np.empty(
-        (n_arrays, n_elements), dtype='uint32'
-    )
+    cdef np.ndarray[UINT32_t, ndim=2] output = np.zeros(shape, dtype=UINT32)
 
     for i in range(n_arrays):
 
@@ -188,13 +210,14 @@ cpdef unsigned_varint_arrays_differential(
     return output, bytes_read_total
 
 
+@cython.wraparound(False)  # disable negative indexing
 cpdef unsigned_varint_array_differential(
     const unsigned char[:] data,
     unsigned long n_elements,
     unsigned long offset = 0,
 ):
 
-    cdef np.ndarray[np.uint32_t, ndim=1] output = np.empty(n_elements, dtype='uint32')
+    cdef np.ndarray[UINT32_t, ndim=1] output = np.empty(n_elements, dtype=UINT32)
 
     cdef int val = 0
     cdef unsigned long i
@@ -206,23 +229,23 @@ cpdef unsigned_varint_array_differential(
         pos += 1
 
         if (v0 & 0x80) == 0:  # one byte
-            if (v0 & 1) == 0:  # positive
+            if (v0 & 0x01) == 0:  # positive
                 val += v0 >> 1
             else:  # negative
                 val -= (v0 >> 1) + 1
         elif (v0 & 0xc0) == 0x80:  # two bytes
             v1 = data[pos + offset]
             pos += 1
-            if (v1 & 1) == 0:  # positive
+            if (v1 & 0x01) == 0:  # positive
                 val += ((v0 & 0x3f) << 7) | (v1 >> 1)
             else:  # negative
-                val -= ((v0 & 0x3f) << 7) | ((v1 >> 1) + 1)
+                val -= (((v0 & 0x3f) << 7) | (v1 >> 1)) + 1
         elif (v0 & 0xe0) == 0xc0:  # three bytes
             v1 = data[pos + offset + 0]
             v2 = data[pos + offset + 1]
             pos += 2
 
-            if (v2 & 1) == 0:
+            if (v2 & 0x01) == 0:
                 val += (
                     ((v0 & 0x1f) << 15)
                     | (v1 << 7)
@@ -232,14 +255,14 @@ cpdef unsigned_varint_array_differential(
                 val -= (
                     ((v0 & 0x1f) << 15)
                     | (v1 << 7)
-                    | ((v2 >> 1) + 1)
-                )
+                    | (v2 >> 1)
+                ) + 1
         elif (v0 & 0xf0) == 0xe0:  # four bytes
             v1 = data[pos + offset + 0]
             v2 = data[pos + offset + 1]
             v3 = data[pos + offset + 2]
             pos += 3
-            if (v3 & 1) == 0:
+            if (v3 & 0x01) == 0:
                 val += (
                     ((v0 & 0x0f) << 23)
                     | (v1 << 15)
@@ -251,8 +274,8 @@ cpdef unsigned_varint_array_differential(
                     ((v0 & 0x0f) << 23)
                     | (v1 << 15)
                     | (v2 << 7)
-                    | ((v3 >> 1) + 1)
-                )
+                    | (v3 >> 1)
+                ) + 1
         elif (v0 & 0xf8) == 0xf0:
             v1 = data[pos + offset + 0]
             v2 = data[pos + offset + 1]
@@ -260,7 +283,7 @@ cpdef unsigned_varint_array_differential(
             v4 = data[pos + offset + 3]
             pos += 4
             # The format would allow bits 32 and 33 being set but we ignore this here. */
-            if (v4 & 1) == 0:
+            if (v4 & 0x01) == 0:
                 val += (
                     ((v0 & 0x07) << 31)
                     | (v1 << 23)
@@ -274,8 +297,8 @@ cpdef unsigned_varint_array_differential(
                     | (v1 << 23)
                     | (v2 << 15)
                     | (v3 << 7)
-                    | ((v4 >> 1) + 1)
-                )
+                    | (v4 >> 1)
+                ) + 1
         output[i] = val
 
     return output, pos

@@ -7,6 +7,7 @@ python:
 
 install:
 - pip install zstandard docutils pygments Cython
+- pip install https://github.com/cta-observatory/pyhessio/archive/v2.1.1.tar.gz
 - pip install .
 before_script:
 - pip install --upgrade pytest>=3.0.0
