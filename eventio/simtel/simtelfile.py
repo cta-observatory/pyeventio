@@ -206,7 +206,7 @@ class SimTelFile:
                 if 'event' in event:
                     return shower, event
             except NoTrackEvents:
-                logging.warn('skipping event: no TrackEvents')
+                logging.warning('skipping event: no TrackEvents')
     def fetch_next_event(self):
         try:
             event = self.next_mc_event()
