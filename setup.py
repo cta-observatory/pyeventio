@@ -25,7 +25,7 @@ class build_ext(_build_ext):
 # if we have cython, use the cython file if not the c file
 ext = '.pyx' if USE_CYTHON else '.c'
 extensions = [
-    Extension('eventio.bits', sources=['eventio/bits' + ext]),
+    Extension('eventio.header', sources=['eventio/header' + ext]),
     Extension('eventio.var_int', sources=['eventio/var_int' + ext]),
     Extension(
         'eventio.simtel.camorgan',
