@@ -1,5 +1,5 @@
 def test_bool_bit_from_pos():
-    from eventio.bits import bool_bit_from_pos
+    from eventio.header import bool_bit_from_pos
 
     word = 0b00000000000000000000000000100000
 
@@ -8,7 +8,7 @@ def test_bool_bit_from_pos():
 
 
 def test_get_bits_from_word():
-    from eventio.bits import get_bits_from_word
+    from eventio.header import get_bits_from_word
 
     word = 0b00000000000000001010110000000000
 

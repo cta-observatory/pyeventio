@@ -13,12 +13,10 @@ from ..tools import (
     read_array,
     read_time,
 )
-from ..bits import bool_bit_from_pos
+from ..header import bool_bit_from_pos
 from ..var_int import (
     unsigned_varint_arrays_differential,
-    unsigned_varint_array,
     varint_array,
-    unsigned_varint,
     varint,
 )
 from ..version_handling import (
