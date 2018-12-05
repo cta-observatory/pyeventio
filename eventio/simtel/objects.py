@@ -1095,19 +1095,24 @@ class MC_Extra_Params(EventIOObject):
 
 class SimTelMCEvent(EventIOObject):
     eventio_type = 2021
+    dtypes = {
+        1: np.dtype([('shower_num', 'i4'), ('xcore', 'f4'), ('ycore', 'f4')]),
+        2: np.dtype([
+            ('shower_num', 'i4'),
+            ('xcore', 'f4'),
+            ('ycore', 'f4'),
+            ('aweight', 'f4')
+        ]),
+    }
 
     def parse_data_field(self):
         ''' '''
-        assert_exact_version(self, supported_version=1)
+        assert_version_in(self, (1, 2))
         self.seek(0)
-
-        return {
-            'event': self.header.id,
-            'shower_num': read_int(self),
-            'xcore': read_float(self),
-            'ycore': read_float(self),
-            # 'aweight': read_float(self),  # only in version 2
-        }
+        array = read_array(
+            self, dtype=self.dtypes[self.header.version], count=1
+        )[0]
+        return array
 
 
 class SimTelTelMoni(EventIOObject):
