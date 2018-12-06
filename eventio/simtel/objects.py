@@ -1058,7 +1058,7 @@ class PixelCalibration(EventIOObject):
     eventio_type = 2017
 
 
-class MCStereoReconstruction(EventIOObject):
+class MCShower(EventIOObject):
     eventio_type = 2020
 
     def __init__(self, header, parent):
@@ -1119,14 +1119,14 @@ class MCExtraParams(EventIOObject):
         byte_stream = BytesIO(self.read())
 
         ep = {
-            'weight': read_float(self),
-            'n_iparam': read_utf8_like_unsigned_int(self),
-            'n_fparam': read_utf8_like_unsigned_int(self),
+            'weight': read_float(byte_stream),
+            'n_iparam': read_utf8_like_unsigned_int(byte_stream),
+            'n_fparam': read_utf8_like_unsigned_int(byte_stream),
         }
         if ep['n_iparam'] > 0:
-            ep['iparam'] = read_array(self, dtype='<i4', count=ep['n_iparam'])
+            ep['iparam'] = read_array(byte_stream, dtype='<i4', count=ep['n_iparam'])
         if ep['n_fparam'] > 0:
-            ep['fparam'] = read_array(self, dtype='<f4', count=ep['n_iparam'])
+            ep['fparam'] = read_array(byte_stream, dtype='<f4', count=ep['n_iparam'])
         return ep
 
 

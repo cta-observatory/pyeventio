@@ -1,5 +1,5 @@
 from ..base import KNOWN_OBJECTS, EventIOObject
-from .simtelfile import SimTelFile
+# from .simtelfile import SimTelFile
 from .objects import (
     TelescopeObject,
     RunHeader,
@@ -22,7 +22,7 @@ from .objects import (
     StereoReconstruction,
     PixelTiming,
     PixelCalibration,
-    MCStereoReconstruction,
+    MCShower,
     MCEvent,
     CameraMonitoring,
     LaserCalibration,
@@ -55,7 +55,7 @@ __all__ = [
     'StereoReconstruction',
     'PixelTiming',
     'PixelCalibration',
-    'MCStereoReconstruction',
+    'MCShower',
     'MCEvent',
     'CameraMonitoring',
     'LaserCalibration',
