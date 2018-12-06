@@ -30,7 +30,7 @@ def read_remaining_with_check(eventio_object):
     pos = eventio_object.tell()
     data = eventio_object.read()
     if len(data) < (eventio_object.header.length - pos):
-        raise IOError('File seems to be truncated')
+        raise EOFError('File seems to be truncated')
     return data
 
 
