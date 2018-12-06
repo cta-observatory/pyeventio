@@ -1,11 +1,7 @@
-
-import gzip
-import tempfile
 import pkg_resources
 import os
-import pytest
 
-from eventio.simtel.simtelfile import SimTelFile
+from eventio.simtel import SimTelFile
 
 prod2_path = pkg_resources.resource_filename(
     'eventio',
@@ -40,9 +36,11 @@ prod4_zst_path = pkg_resources.resource_filename(
 
 test_paths = [prod2_path, prod3_path, prod4_path, prod4_zst_path]
 
+
 def test_can_open():
     for path in test_paths:
         assert SimTelFile(path)
+
 
 def test_at_least_one_event_found():
     for path in test_paths:
@@ -52,13 +50,8 @@ def test_at_least_one_event_found():
             break
         assert one_found, path
 
+
 def test_show_we_get_a_tuple_of_shower_and_event():
-    expected_counter_values = {
-        prod2_path: 8,
-        prod3_path: 5,
-        prod4_path: 28,
-        prod4_zst_path: 28,  # the same of course
-    }
     for path in test_paths:
         for shower, event in SimTelFile(path):
             assert shower
@@ -67,12 +60,6 @@ def test_show_we_get_a_tuple_of_shower_and_event():
 
 
 def test_show_event_is_not_empty_and_has_some_members_for_sure():
-    expected_counter_values = {
-        prod2_path: 8,
-        prod3_path: 5,
-        prod4_path: 28,
-        prod4_zst_path: 28,  # the same of course
-    }
     for path in test_paths:
         for shower, event in SimTelFile(path):
             assert shower.keys() == {
@@ -130,8 +117,8 @@ def test_iterate_complete_file():
     expected_counter_values = {
         prod2_path: 8,
         prod3_path: 5,
-        prod4_path: 28,
-        prod4_zst_path: 28,  # the same of course
+        prod4_path: 30,
+        prod4_zst_path: 30,  # the same of course
     }
     for path in test_paths:
         try:
@@ -140,5 +127,3 @@ def test_iterate_complete_file():
         except (EOFError, IndexError):  # truncated files might raise these...
             pass
         assert counter == expected_counter_values[path]
-
-

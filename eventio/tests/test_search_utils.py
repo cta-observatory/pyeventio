@@ -7,11 +7,11 @@ test_file = resource_filename('eventio', 'resources/gamma_test.simtel.gz')
 def test_find_all_subobjects():
     from eventio import EventIOFile
     from eventio.search_utils import find_all_subobjects
-    from eventio.simtel import SimTelEvent, SimTelTelEvent, SimTelTelADCSamp
+    from eventio.simtel import Event, TelescopeEvent, ADCSamples
 
     with EventIOFile(test_file) as f:
         adcsamps = find_all_subobjects(
-            f, [SimTelEvent, SimTelTelEvent, SimTelTelADCSamp]
+            f, [Event, TelescopeEvent, ADCSamples]
         )
 
         assert len(adcsamps) == 50

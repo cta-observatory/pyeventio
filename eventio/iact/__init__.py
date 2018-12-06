@@ -5,19 +5,19 @@ from ..base import KNOWN_OBJECTS, EventIOFile, EventIOObject
 from ..exceptions import check_type
 
 from .objects import (
-    CORSIKARunHeader,
-    CORSIKATelescopeDefinition,
-    CORSIKAEventHeader,
-    CORSIKAArrayOffsets,
-    CORSIKATelescopeData,
-    IACTPhotons,
-    IACTLayout,
-    IACTTriggerTime,
-    IACTPhotoElectrons,
-    CORSIKAEventEndBlock,
-    CORSIKARunEndBlock,
-    CORSIKALongitudinal,
-    CORSIKAInputCard,
+    RunHeader,
+    TelescopeDefinition,
+    EventHeader,
+    ArrayOffsets,
+    TelescopeData,
+    Photons,
+    Layout,
+    TriggerTime,
+    PhotoElectrons,
+    EventEnd,
+    RunEnd,
+    Longitudinal,
+    InputCard,
 )
 
 
@@ -25,6 +25,24 @@ for o in EventIOObject.__subclasses__():
     KNOWN_OBJECTS[o.eventio_type] = o
 
 log = logging.getLogger(__name__)
+
+
+__all__ = [
+    'IACTFile',
+    'RunHeader',
+    'TelescopeDefinition',
+    'EventHeader',
+    'ArrayOffsets',
+    'TelescopeData',
+    'Photons',
+    'Layout',
+    'TriggerTime',
+    'PhotoElectrons',
+    'EventEnd',
+    'RunEnd',
+    'Longitudinal',
+    'InputCard',
+]
 
 
 class IACTFile(EventIOFile):
@@ -36,45 +54,45 @@ class IACTFile(EventIOFile):
     Instead of low-level access to eventio items, it provides
     direct access to telescope events and simulation settings.
 
-    It is an Iterable of `CORSIKAEvent`s.
+    It is an Iterable of `Event`s.
 
     Notes
     -----
     Calling `next` on this file will give you the next low-level EventIOObject.
-    Calling `next(iter(IACTFile))` will give you the next event.
+    Calling `next(iter(File))` will give you the next event.
 
-    The structure of an IACT EventIO file is assumed to be like this:
+    The structure of an  EventIO file is assumed to be like this:
 
-    CORSIKARunHeader
-    CORSIKAInputCard
-    CORSIKATelescopeDefinition
+    RunHeader
+    InputCard
+    TelescopeDefinition
 
     For each Event:
-      CORSIKAEventHeader
-      CORSIKAArrayOffsets
-      CORSIKALongitudinal (optional)
+      EventHeader
+      ArrayOffsets
+      Longitudinal (optional)
       For each reuse:
-        CORSIKATelescopeData
+        TelescopeData
         For each Telescope:
-          IACTPhotons
-      CORSIKAEventEndBlock
+          Photons
+      EventEnd
 
-    CORSIKARunEndBlock
+    RunEnd
     '''
 
     def __init__(self, path):
         super().__init__(path)
 
         header_object = next(self)
-        check_type(header_object, CORSIKARunHeader)
+        check_type(header_object, RunHeader)
         self.header = header_object.parse_data_field()
 
         input_card_object = next(self)
-        check_type(input_card_object, CORSIKAInputCard)
+        check_type(input_card_object, InputCard)
         self.input_card = input_card_object.parse_data_field()
 
         telescope_object = next(self)
-        check_type(telescope_object, CORSIKATelescopeDefinition)
+        check_type(telescope_object, TelescopeDefinition)
 
         self.n_telescopes = telescope_object.n_telescopes
         self.telescope_positions = telescope_object.parse_data_field()
@@ -99,19 +117,19 @@ class IACTFile(EventIOFile):
         self._next_header_pos = self._first_event_byte
         obj = next(self)
 
-        while not isinstance(obj, CORSIKARunEndBlock):
-            check_type(obj, CORSIKAEventHeader)
+        while not isinstance(obj, RunEnd):
+            check_type(obj, EventHeader)
             header = obj.parse_data_field()
 
             reuse_object = next(self)
-            check_type(reuse_object, CORSIKAArrayOffsets)
+            check_type(reuse_object, ArrayOffsets)
 
             n_reuses = reuse_object.n_reuses
             array_offsets = reuse_object.parse_data_field()
             time_offset = reuse_object.time_offset
 
             obj = next(self)
-            if isinstance(obj, CORSIKALongitudinal):
+            if isinstance(obj, Longitudinal):
                 longitudinal = obj.parse_data_field()
                 obj = next(self)
             else:
@@ -119,19 +137,19 @@ class IACTFile(EventIOFile):
 
             for reuse in range(n_reuses):
 
-                check_type(obj, CORSIKATelescopeData)
+                check_type(obj, TelescopeData)
                 telescope_data_obj = obj
 
                 photon_bunches = {}
                 n_photons = {}
                 n_bunches = {}
                 for data in telescope_data_obj:
-                    if isinstance(data, IACTPhotons):
+                    if isinstance(data, Photons):
                         photon_bunches[data.telescope] = data.parse_data_field()
                         n_photons[data.telescope] = data.n_photons
                         n_bunches[data.telescope] = data.n_bunches
 
-                yield CORSIKAEvent(
+                yield Event(
                     header=header,
                     photon_bunches=photon_bunches,
                     time_offset=time_offset,
@@ -146,15 +164,15 @@ class IACTFile(EventIOFile):
                 )
                 obj = next(self)
 
-            check_type(obj, CORSIKAEventEndBlock)
+            check_type(obj, EventEnd)
 
             obj = next(self)
 
         self.run_end = obj.parse_data_field()
 
 
-CORSIKAEventTuple = namedtuple(
-    'CORSIKAEventTuple',
+EventTuple = namedtuple(
+    'EventTuple',
     [
         'header', 'photon_bunches',
         'time_offset', 'x_offset', 'y_offset', 'weight',
@@ -165,7 +183,7 @@ CORSIKAEventTuple = namedtuple(
 )
 
 
-class CORSIKAEvent(CORSIKAEventTuple):
+class Event(EventTuple):
     '''
     A single event as simulated by corsika
 

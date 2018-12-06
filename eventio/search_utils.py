@@ -26,7 +26,7 @@ def find_all_subobjects(f, structure, level=0):
     '''
     Find all subobjects expected in structure.
     So if you want all AdcSums, use
-    structure = [SimTelEvent, SimTelTelEvent, SimTelTelADCSum]
+    structure = [Event, TelescopeEvent, ADCSum]
     '''
     objects = []
     elem = structure[level]
@@ -43,7 +43,7 @@ def yield_all_subobjects(f, structure, level=0):
     '''
     Find all subobjects expected in structure.
     So if you want all AdcSums, use
-    structure = [SimTelEvent, SimTelTelEvent, SimTelTelADCSum]
+    structure = [Event, TelescopeEvent, ADCSum]
     '''
     elem = structure[level]
 

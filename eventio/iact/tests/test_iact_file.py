@@ -74,7 +74,7 @@ def test_read_telescopes_2():
 def test_iterating():
     with eventio.IACTFile(testfile) as f:
         for event in f:
-            assert isinstance(event, eventio.iact.CORSIKAEvent)
+            assert isinstance(event, eventio.iact.Event)
 
 
 def test_iterating_zstd():
@@ -82,7 +82,7 @@ def test_iterating_zstd():
 
     with eventio.IACTFile(testfile_zstd) as f:
         for i, event in enumerate(f):
-            assert isinstance(event, eventio.iact.CORSIKAEvent)
+            assert isinstance(event, eventio.iact.Event)
             if i > 5:
                 break
 

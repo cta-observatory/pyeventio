@@ -10,10 +10,10 @@ from pkg_resources import resource_filename
 
 from eventio import EventIOFile
 from eventio.simtel import (
-    SimTelCamSettings,
-    SimTelEvent,
-    SimTelTelEvent,
-    SimTelTelADCSum
+    CameraSettings,
+    Event,
+    TelescopeEvent,
+    ADCSum
 )
 
 input_file = resource_filename(
@@ -24,7 +24,7 @@ input_file = resource_filename(
 with EventIOFile(input_file) as f:
     cameras = {}
     for o in f:
-        if isinstance(o, SimTelCamSettings):
+        if isinstance(o, CameraSettings):
             cam_data = o.parse_data_field()
 
             if cam_data['pixel_shape'][0] == -1:
@@ -42,12 +42,12 @@ with EventIOFile(input_file) as f:
                 cam_rotation=cam_data['cam_rot'] * u.rad,
             )
 
-        if isinstance(o, SimTelEvent):
+        if isinstance(o, Event):
             assert len(cameras) > 0
             for subo in o:
-                if isinstance(subo, SimTelTelEvent):
+                if isinstance(subo, TelescopeEvent):
                     for subsubo in subo:
-                        if isinstance(subsubo, SimTelTelADCSum):
+                        if isinstance(subsubo, ADCSum):
                             data = subsubo.parse_data_field()
 
                             plt.figure()
