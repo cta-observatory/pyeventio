@@ -607,7 +607,7 @@ class TelescopeEvent(EventIOObject):
         )
 
 
-class Event(EventIOObject):
+class ArrayEvent(EventIOObject):
     eventio_type = 2010
 
     def __init__(self, header, parent):
