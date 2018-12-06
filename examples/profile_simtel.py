@@ -3,20 +3,25 @@ import pstats
 from io import StringIO
 from eventio import EventIOFile
 from eventio.search_utils import yield_all_objects_depth_first
+from argparse import ArgumentParser
 
-path = 'eventio/resources/gamma_20deg_0deg_run102___cta-prod4-sst-1m_desert-2150m-Paranal-sst-1m.simtel.gz'
+parser = ArgumentParser()
+parser.add_argument('inputfile')
+parser.add_argument('-s', '--sort', default='cumtime')
+parser.add_argument('-l', '--limit', default=50, type=int)
+args = parser.parse_args()
 
 pr = cProfile.Profile()
 pr.enable()
 
-with EventIOFile(path) as f:
+with EventIOFile(args.inputfile) as f:
     for o, level in yield_all_objects_depth_first(f):
         if hasattr(o, 'parse_data_field'):
             o.parse_data_field()
 
 pr.disable()
 s = StringIO()
-ps = pstats.Stats(pr, stream=s).sort_stats('tottime')
+ps = pstats.Stats(pr, stream=s).sort_stats(args.sort)
 
-ps.print_stats(50)
+ps.print_stats(args.limit)
 print(s.getvalue())

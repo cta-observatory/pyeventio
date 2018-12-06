@@ -2,7 +2,7 @@
 import numpy as np
 from io import BytesIO
 import struct
-from ..base import EventIOObject, read_next_header
+from ..base import EventIOObject, read_next_header_sublevel
 from ..tools import (
     read_short,
     read_int,
@@ -25,6 +25,14 @@ from ..version_handling import (
     assert_max_version,
     assert_version_in
 )
+
+
+def read_remaining_with_check(byte_stream, length):
+    pos = byte_stream.tell()
+    data = byte_stream.read()
+    if len(data) < (length - pos):
+        raise EOFError('File seems to be truncated')
+    return data
 
 
 class TelescopeObject(EventIOObject):
@@ -252,7 +260,7 @@ class SimTelCamOrgan(TelescopeObject):
             byte_stream, 'i2', num_pixels * num_gains
         ).reshape(num_pixels, num_gains)
 
-        data = byte_stream.read()
+        data = read_remaining_with_check(byte_stream, self.header.length)
         pos = 0
         sectors, bytes_read = SimTelCamOrgan.read_sector_information(
             data, num_pixels
@@ -642,8 +650,7 @@ class SimTelTelEvtHead(TelescopeObject):
         event_head['trg_source'] = t & 0xff
 
         pos = 0
-        data = byte_stream.read()
-
+        data = read_remaining_with_check(byte_stream, self.header.length)
         if t & 0x100:
             if self.header.version <= 1:
                 num_list_trgsect, = struct.unpack('<h', data[pos:pos + 2])
@@ -724,7 +731,7 @@ class SimTelTelADCSum(EventIOObject):
             )
 
         raw['adc_sums'] = []
-        data = byte_stream.read()
+        data = read_remaining_with_check(byte_stream, self.header.length)
         raw['adc_sums'], bytes_read = unsigned_varint_arrays_differential(
             data, n_arrays=n_gains, n_elements=n_pixels
         )
@@ -805,7 +812,7 @@ class SimTelTelADCSamp(EventIOObject):
             dtype='u2'
         )
         n_pixels_signal = sum(p[1] - p[0] for p in pixel_ranges)
-        data = byte_stream.read()
+        data = read_remaining_with_check(byte_stream, self.header.length)
         adc_samples_signal, bytes_read = unsigned_varint_arrays_differential(
             data, n_arrays=num_gains * n_pixels_signal, n_elements=num_samples,
         )
@@ -824,7 +831,7 @@ class SimTelTelADCSamp(EventIOObject):
         num_samples,
     ):
 
-        data = byte_stream.read()
+        data = read_remaining_with_check(byte_stream, self.header.length)
         adc_samples, bytes_read = unsigned_varint_arrays_differential(
             data, n_arrays=num_gains * num_pixels, n_elements=num_samples,
         )
@@ -1024,7 +1031,7 @@ class SimTelPixelTiming(EventIOObject):
         pixel_timing['granularity'] = read_float(byte_stream)
         pixel_timing['peak_global'] = read_float(byte_stream)
 
-        data = byte_stream.read()
+        data = read_remaining_with_check(byte_stream, self.header.length)
         if list_type == 1:
             result, bytes_read = SimTelPixelTiming._parse_list_type_1(
                 data,
@@ -1102,7 +1109,7 @@ class SimTelMCShower(EventIOObject):
             mc['profiles'].append(p)
 
         if self.header.version >= 2:
-            h = read_next_header(self, toplevel=False)
+            h = read_next_header_sublevel(self)
             assert h.type == 1215
             mc['mc_extra_params'] = MC_Extra_Params(h, self).parse_data_field()
         return mc
