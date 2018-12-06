@@ -3,245 +3,181 @@ Implementation of an EventIOFile that
 loops through SimTel Array events.
 '''
 import logging
-from eventio.base import EventIOFile, EventIOObject
+import re
+from copy import copy
+from collections import defaultdict
+from ..base import EventIOFile
+from ..exceptions import check_type
+from .. import iact
+from ..histograms import Histograms
+from .objects import (
+    ADCSamples,
+    ADCSum,
+    ArrayEvent,
+    CameraMonitoring,
+    CameraOrganization,
+    CameraSettings,
+    CameraSoftwareSettings,
+    CentralEvent,
+    DisabledPixels,
+    DriveSettings,
+    History,
+    ImageParameters,
+    LaserCalibration,
+    MCEvent,
+    MCPhotoelectronSum,
+    MCRunHeader,
+    MCShower,
+    PixelList,
+    PixelSettings,
+    PixelTiming,
+    PointingCorrection,
+    RunHeader,
+    StereoReconstruction,
+    TelescopeEvent,
+    TelescopeEventHeader,
+    TrackingPosition,
+)
 
 
-class WrongType(Exception):
-    pass
+camel_re1 = re.compile('(.)([A-Z][a-z]+)')
+camel_re2 = re.compile('([a-z0-9])([A-Z])')
+
+
+def camel_to_snake(name):
+    s1 = camel_re1.sub(r'\1_\2', name)
+    return camel_re2.sub(r'\1_\2', s1).lower()
 
 
 class NoTrackingPositions(Exception):
     pass
 
 
-class WithNextAssert:
-    '''MixIn for EventIoFile adding `next_assert`'''
-
-    def next_assert(self, object_):
-        '''return next object from file, only
-        if it is of type `object_`
-        else raise WrongType
-
-        Make sure the object is not lost, but another call to next_assert
-        will see the exact same object
-        '''
-        if not hasattr(self, '_last_obj'):
-            self._last_obj = None
-
-        if self._last_obj is None:
-            try:
-                self._last_obj = next(self)
-            except StopIteration:
-                raise WrongType
-
-        o = self._last_obj
-        if not isinstance(o, object_):
-            raise WrongType('is:{o}, not:{object_}'.format(
-                o=o, object_=object_)
-            )
-
-        self._last_obj = None
-        return o
-
-    def next_type_or_none(self, object_):
-        '''return next object from file, only
-        if it is of type `object_`
-        else return None
-
-        Make sure the object is not lost, but another call to next_assert
-        will see the exact same object
-        '''
-        if not hasattr(self, '_last_obj'):
-            self._last_obj = None
-
-        if self._last_obj is None:
-            try:
-                self._last_obj = next(self)
-            except StopIteration:
-                return None
-
-        o = self._last_obj
-        if not isinstance(o, object_):
-            return None
-
-        self._last_obj = None
-        return o
-
-
-EventIOObject.next_assert = WithNextAssert.next_assert
-EventIOObject.next_type_or_none = WithNextAssert.next_type_or_none
-
-from eventio.iact.objects import InputCard, TelescopeData
-from eventio.simtel.objects import (
-    History,
-    TelescopeObject,
-    RunHeader,
-    MCRunHeader,
-    CameraSettings,
-    CameraOrganization,
-    PixelSettings,
-    DisabledPixels,
-    CameraSoftwareSettings,
-    PointingCorrection,
-    DriveSettings,
-    CentralEvent,
-    TrackingPosition,
-    TelescopeEvent,
-    Event,
-    TelescopeEventHeader,
-    ADCSum,
-    ADCSamples,
-    ImageParameters,
-    StereoReconstruction,
-    PixelTiming,
-    PixelCalibration,
-    MCStereoReconstruction,
-    MCEvent,
-    CameraMonitoring,
-    LaserCalibration,
-    RunStatistics,
-    MCRunStatistics,
-    MCPhotoelectronSum,
-    PixelList,
-    CalibrationEvent,
-)
-
-
-class SimTelFile:
+class SimTelFile(EventIOFile):
     def __init__(self, path):
+        super().__init__(path)
+
         self.path = path
-        self.file_ = EventIOFileWithNextAssert(path)
 
         self.history = []
-        while True:
-            try:
-                self.history.append(self.file_.next_assert(History))
-            except WrongType:
-                break
+        o = next(self)
+        while isinstance(o, History):
+            self.history.append(o)
+            o = next(self)
 
-        self.header = self.file_.next_assert(RunHeader).parse_data_field()
+        check_type(o, RunHeader)
+        self.header = o.parse_data_field()
         self.n_telescopes = self.header['n_telescopes']
-        self.mc_header = read_all_of_type(self.file_, MCRunHeader)
-        self.corsika_input = read_all_of_type(self.file_, InputCard)
-        self.telescope_descriptions = [
-            telescope_description_from(self.file_)
-            for _ in range(self.n_telescopes)
+
+        o = next(self)
+        self.mc_header = []
+        while isinstance(o, MCRunHeader):
+            self.mc_header.append(o.parse_data_field())
+            o = next(self)
+
+        o = next(self)
+        self.corsika_inputcards = []
+        while isinstance(o, iact.InputCard):
+            self.corsika_inputcards.append(o.parse_data_field())
+            o = next(self)
+
+        self.telescope_descriptions = defaultdict(dict)
+
+        expected_structure = [
+            CameraSettings,
+            CameraOrganization,
+            PixelSettings,
+            DisabledPixels,
+            CameraSoftwareSettings,
+            DriveSettings,
+            PointingCorrection,
         ]
 
+        first = True
+        for i in range(self.n_telescopes):
+            for eventio_type in expected_structure:
+                if not first:
+                    o = next(self)
+                first = False
+
+                check_type(o, eventio_type)
+                key = camel_to_snake(o.__class__.__name__)
+                self.telescope_descriptions[o.telescope_id][key] = o.parse_data_field()
+
         self.shower = None
-        self.tel_moni = {}  # tel_id: CameraMonitoring
-        self.lascal = {}  # tel_id: LaserCalibration
-
-        self.cam_settings = {}
-        for telescope_description in self.telescope_descriptions:
-            cam_setting = telescope_description[0]
-            self.cam_settings[cam_setting['telescope_id']] = cam_setting
-
-        self.ref_pulse = {}
-        self.time_slices_per_telescope = {}
-        for telescope_description in self.telescope_descriptions:
-            pixel_setting = telescope_description[2]
-            telescope_id = pixel_setting['telescope_id']
-            self.time_slices_per_telescope[telescope_id] = pixel_setting['time_slice']
-            self.ref_pulse[telescope_id] = {
-                'step': pixel_setting['ref_step'],
-                'shape': pixel_setting['refshape']
-            }
+        self.camera_monitoring = {}  # tel_id: CameraMonitoring
+        self.laser_calibration = {}  # tel_id: LaserCalibration
+        self._first_event_byte = self.tell()
 
     def __iter__(self):
-        return self
+        self._next_header_pos = self._first_event_byte
 
-    def __next__(self):
+        current_mc_shower = None
+        current_mc_event = None
+        current_photon_electron_sum = None
+        current_photon_electrons = None
+        camera_monitorings = defaultdict(dict)
+        laser_calibrations = defaultdict(dict)
+
+        o = next(self)
+
         while True:
-            try:
-                shower, event = self.fetch_next_event()
-                if 'event' in event:
-                    return shower, event
-            except NoTrackingPositions:
-                logging.warning('skipping event: no TrackingPositions')
-    def fetch_next_event(self):
-        try:
-            event = self.next_mc_event()
-            return self.shower, event
-        except WrongType:
-            try:
-                self.shower = self.file_.next_assert(MCStereoReconstruction).parse_data_field()
-            except WrongType:
-                raise StopIteration
+            if isinstance(o, MCShower):
+                current_mc_shower = o.parse_data_field()
 
-            event = self.next_mc_event()
-            return self.shower, event
+            elif isinstance(o, MCEvent):
+                current_mc_event = o.parse_data_field()
 
-    def next_mc_event(self):
-        result = {}
+            elif isinstance(o, iact.TelescopeData):
+                current_photon_electrons = parse_photo_electrons(o)
 
-        # There is for sure exactly one of these
-        result['mc_event'] = self.file_.next_assert(MCEvent).parse_data_field()
-        result['corsika_tel_data'] = self.file_.next_type_or_none(
-            TelescopeData)
+            elif isinstance(o, MCPhotoelectronSum):
+                current_photon_electron_sum = o.parse_data_field()
 
-        self.update_moni_lascal()
-        try:
-            result['pe_sum'] = self.file_.next_assert(MCPhotoelectronSum).parse_data_field()
-        except WrongType:
-            return result
+            elif isinstance(o, ArrayEvent):
+                array_event = parse_array_event(o)
+                event_data = {
+                    'mc_shower': current_mc_shower,
+                    'mc_event': current_mc_event,
+                    'array_event': array_event,
+                    'photon_electron_sum': current_photon_electron_sum,
+                    'photon_electrons': current_photon_electrons,
+                }
+                event_data['camera_monitorings'] = {
+                    telescope_id: copy(camera_monitorings[telescope_id])
+                    for telescope_id in array_event['telescope_events'].keys()
+                }
+                event_data['laser_calibrations'] = {
+                    telescope_id: copy(laser_calibrations[telescope_id])
+                    for telescope_id in array_event['telescope_events'].keys()
+                }
+                yield event_data
 
-        event_ = self.file_.next_type_or_none(Event)
-        if event_ is not None:
-            result['event'] = parse_event(event_)
+            elif isinstance(o, CameraMonitoring):
+                camera_monitorings[o.telescope_id].update(o.parse_data_field())
 
-        return result
+            elif isinstance(o, LaserCalibration):
+                laser_calibrations[o.telescope_id].update(o.parse_data_field())
 
-    def update_moni_lascal(self):
-        try:
-            for tel_id in range(self.n_telescopes):
-                moni = self.file_.next_assert(
-                    CameraMonitoring
-                ).parse_data_field()
-                self.tel_moni[moni['telescope_id']] = moni
+            elif isinstance(o, Histograms):
+                self.histograms = o.parse_data_field()
+                break
 
-                lascal = self.file_.next_assert(
-                    LaserCalibration
-                ).parse_data_field()
-                self.lascal[lascal['telescope_id']] = lascal
-
-        except WrongType:
-            # this is normal .. not every event has updates here
-            pass
+            o = next(self)
 
 
+def telescope_description_from(eventio_file, n_telescopes):
+    '''
+    Read ``n_telescopes`` telescope descriptions from EventIOFile eventio_file
 
-class EventIOFileWithNextAssert(EventIOFile, WithNextAssert):
-    pass
+    Assumes that the next object in the file is already the first
+    object of the telescope descriptions: ``CameraSettings``
+    '''
 
-
-def telescope_description_from(file_):
-    return [
-        file_.next_assert(CameraSettings).parse_data_field(),
-        file_.next_assert(CameraOrganization),
-        file_.next_assert(PixelSettings).parse_data_field(),
-        file_.next_assert(DisabledPixels),
-        file_.next_assert(CameraSoftwareSettings),
-        file_.next_assert(DriveSettings),
-        file_.next_assert(PointingCorrection),
-    ]
+    return telescopes
 
 
-def read_all_of_type(f, type_, converter=lambda x: x):
-    result = []
-    while True:
-        try:
-            result.append(
-                converter(
-                    f.next_assert(type_)
-                )
-            )
-        except WrongType:
-            break
-    return result
-
-
-def parse_event(event):
+def parse_array_event(array_event):
     '''structure of event:
         CentralEvent[2009]  <-- this knows how many TelescopeEvents
 
@@ -262,83 +198,74 @@ def parse_event(event):
             m track events (n does not need to be == m)
             1 shower
     '''
-    result = {}
-    result['cent_event'] = event.next_assert(CentralEvent).parse_data_field()
-    tel_events = read_all_of_type(
-        event,
-        TelescopeEvent,
-        converter=parse_tel_event,
-    )
-    #assert result['tel_events'], (result, result['cent_event'].header)  # more than zero
-    track_events = read_all_of_type(
-        event,
-        TrackingPosition,
-        converter=lambda x: x.parse_data_field()
-    )
+    check_type(array_event, ArrayEvent)
 
+    telescope_events = {}
+    tracking_positions = {}
 
+    for i, o in enumerate(array_event):
+        # require first element to be a CentralEvent
+        if i == 0:
+            check_type(o, CentralEvent)
+            central_event = o.parse_data_field()
 
-    # convert into dicts with key = telescope_id
-    tel_events = {
-        tel_event['header']['telescope_id']: tel_event
-        for tel_event in tel_events
+        elif isinstance(o, TelescopeEvent):
+            telescope_events[o.telescope_id] = parse_telescope_event(o)
+
+        elif isinstance(o, TrackingPosition):
+            tracking_positions[o.telescope_id] = o.parse_data_field()
+
+    missing_tracking = set(telescope_events.keys()) - set(tracking_positions.keys())
+    if missing_tracking:
+        raise NoTrackingPositions(
+            'Missing tracking positions for telescopes {}'.format(
+                missing_tracking
+            )
+        )
+
+    return {
+        'central_event': central_event,
+        'telescope_events': telescope_events,
+        'tracking_positions': tracking_positions,
     }
-    track_events = {
-        track_event['telescope_id']: track_event
-        for track_event in track_events
-    }
-
-    # modify tel_events .. append track --> track_event
-    for telescope_id, tel_event in tel_events.items():
-        try:
-            tel_event['track'] = track_events[telescope_id]
-        except KeyError:
-            raise NoTrackingPositions()
-    result['tel_events'] = tel_events
-    #assert result['track_events'], (result, result['cent_event'].header)  # more than zero
-    result['shower'] = read_all_of_type(event, StereoReconstruction)
-    return result
 
 
-def parse_tel_event(tel_event):
-    '''structure of tel_event
-    probably: did survive cleaning and hence we have shower information
-     TelescopeEvent[2204]
-         TelescopeEventHeader[2011]
-         ADCSamples[2013]
-         PixelTiming[2016]
-         ImageParameters[2014]
-         PixelList[2027]
+def parse_photo_electrons(telescope_data):
+    check_type(telescope_data, iact.TelescopeData)
 
-    probably: did not survive cleaning
-     TelescopeEvent[2208]
-         TelescopeEventHeader[2011]
-         ADCSamples[2013]
-         PixelTiming[2016]
-    '''
-    result = {}
-    # These 3 are sure
-    result['header'] = tel_event.next_assert(TelescopeEventHeader).parse_data_field()
+    photo_electrons = {}
+    for o in telescope_data():
 
-    # well could be either ADCSamp or ADCSum
-    adc_stuff = tel_event.next_type_or_none(ADCSamples)
-    if adc_stuff is None:
-        adc_stuff = tel_event.next_type_or_none(ADCSum)
-        if adc_stuff is None:
-            raise WrongType
-        waveform = adc_stuff.parse_data_field()[..., None]
-    else:
-        waveform = adc_stuff.parse_data_field()
+        check_type(o, iact.PhotoElectrons)
+        photo_electrons[o.telescope_id] = o.parse_data_field()
 
-    result['waveform'] = waveform
-    result['pixel_timing'] = tel_event.next_assert(PixelTiming)
+    return photo_electrons
 
-    # these are only sometimes there
-    image = tel_event.next_type_or_none(ImageParameters)
-    if image is not None:
-        result['image'] = image.parse_data_field()
-    pixel_list = tel_event.next_type_or_none(PixelList)
-    if pixel_list is not None:
-        result['pixel_list'] = pixel_list.parse_data_field()
 
-    return result
+def parse_telescope_event(telescope_event):
+    '''Parse a telescope event'''
+    check_type(telescope_event, TelescopeEvent)
+
+    event = {}
+    for i, o in enumerate(telescope_event):
+
+        if i == 0:
+            check_type(o, TelescopeEventHeader)
+            event['header'] = o.parse_data_field()
+
+        elif isinstance(o, ADCSamples):
+            event['adc_samples'] = o.parse_data_field()
+
+        elif isinstance(o, ADCSum):
+            event['adc_sum'] = o.parse_data_field()
+
+        elif isinstance(o, PixelTiming):
+            event['pixel_timing'] = o.parse_data_field()
+
+        elif isinstance(o, ImageParameters):
+            event['image_parameters'] = o.parse_data_field()
+
+        elif isinstance(o, PixelList):
+            event['pixel_list'] = o.parse_data_field()
+
+    return event
