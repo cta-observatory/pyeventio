@@ -9,7 +9,7 @@ from ctapipe.visualization import CameraDisplay
 
 from eventio import EventIOFile
 from eventio.simtel import CameraSettings
-from eventio.iact import IACTPhotoElectrons, CORSIKATelescopeData
+from eventio.iact import PhotoElectrons, TelescopeData
 
 input_file = resource_filename(
     'eventio',
@@ -36,9 +36,9 @@ with EventIOFile(input_file) as f:
                 pix_rotation=pix_rotation,
             )
 
-        if isinstance(o, CORSIKATelescopeData):
+        if isinstance(o, TelescopeData):
             for subo in o:
-                if isinstance(subo, IACTPhotoElectrons):
+                if isinstance(subo, PhotoElectrons):
                     pe = subo.parse_data_field()
 
                     plt.figure()

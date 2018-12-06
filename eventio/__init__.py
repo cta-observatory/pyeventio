@@ -1,9 +1,9 @@
 from .base import EventIOFile, KNOWN_OBJECTS
-from .iact import IACTFile
+from .iact import File
 from . import simtel
 from .histograms import Histograms
 
-__all__ = ['EventIOFile', 'IACTFile', 'simtel']
+__all__ = ['EventIOFile', 'File', 'simtel']
 
 
 KNOWN_OBJECTS[Histograms.eventio_type] = Histograms

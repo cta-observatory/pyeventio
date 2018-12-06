@@ -1,11 +1,10 @@
-''' Methods to read in and parse the IACT EventIO object types '''
+''' Methods to read in and parse the  EventIO object types '''
 import struct
 import numpy as np
 from numpy.lib.recfunctions import append_fields
 
 from ..tools import (
     read_short, read_int, read_float, read_from, read_eventio_string,
-    read_utf8_like_unsigned_int, read_array
 )
 from ..base import EventIOObject
 from ..exceptions import WrongSizeException
@@ -17,23 +16,23 @@ from ..version_handling import assert_version_in
 
 
 __all__ = [
-    'CORSIKARunHeader',
-    'CORSIKATelescopeDefinition',
-    'CORSIKAEventHeader',
-    'CORSIKAArrayOffsets',
-    'CORSIKATelescopeData',
-    'IACTPhotons',
-    'IACTLayout',
-    'IACTTriggerTime',
-    'IACTPhotoElectrons',
-    'CORSIKAEventEndBlock',
-    'CORSIKARunEndBlock',
-    'CORSIKALongitudinal',
-    'CORSIKAInputCard',
+    'RunHeader',
+    'TelescopeDefinition',
+    'EventHeader',
+    'ArrayOffsets',
+    'TelescopeData',
+    'Photons',
+    'Layout',
+    'TriggerTime',
+    'PhotoElectrons',
+    'EventEnd',
+    'RunEnd',
+    'Longitudinal',
+    'InputCard',
 ]
 
 
-class CORSIKARunHeader(EventIOObject):
+class RunHeader(EventIOObject):
     '''
     This object contains the corsika run header block
     '''
@@ -43,7 +42,7 @@ class CORSIKARunHeader(EventIOObject):
         '''
         Read the data in this EventIOItem
 
-        Returns a dictionary with the items of the CORSIKA run header block
+        Returns a dictionary with the items of the  run header block
         '''
         self.seek(0)
         data = self.read()
@@ -61,7 +60,7 @@ class CORSIKARunHeader(EventIOObject):
         return parse_corsika_run_header(block)
 
 
-class CORSIKATelescopeDefinition(EventIOObject):
+class TelescopeDefinition(EventIOObject):
     '''
     This object contains the coordinates of the telescopes
     of the simulated array
@@ -105,8 +104,8 @@ class CORSIKATelescopeDefinition(EventIOObject):
         return tel_pos
 
 
-class CORSIKAEventHeader(EventIOObject):
-    ''' This Object contains the CORSIKA event header block '''
+class EventHeader(EventIOObject):
+    ''' This Object contains the  event header block '''
     eventio_type = 1202
 
     def parse_data_field(self):
@@ -114,7 +113,7 @@ class CORSIKAEventHeader(EventIOObject):
         Read the data in this EventIOItem
 
         Returns a dictionary containing the keys of the
-        CORSIKA event header block
+         event header block
         '''
         self.seek(0)
         data = self.read()
@@ -133,7 +132,7 @@ class CORSIKAEventHeader(EventIOObject):
         return parse_corsika_event_header(block)
 
 
-class CORSIKAArrayOffsets(EventIOObject):
+class ArrayOffsets(EventIOObject):
     eventio_type = 1203
 
     def __init__(self, header, parent):
@@ -178,10 +177,10 @@ class CORSIKAArrayOffsets(EventIOObject):
         )
 
 
-class CORSIKATelescopeData(EventIOObject):
+class TelescopeData(EventIOObject):
     '''
     A container class for the photon bunches.
-    Usually contains one photon bunch object (IACTPhotons)
+    Usually contains one photon bunch object (Photons)
     per simulated telescope
     '''
     eventio_type = 1204
@@ -193,7 +192,8 @@ class CORSIKATelescopeData(EventIOObject):
             self.header.id,
         )
 
-class IACTPhotons(EventIOObject):
+
+class Photons(EventIOObject):
     '''
     This object contains the data of the simulated cherenkov photons
     for a single telescope
@@ -285,15 +285,15 @@ class IACTPhotons(EventIOObject):
         return bunches
 
 
-class IACTLayout(EventIOObject):
+class Layout(EventIOObject):
     eventio_type = 1206
 
 
-class IACTTriggerTime(EventIOObject):
+class TriggerTime(EventIOObject):
     eventio_type = 1207
 
 
-class IACTPhotoElectrons(EventIOObject):
+class PhotoElectrons(EventIOObject):
     eventio_type = 1208
     from ..var_int import parse_1208
 
@@ -318,7 +318,7 @@ class IACTPhotoElectrons(EventIOObject):
 
         data = self.read()
 
-        photoelectrons, time, amplitude, photons = IACTPhotoElectrons.parse_1208(
+        photoelectrons, time, amplitude, photons = PhotoElectrons.parse_1208(
             data, pe['n_pixels'], pe['non_empty'], self.header.version, flags
         )
 
@@ -330,7 +330,7 @@ class IACTPhotoElectrons(EventIOObject):
         return pe
 
 
-class CORSIKAEventEndBlock(EventIOObject):
+class EventEnd(EventIOObject):
     eventio_type = 1209
 
     def parse_data_field(self):
@@ -350,16 +350,16 @@ class CORSIKAEventEndBlock(EventIOObject):
         return block
 
 
-class CORSIKARunEndBlock(EventIOObject):
-    ''' This Object contains the CORSIKA run end block '''
+class RunEnd(EventIOObject):
+    ''' This Object contains the  run end block '''
     eventio_type = 1210
 
     def parse_data_field(self):
         '''
         Read the data in this EventIOObject
 
-        Returns the CORSIKA run end block as arrays of floats.
-        No parsing yet, sorry. The meaning is defined in the CORSIKA
+        Returns the  run end block as arrays of floats.
+        No parsing yet, sorry. The meaning is defined in the
         User Guide.
         '''
 
@@ -376,8 +376,8 @@ class CORSIKARunEndBlock(EventIOObject):
         return block
 
 
-class CORSIKALongitudinal(EventIOObject):
-    ''' This Object contains the CORSIKA longitudinal shower data block '''
+class Longitudinal(EventIOObject):
+    ''' This Object contains the  longitudinal shower data block '''
     eventio_type = 1211
 
     def __init__(self, header, parent):
@@ -387,8 +387,8 @@ class CORSIKALongitudinal(EventIOObject):
         '''
         Read the data in this EventIOObject
 
-        Returns the CORSIKA longitudinal shower data block as arrays of floats.
-        No parsing yet, sorry. The meaning is defined in the CORSIKA
+        Returns the  longitudinal shower data block as arrays of floats.
+        No parsing yet, sorry. The meaning is defined in the
         User Guide.
         '''
         self.seek(0)
@@ -406,15 +406,15 @@ class CORSIKALongitudinal(EventIOObject):
         return long
 
 
-class CORSIKAInputCard(EventIOObject):
-    ''' This Object contains the CORSIKA steering card '''
+class InputCard(EventIOObject):
+    ''' This Object contains the  steering card '''
     eventio_type = 1212
 
     def parse_data_field(self):
         '''
         Read the data in this EventIOObject
 
-        Returns the CORSIKA steering card as string.
+        Returns the  steering card as string.
         '''
         self.seek(0)
         n_strings = read_int(self)

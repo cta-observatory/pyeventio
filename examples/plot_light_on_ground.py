@@ -2,7 +2,7 @@ import matplotlib.pyplot as plt
 from pkg_resources import resource_filename
 from argparse import ArgumentParser
 
-from eventio import IACTFile
+from eventio import File
 
 parser = ArgumentParser()
 parser.add_argument('-i', '--inputfile', dest='inputfile')
@@ -15,7 +15,7 @@ def main():
     if not args.inputfile:
         args.inputfile = resource_filename('eventio', 'resources/one_shower.dat')
 
-    with IACTFile(args.inputfile) as f:
+    with File(args.inputfile) as f:
 
         for event in f:
             if args.telescope:

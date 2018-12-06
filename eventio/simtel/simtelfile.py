@@ -1,7 +1,7 @@
 """
     RunHeader[2000]
     MCRunHeader[2001]
-    CORSIKAInputCard[1212]
+    InputCard[1212]
 
         # 1x per telescope (n_telescopes is in RunHeader)
         # I call this TelescopeDescription
@@ -19,8 +19,8 @@
         MCStereoReconstruction[2020](shower=3)
         {
             MCEvent[2021](event=301)
-            CORSIKATelescopeData[1204](event=301)
-                # IACTPhotoElectrons inside
+            TelescopeData[1204](event=301)
+                # PhotoElectrons inside
 
             { 1x per telescope and I don't know why they come here
             CameraMonitoring[2022](telescope_id=1, what=0x7f)
@@ -121,7 +121,7 @@ class WithNextAssert:
 EventIOObject.next_assert = WithNextAssert.next_assert
 EventIOObject.next_type_or_none = WithNextAssert.next_type_or_none
 
-from eventio.iact.objects import CORSIKAInputCard, CORSIKATelescopeData
+from eventio.iact.objects import InputCard, TelescopeData
 from eventio.simtel.objects import (
     History,
     TelescopeObject,
@@ -172,7 +172,7 @@ class File:
         self.header = self.file_.next_assert(RunHeader).parse_data_field()
         self.n_telescopes = self.header['n_telescopes']
         self.mc_header = read_all_of_type(self.file_, MCRunHeader)
-        self.corsika_input = read_all_of_type(self.file_, CORSIKAInputCard)
+        self.corsika_input = read_all_of_type(self.file_, InputCard)
         self.telescope_descriptions = [
             telescope_description_from(self.file_)
             for _ in range(self.n_telescopes)
@@ -228,7 +228,7 @@ class File:
         # There is for sure exactly one of these
         result['mc_event'] = self.file_.next_assert(MCEvent).parse_data_field()
         result['corsika_tel_data'] = self.file_.next_type_or_none(
-            CORSIKATelescopeData)
+            TelescopeData)
 
         self.update_moni_lascal()
         try:
