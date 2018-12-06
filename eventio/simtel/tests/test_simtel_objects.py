@@ -260,11 +260,11 @@ def test_2200():
 def test_2010():
     from eventio.simtel.objects import CentralEvent
     # class under test
-    from eventio.simtel.objects import Event
+    from eventio.simtel.objects import ArrayEvent
 
     with EventIOFile(prod2_file) as f:
         n_events = 0
-        for event in yield_toplevel_of_type(f, Event):
+        for event in yield_toplevel_of_type(f, ArrayEvent):
             assert isinstance(next(event), CentralEvent)
             n_events += 1
         assert n_events > 0
