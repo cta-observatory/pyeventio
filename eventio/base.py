@@ -94,7 +94,8 @@ def read_next_header(byte_stream, endianness=None):
 
     Raises stop iteration if not enough data is available.
     '''
-    if endianness is None:
+    is_toplevel_object = endianness is None
+    if is_toplevel_object:
         sync = byte_stream.read(constants.SYNC_MARKER_SIZE)
         check_size_or_stopiteration(sync, constants.SYNC_MARKER_SIZE)
         endianness = parse_sync_bytes(sync)
@@ -108,7 +109,7 @@ def read_next_header(byte_stream, endianness=None):
     check_size_or_stopiteration(
         header_bytes,
         constants.OBJECT_HEADER_SIZE,
-        warn_zero=endianness is None,
+        warn_zero=is_toplevel_object,
     )
 
     header = parse_header_bytes(header_bytes)
@@ -116,7 +117,11 @@ def read_next_header(byte_stream, endianness=None):
 
     if header.extended:
         extension_field = byte_stream.read(constants.EXTENSION_SIZE)
-        check_size_or_stopiteration(extension_field, constants.EXTENSION_SIZE, True)
+        check_size_or_stopiteration(
+            extension_field,
+            constants.EXTENSION_SIZE,
+            warn_zero=True
+        )
         header.length += parse_extension_field(extension_field)
 
     header.data_field_first_byte = byte_stream.tell()
