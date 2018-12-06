@@ -1,65 +1,7 @@
-"""
+'''
 Implementation of an EventIOFile that
 loops through SimTel Array events.
-
-We assume the follwing structure:
-
-    RunHeader[2000]
-    MCRunHeader[2001]
-    InputCard[1212]
-
-        # 1x per telescope (n_telescopes is in RunHeader)
-        # I call this TelescopeDescription
-    {
-        CameraSettings[2002]
-        CameraOrganization[2003]
-        PixelSettings[2004]
-        DisabledPixels[2005]
-        CameraSoftwareSettings[2006]
-        DriveSettings[2008]
-        PointingCorrection[2007]
-    }
-
-    {
-        MCStereoReconstruction[2020](shower=3)
-        {
-            MCEvent[2021](event=301)
-            TelescopeData[1204](event=301)
-                # PhotoElectrons inside
-
-            { 1x per telescope and I don't know why they come here
-            CameraMonitoring[2022](telescope_id=1, what=0x7f)
-            LaserCalibration[2023](telescope_id=1)
-            }
-            MCPhotoelectronSum[2026](id=301)
-            Event[2010]
-            {
-                CentralEvent[2009](id=301)
-                TelescopeEvent[2229](telescope_id=29, id=301)
-                {
-                    TelescopeEventHeader[2011](telescope_id=29)
-                    ADCSamples[2013](telescope_id=29,
-                    PixelTiming[2016](telescope_id=29)
-                    ImageParameters[2014](telescope_id=29,
-                    PixelList[2027](telescope_id=29
-                }
-                TelescopeEvent[2237](telescope_id=37, id=301)
-                TrackingPosition[2113](telescope_id=13
-                TrackingPosition[2117](telescope_id=17
-                TrackingPosition[2123](telescope_id=23
-                TrackingPosition[2129](telescope_id=29
-                TrackingPosition[2131](telescope_id=31
-                ...
-                TrackingPosition[2163](telescope_id=63
-                StereoReconstruction[2015]
-            }
-        }
-
-
-    }
-
-
-"""
+'''
 import logging
 from eventio.base import EventIOFile, EventIOObject
 
@@ -94,7 +36,7 @@ class WithNextAssert:
 
         o = self._last_obj
         if not isinstance(o, object_):
-            raise WrongType("is:{o}, not:{object_}".format(
+            raise WrongType('is:{o}, not:{object_}'.format(
                 o=o, object_=object_)
             )
 
