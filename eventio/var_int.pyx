@@ -227,7 +227,7 @@ cdef unsigned long unsigned_varint_array_differential(
     const unsigned char[:] data,
     UINT32_t[:] output,
     unsigned long offset = 0,
-):
+) except -1:
 
     cdef unsigned long n_elements = output.shape[0]
     cdef int val = 0
