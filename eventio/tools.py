@@ -31,6 +31,8 @@ def read_float(f):
 def read_array(f, dtype, count):
     '''Read a numpy array with `dtype` of length `count` from file-like `f`'''
     dt = np.dtype(dtype)
+    if count == 0:
+        return np.array((), dtype=dtype)
     return np.frombuffer(f.read(count * dt.itemsize), count=count, dtype=dt)
 
 
@@ -90,7 +92,8 @@ def read_utf8_like_unsigned_int(f):
     # this is a reimplementation from eventio.c lines 797ff
     var_int_bytes = bytearray(f.read(1))
     var_int_length = get_length_of_varint(var_int_bytes[0])
-    var_int_bytes.extend(f.read(var_int_length - 1))
+    if var_int_length - 1 > 0:
+        var_int_bytes.extend(f.read(var_int_length - 1))
 
     return parse_varint(var_int_bytes)
 

@@ -186,6 +186,12 @@ class CORSIKATelescopeData(EventIOObject):
     '''
     eventio_type = 1204
 
+    def __repr__(self):
+        return '{}[{}](shower_event_id={})'.format(
+            self.__class__.__name__,
+            self.header.type,
+            self.header.id,
+        )
 
 class IACTPhotons(EventIOObject):
     '''

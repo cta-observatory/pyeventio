@@ -245,8 +245,8 @@ def test_2100_3_objects():
         for i, o in enumerate(yield_n_and_assert(f, SimTelTrackEvent, n=3)):
             pointing = parse_and_assert_consumption(o, limit=0)
 
-            assert 'azimuth_raw' in pointing.dtype.names
-            assert 'altitude_raw' in pointing.dtype.names
+            assert 'azimuth_raw' in pointing
+            assert 'altitude_raw' in pointing
 
 
 def test_2200():
