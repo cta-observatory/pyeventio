@@ -234,8 +234,7 @@ def parse_photo_electrons(telescope_data):
     check_type(telescope_data, iact.TelescopeData)
 
     photo_electrons = {}
-    for o in telescope_data():
-
+    for o in telescope_data:
         check_type(o, iact.PhotoElectrons)
         photo_electrons[o.telescope_id] = o.parse_data_field()
 
