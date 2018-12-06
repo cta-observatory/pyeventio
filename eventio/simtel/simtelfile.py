@@ -5,6 +5,8 @@ loops through SimTel Array events.
 import re
 from copy import copy
 from collections import defaultdict
+import logging
+import warnings
 from ..base import EventIOFile
 from ..exceptions import check_type
 from .. import iact
@@ -36,6 +38,9 @@ from .objects import (
     TelescopeEventHeader,
     TrackingPosition,
 )
+
+
+log = logging.getLogger(__name__)
 
 
 camel_re1 = re.compile('(.)([A-Z][a-z]+)')
@@ -73,13 +78,10 @@ class SimTelFile(EventIOFile):
             self.mc_header.append(o.parse_data_field())
             o = next(self)
 
-        o = next(self)
         self.corsika_inputcards = []
         while isinstance(o, iact.InputCard):
             self.corsika_inputcards.append(o.parse_data_field())
             o = next(self)
-
-        self.telescope_descriptions = defaultdict(dict)
 
         expected_structure = [
             CameraSettings,
@@ -91,6 +93,7 @@ class SimTelFile(EventIOFile):
             PointingCorrection,
         ]
 
+        self.telescope_descriptions = defaultdict(dict)
         first = True
         for i in range(self.n_telescopes):
             for eventio_type in expected_structure:
@@ -98,7 +101,14 @@ class SimTelFile(EventIOFile):
                     o = next(self)
                 first = False
 
-                check_type(o, eventio_type)
+                while not isinstance(o, eventio_type):
+                    msg = 'Skipping unexpected object of type {}'.format(
+                        o.__class__.__name__
+                    )
+                    warnings.warn(msg)
+                    log.warn(msg)
+                    o = next(self)
+
                 key = camel_to_snake(o.__class__.__name__)
                 self.telescope_descriptions[o.telescope_id][key] = o.parse_data_field()
 
