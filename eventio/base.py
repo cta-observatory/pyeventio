@@ -52,7 +52,7 @@ class EventIOFile:
 
     def __next__(self):
         self._filehandle.seek(self._next_header_pos)
-        header = read_next_header(self)
+        header = read_next_header_toplevel(self)
         self._next_header_pos = self._filehandle.tell() + header.length
         return KNOWN_OBJECTS.get(header.type, EventIOObject)(header, parent=self)
 
@@ -88,8 +88,21 @@ def check_size_or_stopiteration(data, expected_length, warn_zero=False):
         raise StopIteration
 
 
-def read_next_header(byte_stream, endianness=None):
-    '''Read the next header object from the file
+def read_next_header_toplevel(byte_stream):
+    '''Read the next toplevel header object from the file
+    Assumes position of `byte_stream` is at the beginning of a new header.
+
+    Raises stop iteration if not enough data is available.
+    '''
+    sync = byte_stream.read(constants.SYNC_MARKER_SIZE)
+    check_size_or_stopiteration(sync, constants.SYNC_MARKER_SIZE)
+    endianness = parse_sync_bytes(sync)
+
+    return read_next_header_sublevel(byte_stream, endianness)
+
+
+def read_next_header_sublevel(byte_stream, endianness):
+    '''Read the next sublevel header object from the file
     Assumes position of `byte_stream` is at the beginning of a new header.
 
     endianness: char
@@ -98,12 +111,6 @@ def read_next_header(byte_stream, endianness=None):
 
     Raises stop iteration if not enough data is available.
     '''
-    is_toplevel_object = endianness is None
-    if is_toplevel_object:
-        sync = byte_stream.read(constants.SYNC_MARKER_SIZE)
-        check_size_or_stopiteration(sync, constants.SYNC_MARKER_SIZE)
-        endianness = parse_sync_bytes(sync)
-
     if endianness == '>':
         raise NotImplementedError(
             'Big endian byte order is not supported by this reader'
@@ -113,7 +120,7 @@ def read_next_header(byte_stream, endianness=None):
     check_size_or_stopiteration(
         header_bytes,
         constants.OBJECT_HEADER_SIZE,
-        warn_zero=is_toplevel_object,
+        warn_zero=True,
     )
 
     header = parse_header_bytes(header_bytes)
@@ -215,7 +222,7 @@ class EventIOObject:
             raise StopIteration
 
         self.seek(self._next_header_pos)
-        header = read_next_header(self, endianness=self.header.endianness)
+        header = read_next_header_sublevel(self, self.header.endianness)
         self._next_header_pos = self.tell() + header.length
         return KNOWN_OBJECTS.get(header.type, EventIOObject)(header, parent=self)
 

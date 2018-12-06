@@ -1,7 +1,7 @@
 ''' Implementations of the simtel_array EventIO object types '''
 import numpy as np
 import struct
-from ..base import EventIOObject, read_next_header
+from ..base import EventIOObject, read_next_header_sublevel
 from ..tools import (
     read_short,
     read_int,
@@ -1078,7 +1078,7 @@ class SimTelMCShower(EventIOObject):
             mc['profiles'].append(p)
 
         if self.header.version >= 2:
-            h = read_next_header(self, toplevel=False)
+            h = read_next_header_sublevel(self)
             assert h.type == 1215
             mc['mc_extra_params'] = MC_Extra_Params(h, self).parse_data_field()
         return mc
