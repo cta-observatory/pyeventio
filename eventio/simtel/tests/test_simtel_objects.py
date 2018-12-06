@@ -416,13 +416,13 @@ def test_2017():
 
 
 def test_2020_3_objects():
-    from eventio.simtel.objects import MCStereoReconstruction
+    from eventio.simtel.objects import MCShower
 
     hessio_data = np.load(resource_filename(
         'eventio', 'resources/gamma_test_mc_shower.npy'
     ))
     with EventIOFile(prod2_file) as f:
-        for i, o in enumerate(yield_n_and_assert(f, MCStereoReconstruction, n=3)):
+        for i, o in enumerate(yield_n_and_assert(f, MCShower, n=3)):
             mc = parse_and_assert_consumption(o, limit=2)
 
             expected = hessio_data[i]
