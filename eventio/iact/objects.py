@@ -289,6 +289,7 @@ class IACTTriggerTime(EventIOObject):
 
 class IACTPhotoElectrons(EventIOObject):
     eventio_type = 1208
+    from ..var_int import parse_1208
 
     def __init__(self, header, parent):
         super().__init__(header, parent)
@@ -296,7 +297,7 @@ class IACTPhotoElectrons(EventIOObject):
         self.telescope_id = header.id % 1000
 
     def parse_data_field(self):
-        assert_version_in(self, [1, 2])
+        assert_version_in(self, [1, 2, 3])
         self.seek(0)
 
         pe = {}
@@ -308,31 +309,17 @@ class IACTPhotoElectrons(EventIOObject):
             flags = 0
 
         pe['non_empty'] = read_int(self)
-        pe['photoelectrons'] = np.zeros(pe['n_pixels'])
-        pe['time'] = [[] for _ in range(pe['n_pixels'])]
-        if flags & 1:
-            pe['amplitude'] = [[] for _ in range(pe['n_pixels'])]
 
-        if self.header.version > 2:
-            read_pixid = read_utf8_like_unsigned_int
-        else:
-            read_pixid = read_short
+        data = self.read()
 
-        for i in range(pe['non_empty']):
-            pix_id = read_pixid(self)
-            n_pe = read_int(self)
-            pe['photoelectrons'][pix_id] = n_pe
-            pe['time'][pix_id] = read_array(self, dtype='<f4', count=n_pe)
+        photoelectrons, time, amplitude, photons = IACTPhotoElectrons.parse_1208(
+            data, pe['n_pixels'], pe['non_empty'], self.header.version, flags
+        )
 
-            if flags & 1:
-                pe['amplitude'][pix_id] = read_array(self, dtype='<f4', count=n_pe)
-
-        if flags & 4:
-            pe['photon_counts'] = np.zeros(pe['n_pixels'])
-            nonempty = read_int(self)
-            for i in range(nonempty):
-                pix_id = read_short(self)
-                pe['photon_counts'][pix_id] = read_int(self)
+        pe['photoelectrons'] = photoelectrons
+        pe['time'] = time
+        pe['amplitude'] = amplitude
+        pe['photons'] = photons
 
         return pe
 
