@@ -21,7 +21,7 @@ ctypedef np.int64_t INT64_t
 
 
 @cython.wraparound(False)  # disable negative indexing
-cpdef (unsigned long, unsigned int) unsigned_varint(const unsigned char[:] data, unsigned long offset=0):
+cpdef (UINT64_t, unsigned int) unsigned_varint(const unsigned char[:] data, unsigned long offset=0):
     cdef unsigned int length
     cdef unsigned long value
     length = get_length_of_varint(data[offset])
@@ -30,7 +30,7 @@ cpdef (unsigned long, unsigned int) unsigned_varint(const unsigned char[:] data,
 
 
 @cython.wraparound(False)  # disable negative indexing
-cpdef (long, unsigned int) varint(const unsigned char[:] data, unsigned long offset=0):
+cpdef (INT64_t, unsigned int) varint(const unsigned char[:] data, unsigned long offset=0):
     cdef unsigned int length
     cdef unsigned long value
     value, length = unsigned_varint(data, offset)
@@ -59,11 +59,12 @@ cpdef unsigned int get_length_of_varint(const unsigned char first_byte):
     return 9
 
 
+@cython.boundscheck(False)
 @cython.wraparound(False)  # disable negative indexing
-cpdef unsigned long parse_varint(const unsigned char[:] var_int_bytes):
+cpdef UINT64_t parse_varint(const unsigned char[:] var_int_bytes):
     length = var_int_bytes.shape[0]
-    cdef unsigned long v[9]
-    cdef long i  = 0
+    cdef UINT64_t v[9]
+    cdef int i  = 0
     for i in range(length):
         v[i] = var_int_bytes[i]
 
@@ -167,21 +168,26 @@ cpdef varint_array(
     unsigned long offset = 0,
 ):
     cdef unsigned long bytes_read
-    cdef np.ndarray[UINT64_t, ndim=1] unsigned_output
     cdef np.ndarray[INT64_t, ndim=1] output = np.empty(n_elements, dtype=INT64)
 
-    unsigned_output, bytes_read = unsigned_varint_array(data, n_elements, offset)
+    cdef UINT64_t val
+    cdef unsigned int length
 
     cdef unsigned long one = 1;
     cdef unsigned long i
+    cdef unsigned long pos = 0
 
     for i in range(n_elements):
-        if (unsigned_output[i] & one):
-            output[i] = -(unsigned_output[i] >> one) - one
-        else:
-            output[i] = unsigned_output[i] >> one
+        length = get_length_of_varint(data[pos])
+        val = parse_varint(data[pos:pos + length])
+        pos += length
 
-    return output, bytes_read
+        if (val & one):
+            output[i] = -(val >> one) - one
+        else:
+            output[i] = val >> one
+
+    return output, pos
 
 
 @cython.wraparound(False)  # disable negative indexing
