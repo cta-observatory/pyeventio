@@ -1,4 +1,5 @@
 from ..base import KNOWN_OBJECTS, EventIOObject
+from .simtelfile import SimTelFile
 from .objects import (
     TelescopeObject,
     RunHeader,
@@ -33,6 +34,7 @@ from .objects import (
 )
 
 __all__ = [
+    'SimTelFile',
     'RunHeader',
     'MCRunHeader',
     'CameraSettings',

@@ -58,11 +58,14 @@
 import logging
 from eventio.base import EventIOFile, EventIOObject
 
+
 class WrongType(Exception):
     pass
 
+
 class NoTrackingPositions(Exception):
     pass
+
 
 class WithNextAssert:
     '''MixIn for EventIoFile adding `next_assert`'''
@@ -157,7 +160,7 @@ from eventio.simtel.objects import (
 )
 
 
-class File:
+class SimTelFile:
     def __init__(self, path):
         self.path = path
         self.file_ = EventIOFileWithNextAssert(path)

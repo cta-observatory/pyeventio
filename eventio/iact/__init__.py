@@ -27,7 +27,25 @@ for o in EventIOObject.__subclasses__():
 log = logging.getLogger(__name__)
 
 
-class File(EventIOFile):
+__all__ = [
+    'IACTFile',
+    'RunHeader',
+    'TelescopeDefinition',
+    'EventHeader',
+    'ArrayOffsets',
+    'TelescopeData',
+    'Photons',
+    'Layout',
+    'TriggerTime',
+    'PhotoElectrons',
+    'EventEnd',
+    'RunEnd',
+    'Longitudinal',
+    'InputCard',
+]
+
+
+class IACTFile(EventIOFile):
     '''
     An Interface to access the data of a EventIO file
     as produced by the   (a.k.a. bernlohr) extension
