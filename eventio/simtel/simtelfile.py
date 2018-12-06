@@ -108,7 +108,7 @@ class WithNextAssert:
             try:
                 self._last_obj = next(self)
             except StopIteration:
-                raise WrongType
+                return None
 
         o = self._last_obj
         if not isinstance(o, object_):
