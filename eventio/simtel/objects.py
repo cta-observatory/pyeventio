@@ -26,6 +26,14 @@ from ..version_handling import (
 )
 
 
+def read_remaining_with_check(eventio_object):
+    pos = eventio_object.tell()
+    data = eventio_object.read()
+    if len(data) < (eventio_object.header.length - pos):
+        raise IOError('File seems to be truncated')
+    return data
+
+
 class TelescopeObject(EventIOObject):
     '''
     BaseClass that reads telescope id from header.id and puts it in repr
@@ -246,7 +254,7 @@ class SimTelCamOrgan(TelescopeObject):
             self, 'i2', num_pixels * num_gains
         ).reshape(num_pixels, num_gains)
 
-        data = self.read()
+        data = read_remaining_with_check(self)
         pos = 0
         sectors, bytes_read = SimTelCamOrgan.read_sector_information(
             data, num_pixels
@@ -627,7 +635,7 @@ class SimTelTelEvtHead(TelescopeObject):
         event_head['trg_source'] = t & 0xff
 
         pos = 0
-        data = self.read()
+        data = read_remaining_with_check(self)
 
         if t & 0x100:
             if self.header.version <= 1:
@@ -708,7 +716,8 @@ class SimTelTelADCSum(EventIOObject):
             )
 
         raw['adc_sums'] = []
-        data = self.read()
+        data = read_remaining_with_check(self)
+
         raw['adc_sums'], bytes_read = unsigned_varint_arrays_differential(
             data, n_arrays=n_gains, n_elements=n_pixels
         )
@@ -786,7 +795,8 @@ class SimTelTelADCSamp(EventIOObject):
             dtype='u2'
         )
         n_pixels_signal = sum(p[1] - p[0] for p in pixel_ranges)
-        data = self.read()
+
+        data = read_remaining_with_check(self)
         adc_samples_signal, bytes_read = unsigned_varint_arrays_differential(
             data, n_arrays=num_gains * n_pixels_signal, n_elements=num_samples,
         )
@@ -804,7 +814,7 @@ class SimTelTelADCSamp(EventIOObject):
         num_samples,
     ):
 
-        data = self.read()
+        data = read_remaining_with_check(self)
         adc_samples, bytes_read = unsigned_varint_arrays_differential(
             data, n_arrays=num_gains * num_pixels, n_elements=num_samples,
         )
@@ -1001,7 +1011,7 @@ class SimTelPixelTiming(EventIOObject):
         pixel_timing['granularity'] = read_float(self)
         pixel_timing['peak_global'] = read_float(self)
 
-        data = self.read()
+        data = read_remaining_with_check(self)
         if list_type == 1:
             result, bytes_read = SimTelPixelTiming._parse_list_type_1(
                 data,
