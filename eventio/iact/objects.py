@@ -1,4 +1,4 @@
-''' Methods to read in and parse the  EventIO object types '''
+''' Methods to read in and parse the IACT EventIO object types '''
 import struct
 import numpy as np
 from numpy.lib.recfunctions import append_fields
@@ -351,14 +351,14 @@ class EventEnd(EventIOObject):
 
 
 class RunEnd(EventIOObject):
-    ''' This Object contains the  run end block '''
+    ''' This Object contains the CORSIKA run end block '''
     eventio_type = 1210
 
     def parse_data_field(self):
         '''
         Read the data in this EventIOObject
 
-        Returns the  run end block as arrays of floats.
+        Returns the CORSIKA run end block as arrays of floats.
         No parsing yet, sorry. The meaning is defined in the
         User Guide.
         '''
@@ -377,7 +377,7 @@ class RunEnd(EventIOObject):
 
 
 class Longitudinal(EventIOObject):
-    ''' This Object contains the  longitudinal shower data block '''
+    ''' This Object contains the CORSIKA longitudinal shower data block '''
     eventio_type = 1211
 
     def __init__(self, header, parent):
@@ -387,7 +387,7 @@ class Longitudinal(EventIOObject):
         '''
         Read the data in this EventIOObject
 
-        Returns the  longitudinal shower data block as arrays of floats.
+        Returns the longitudinal shower data block as arrays of floats.
         No parsing yet, sorry. The meaning is defined in the
         User Guide.
         '''
@@ -407,7 +407,7 @@ class Longitudinal(EventIOObject):
 
 
 class InputCard(EventIOObject):
-    ''' This Object contains the  steering card '''
+    ''' This Object contains the CORSIKA steering card '''
     eventio_type = 1212
 
     def parse_data_field(self):
