@@ -147,7 +147,9 @@ class SimTelFile(EventIOFile):
                 event_data = {
                     'mc_shower': current_mc_shower,
                     'mc_event': current_mc_event,
-                    'array_event': array_event,
+                    'telescope_events': array_event['telescope_events'],
+                    'tracking_positions': array_event['tracking_positions'],
+                    'trigger_information': array_event['trigger_information'],
                     'photoelectron_sums': current_photoelectron_sum,
                     'photoelectrons': current_photoelectrons,
                 }

@@ -55,7 +55,7 @@ def test_show_we_get_a_dict_with_hower_and_event():
     for path in test_paths:
         for event in SimTelFile(path):
             assert 'mc_shower' in event
-            assert 'array_event' in event
+            assert 'telescope_events' in event
             assert 'mc_event' in event
             break
 
@@ -83,19 +83,16 @@ def test_show_event_is_not_empty_and_has_some_members_for_sure():
             assert event.keys() == {
                 'mc_shower',
                 'mc_event',
-                'array_event',
+                'telescope_events',
+                'trigger_information',
+                'tracking_positions',
                 'photoelectron_sums',
                 'photoelectrons',
                 'camera_monitorings',
                 'laser_calibrations',
             }
 
-            array_event = event['array_event']
-            assert array_event.keys() == {
-                'trigger_information', 'telescope_events', 'tracking_positions'
-            }
-
-            telescope_events = array_event['telescope_events']
+            telescope_events = event['telescope_events']
 
             assert telescope_events  # never empty!
 
