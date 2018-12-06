@@ -92,7 +92,7 @@ def test_show_event_is_not_empty_and_has_some_members_for_sure():
 
             array_event = event['array_event']
             assert array_event.keys() == {
-                'central_event', 'telescope_events', 'tracking_positions'
+                'trigger_information', 'telescope_events', 'tracking_positions'
             }
 
             telescope_events = array_event['telescope_events']

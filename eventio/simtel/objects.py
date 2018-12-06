@@ -452,7 +452,7 @@ class DriveSettings(TelescopeObject):
         return tracking_info
 
 
-class CentralEvent(EventIOObject):
+class TriggerInformation(EventIOObject):
     eventio_type = 2009
 
     def __init__(self, header, parent):

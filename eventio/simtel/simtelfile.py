@@ -17,7 +17,7 @@ from .objects import (
     CameraOrganization,
     CameraSettings,
     CameraSoftwareSettings,
-    CentralEvent,
+    TriggerInformation,
     DisabledPixels,
     DriveSettings,
     History,
@@ -166,7 +166,7 @@ class SimTelFile(EventIOFile):
 
 def parse_array_event(array_event):
     '''structure of event:
-        CentralEvent[2009]  <-- this knows how many TelescopeEvents
+        TriggerInformation[2009]  <-- this knows how many TelescopeEvents
 
         TelescopeEvent[2202]
         ...
@@ -191,10 +191,10 @@ def parse_array_event(array_event):
     tracking_positions = {}
 
     for i, o in enumerate(array_event):
-        # require first element to be a CentralEvent
+        # require first element to be a TriggerInformation
         if i == 0:
-            check_type(o, CentralEvent)
-            central_event = o.parse_data_field()
+            check_type(o, TriggerInformation)
+            trigger_information = o.parse_data_field()
 
         elif isinstance(o, TelescopeEvent):
             telescope_events[o.telescope_id] = parse_telescope_event(o)
@@ -211,7 +211,7 @@ def parse_array_event(array_event):
         )
 
     return {
-        'central_event': central_event,
+        'trigger_information': trigger_information,
         'telescope_events': telescope_events,
         'tracking_positions': tracking_positions,
     }

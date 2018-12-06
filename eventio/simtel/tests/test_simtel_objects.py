@@ -228,10 +228,10 @@ def test_2008_3_objects():
 
 
 def test_2009_3_objects():
-    from eventio.simtel.objects import CentralEvent
+    from eventio.simtel.objects import TriggerInformation
 
     with EventIOFile(prod2_file) as f:
-        for i, o in enumerate(yield_n_and_assert(f, CentralEvent, n=3)):
+        for i, o in enumerate(yield_n_and_assert(f, TriggerInformation, n=3)):
             data = parse_and_assert_consumption(o, limit=2)
             assert 'cpu_time' in data
             assert 'gps_time' in data
@@ -258,14 +258,14 @@ def test_2200():
 
 
 def test_2010():
-    from eventio.simtel.objects import CentralEvent
+    from eventio.simtel.objects import TriggerInformation
     # class under test
     from eventio.simtel.objects import ArrayEvent
 
     with EventIOFile(prod2_file) as f:
         n_events = 0
         for event in yield_toplevel_of_type(f, ArrayEvent):
-            assert isinstance(next(event), CentralEvent)
+            assert isinstance(next(event), TriggerInformation)
             n_events += 1
         assert n_events > 0
 
