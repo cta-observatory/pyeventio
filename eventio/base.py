@@ -88,25 +88,23 @@ def check_size_or_stopiteration(data, expected_length, warn_zero=False):
         raise StopIteration
 
 
-def read_next_header(eventio, toplevel=True):
+def read_next_header(byte_stream, toplevel=True, endianness=None):
     '''Read the next header object from the file
-    Assumes position of `eventio` is at the beginning of a new header.
+    Assumes position of `byte_stream` is at the beginning of a new header.
 
     Raises stop iteration if not enough data is available.
     '''
     if toplevel:
-        sync = eventio.read(constants.SYNC_MARKER_SIZE)
+        sync = byte_stream.read(constants.SYNC_MARKER_SIZE)
         check_size_or_stopiteration(sync, constants.SYNC_MARKER_SIZE)
         endianness = parse_sync_bytes(sync)
-    else:
-        endianness = eventio.header.endianness
 
     if endianness == '>':
         raise NotImplementedError(
             'Big endian byte order is not supported by this reader'
         )
 
-    header_bytes = eventio.read(constants.OBJECT_HEADER_SIZE)
+    header_bytes = byte_stream.read(constants.OBJECT_HEADER_SIZE)
     check_size_or_stopiteration(
         header_bytes, constants.OBJECT_HEADER_SIZE, warn_zero=toplevel
     )
@@ -115,11 +113,11 @@ def read_next_header(eventio, toplevel=True):
     header.endianness = endianness
 
     if header.extended:
-        extension_field = eventio.read(constants.EXTENSION_SIZE)
+        extension_field = byte_stream.read(constants.EXTENSION_SIZE)
         check_size_or_stopiteration(extension_field, constants.EXTENSION_SIZE, True)
         header.length += parse_extension_field(extension_field)
 
-    header.data_field_first_byte = eventio.tell()
+    header.data_field_first_byte = byte_stream.tell()
 
     return header
 
@@ -206,7 +204,7 @@ class EventIOObject:
             raise StopIteration
 
         self.seek(self._next_header_pos)
-        header = read_next_header(self, toplevel=False)
+        header = read_next_header(self, toplevel=False, endianness=self.header.endianness)
         self._next_header_pos = self.tell() + header.length
         return KNOWN_OBJECTS.get(header.type, EventIOObject)(header, parent=self)
 
