@@ -24,7 +24,7 @@ ctypedef np.int64_t INT64_t
 cpdef (unsigned long, unsigned int) unsigned_varint(const unsigned char[:] data, unsigned long offset=0):
     cdef unsigned int length
     cdef unsigned long value
-    length = get_length_of_varint(data[0])
+    length = get_length_of_varint(data[offset])
     value = parse_varint(data[offset:offset + length])
     return value, length
 
@@ -145,11 +145,9 @@ cpdef unsigned_varint_array(
 ):
     cdef np.ndarray[UINT64_t, ndim=1] output = np.empty(n_elements, dtype=UINT64)
 
-    cdef int val
     cdef unsigned long i
     cdef unsigned long pos
     cdef unsigned long idx
-    cdef unsigned char v0, v1, v2, v3, v4
     cdef unsigned long length
     pos = 0
 
@@ -376,7 +374,7 @@ cpdef simtel_pixel_timing_parse_list_type_1(
 ):
     cdef int start, stop, list_index
     cdef long pixel_list_length = pixel_list.shape[0]
-    cdef int i, j, i_pix
+    cdef int i, i_gain, i_type, i_pix
     cdef unsigned int length = 0
     cdef np.ndarray[INT64_t, ndim=1] result
 
@@ -391,29 +389,27 @@ cpdef simtel_pixel_timing_parse_list_type_1(
     cdef short* short_ptr
 
     cdef unsigned long pos = 0
-    print(with_sum)
     for i in range(pixel_list_length):
         i_pix = pixel_list[i]
-
-        for j in range(num_types):
+        for i_type in range(num_types):
             short_ptr = <short*> &(data[pos])
-            timval[i_pix, j] = granularity * (short_ptr[0])
+            timval[i_pix, i_type] = granularity * (short_ptr[0])
             pos += 2
 
         if with_sum:
-            for j in range(num_gains):
-                pulse_sum_loc[j, i_pix], length = varint(data, offset=pos)
+            for i_gain in range(num_gains):
+                pulse_sum_loc[i_gain, i_pix], length = varint(data, offset=pos)
                 pos += length
 
             if glob_only_selected:
                 for j in range(num_gains):
-                    pulse_sum_glob[j, i_pix], length = varint(data, offset=pos)
+                    pulse_sum_glob[i_gain, i_pix], length = varint(data, offset=pos)
                     pos += length
 
     if with_sum and len(pixel_list) > 0 and not glob_only_selected:
-        for j in range(num_gains):
+        for i_gain in range(num_gains):
             for i_pix in range(num_pixels):
-                pulse_sum_glob[j, i_pix], length = varint(
+                pulse_sum_glob[i_gain, i_pix], length = varint(
                     data, offset=pos,
                 )
                 pos += length
