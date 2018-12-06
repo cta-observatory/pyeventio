@@ -82,10 +82,10 @@ def test_72_3_objects():
 
 
 def test_2000_3_objects():
-    from eventio.simtel.objects import SimTelRunHeader
+    from eventio.simtel.objects import RunHeader
 
     with EventIOFile(prod2_file) as f:
-        for i, o in enumerate(yield_n_and_assert(f, SimTelRunHeader, n=3)):
+        for i, o in enumerate(yield_n_and_assert(f, RunHeader, n=3)):
             d = parse_and_assert_consumption(o, limit=2)
 
             assert d['observer'] == b'bernlohr@lfc371.mpi-hd.mpg.de'
@@ -93,18 +93,18 @@ def test_2000_3_objects():
 
 
 def test_2001_3_objects():
-    from eventio.simtel.objects import SimTelMCRunHeader
+    from eventio.simtel.objects import MCRunHeader
 
     with EventIOFile(prod2_file) as f:
-        for i, o in enumerate(yield_n_and_assert(f, SimTelMCRunHeader, n=3)):
+        for i, o in enumerate(yield_n_and_assert(f, MCRunHeader, n=3)):
             parse_and_assert_consumption(o, limit=0)
 
 
 def test_2002_v3_3_objects():
-    from eventio.simtel.objects import SimTelCamSettings
+    from eventio.simtel.objects import CameraSettings
 
     with EventIOFile(prod2_file) as f:
-        for i, o in enumerate(yield_n_and_assert(f, SimTelCamSettings, n=3)):
+        for i, o in enumerate(yield_n_and_assert(f, CameraSettings, n=3)):
             camera_data = parse_and_assert_consumption(o, limit=0)
 
             assert o.header.version == 3
@@ -124,10 +124,10 @@ def test_2002_v3_3_objects():
 
 
 def test_2002_v5_3_objects():
-    from eventio.simtel.objects import SimTelCamSettings
+    from eventio.simtel.objects import CameraSettings
 
     with EventIOFile(prod4b_astri_file) as f:
-        for i, o in enumerate(yield_n_and_assert(f, SimTelCamSettings, n=3)):
+        for i, o in enumerate(yield_n_and_assert(f, CameraSettings, n=3)):
             cam_data = parse_and_assert_consumption(o, limit=0)
 
             assert o.header.version == 5
@@ -136,10 +136,10 @@ def test_2002_v5_3_objects():
 
 
 def test_2003_3_objects():
-    from eventio.simtel.objects import SimTelCamOrgan
+    from eventio.simtel.objects import CameraOrganization
 
     with EventIOFile(prod2_file) as f:
-        for i, o in enumerate(yield_n_and_assert(f, SimTelCamOrgan, n=3)):
+        for i, o in enumerate(yield_n_and_assert(f, CameraOrganization, n=3)):
             cam_organ = parse_and_assert_consumption(o, limit=1)
             assert cam_organ['telescope_id'] == i + 1
 
@@ -151,20 +151,20 @@ def test_2003_3_objects():
 
 
 def test_2004_3_objects():
-    from eventio.simtel.objects import SimTelPixelset
+    from eventio.simtel.objects import PixelSettings
 
     with EventIOFile(prod2_file) as f:
-        for i, o in enumerate(yield_n_and_assert(f, SimTelPixelset, n=3)):
+        for i, o in enumerate(yield_n_and_assert(f, PixelSettings, n=3)):
             assert o.telescope_id == i + 1
             pixelset = parse_and_assert_consumption(o, limit=1)
             assert pixelset['num_pixels'] == 1855
 
 
 def test_2005_3_objects():
-    from eventio.simtel.objects import SimTelPixelDisable
+    from eventio.simtel.objects import DisabledPixels
 
     with EventIOFile(prod2_file) as f:
-        for i, o in enumerate(yield_n_and_assert(f, SimTelPixelDisable, n=3)):
+        for i, o in enumerate(yield_n_and_assert(f, DisabledPixels, n=3)):
             pixel_disable = parse_and_assert_consumption(o, limit=0)
 
             assert pixel_disable['telescope_id'] == i + 1
@@ -175,10 +175,10 @@ def test_2005_3_objects():
 
 
 def test_2006_3_objects():
-    from eventio.simtel.objects import SimTelCamsoftset
+    from eventio.simtel.objects import CameraSoftwareSettings
 
     with EventIOFile(prod2_file) as f:
-        for i, o in enumerate(yield_n_and_assert(f, SimTelCamsoftset, n=3)):
+        for i, o in enumerate(yield_n_and_assert(f, CameraSoftwareSettings, n=3)):
             d = parse_and_assert_consumption(o, limit=0)
 
             assert d['telescope_id'] == i + 1
@@ -201,10 +201,10 @@ def test_2006_3_objects():
 
 
 def test_2007_3_objects():
-    from eventio.simtel.objects import SimTelPointingCor
+    from eventio.simtel.objects import PointingCorrection
 
     with EventIOFile(prod2_file) as f:
-        for i, o in enumerate(yield_n_and_assert(f, SimTelPointingCor, n=3)):
+        for i, o in enumerate(yield_n_and_assert(f, PointingCorrection, n=3)):
             d = parse_and_assert_consumption(o, limit=0)
 
             assert d['telescope_id'] == i + 1
@@ -214,10 +214,10 @@ def test_2007_3_objects():
 
 
 def test_2008_3_objects():
-    from eventio.simtel.objects import SimTelTrackSet
+    from eventio.simtel.objects import DriveSettings
 
     with EventIOFile(prod2_file) as f:
-        for i, o in enumerate(yield_n_and_assert(f, SimTelTrackSet, n=3)):
+        for i, o in enumerate(yield_n_and_assert(f, DriveSettings, n=3)):
             assert o.telescope_id == i + 1
             tracking_info = parse_and_assert_consumption(o, limit=0)
 
@@ -228,10 +228,10 @@ def test_2008_3_objects():
 
 
 def test_2009_3_objects():
-    from eventio.simtel.objects import SimTelCentEvent
+    from eventio.simtel.objects import CentralEvent
 
     with EventIOFile(prod2_file) as f:
-        for i, o in enumerate(yield_n_and_assert(f, SimTelCentEvent, n=3)):
+        for i, o in enumerate(yield_n_and_assert(f, CentralEvent, n=3)):
             data = parse_and_assert_consumption(o, limit=2)
             assert 'cpu_time' in data
             assert 'gps_time' in data
@@ -239,10 +239,10 @@ def test_2009_3_objects():
 
 
 def test_2100_3_objects():
-    from eventio.simtel.objects import SimTelTrackEvent
+    from eventio.simtel.objects import TrackingPosition
 
     with EventIOFile(prod2_file) as f:
-        for i, o in enumerate(yield_n_and_assert(f, SimTelTrackEvent, n=3)):
+        for i, o in enumerate(yield_n_and_assert(f, TrackingPosition, n=3)):
             pointing = parse_and_assert_consumption(o, limit=0)
 
             assert 'azimuth_raw' in pointing
@@ -250,31 +250,31 @@ def test_2100_3_objects():
 
 
 def test_2200():
-    from eventio.simtel.objects import SimTelTelEvent
+    from eventio.simtel.objects import TelescopeEvent
 
-    assert SimTelTelEvent.type_to_telid(3305) == 205
-    assert SimTelTelEvent.type_to_telid(3205) == 105
-    assert SimTelTelEvent.type_to_telid(2203) == 3
+    assert TelescopeEvent.type_to_telid(3305) == 205
+    assert TelescopeEvent.type_to_telid(3205) == 105
+    assert TelescopeEvent.type_to_telid(2203) == 3
 
 
 def test_2010():
-    from eventio.simtel.objects import SimTelCentEvent
+    from eventio.simtel.objects import CentralEvent
     # class under test
-    from eventio.simtel.objects import SimTelEvent
+    from eventio.simtel.objects import Event
 
     with EventIOFile(prod2_file) as f:
         n_events = 0
-        for event in yield_toplevel_of_type(f, SimTelEvent):
-            assert isinstance(next(event), SimTelCentEvent)
+        for event in yield_toplevel_of_type(f, Event):
+            assert isinstance(next(event), CentralEvent)
             n_events += 1
         assert n_events > 0
 
 
 def test_2011_3_objects():
-    from eventio.simtel.objects import SimTelTelEvtHead
+    from eventio.simtel.objects import TelescopeEventHeader
 
     with EventIOFile(prod2_file) as f:
-        for i, o in enumerate(yield_n_and_assert(f, SimTelTelEvtHead, n=3)):
+        for i, o in enumerate(yield_n_and_assert(f, TelescopeEventHeader, n=3)):
             parse_and_assert_consumption(o, limit=2)
 
             # print(d)
@@ -342,18 +342,18 @@ def test_2011_3_objects():
 
 
 def test_2012_3_objects():
-    from eventio.simtel.objects import SimTelTelADCSum
+    from eventio.simtel.objects import ADCSum
 
     with EventIOFile(prod4b_astri_file) as f:
-        for i, o in enumerate(yield_n_and_assert(f, SimTelTelADCSum, n=3)):
+        for i, o in enumerate(yield_n_and_assert(f, ADCSum, n=3)):
             parse_and_assert_consumption(o, limit=3)
 
 
 def test_2013_3_objects():
-    from eventio.simtel.objects import SimTelTelADCSamp
+    from eventio.simtel.objects import ADCSamples
 
     with EventIOFile(prod2_file) as f:
-        for i, o in enumerate(yield_n_and_assert(f, SimTelTelADCSamp, n=3)):
+        for i, o in enumerate(yield_n_and_assert(f, ADCSamples, n=3)):
             d = parse_and_assert_consumption(o, limit=3)
 
             if i == 0:
@@ -363,7 +363,7 @@ def test_2013_3_objects():
 
 
 def test_2014_3_objects():
-    from eventio.simtel.objects import SimTelTelImage
+    from eventio.simtel.objects import ImageParameters
 
     expected_telescope_ids = [
         38, 47, 11, 21, 24, 26, 61, 63, 118, 119, 17, 104, 124, 2, 4, 14,
@@ -372,17 +372,17 @@ def test_2014_3_objects():
     ]
 
     with EventIOFile(prod2_file) as f:
-        for i, o in enumerate(yield_n_and_assert(f, SimTelTelImage, n=3)):
+        for i, o in enumerate(yield_n_and_assert(f, ImageParameters, n=3)):
             d = parse_and_assert_consumption(o, limit=2)
 
             assert d['telescope_id'] == expected_telescope_ids[i]
 
 
 def test_2015_3_objects():
-    from eventio.simtel.objects import SimTelShower
+    from eventio.simtel.objects import StereoReconstruction
 
     with EventIOFile(prod4b_sst1m_file) as f:
-        for obj in yield_n_and_assert(f, SimTelShower, n=3):
+        for obj in yield_n_and_assert(f, StereoReconstruction, n=3):
             parse_and_assert_consumption(obj, limit=2)
 
             # print(d)
@@ -403,10 +403,10 @@ def test_2015_3_objects():
 
 
 def test_2016():
-    from eventio.simtel.objects import SimTelPixelTiming
+    from eventio.simtel.objects import PixelTiming
 
     with EventIOFile(prod4b_sst1m_file) as f:
-        for obj in yield_n_and_assert(f, SimTelPixelTiming, n=3):
+        for obj in yield_n_and_assert(f, PixelTiming, n=3):
             parse_and_assert_consumption(obj, limit=3)
 
 
@@ -416,13 +416,13 @@ def test_2017():
 
 
 def test_2020_3_objects():
-    from eventio.simtel.objects import SimTelMCShower
+    from eventio.simtel.objects import MCStereoReconstruction
 
     hessio_data = np.load(resource_filename(
         'eventio', 'resources/gamma_test_mc_shower.npy'
     ))
     with EventIOFile(prod2_file) as f:
-        for i, o in enumerate(yield_n_and_assert(f, SimTelMCShower, n=3)):
+        for i, o in enumerate(yield_n_and_assert(f, MCStereoReconstruction, n=3)):
             mc = parse_and_assert_consumption(o, limit=2)
 
             expected = hessio_data[i]
@@ -433,10 +433,10 @@ def test_2020_3_objects():
 
 
 def test_2021_3_objects():
-    from eventio.simtel.objects import SimTelMCEvent
+    from eventio.simtel.objects import MCEvent
 
     with EventIOFile(prod2_file) as f:
-        for i, o in enumerate(yield_n_and_assert(f, SimTelMCEvent, n=3)):
+        for i, o in enumerate(yield_n_and_assert(f, MCEvent, n=3)):
             d = parse_and_assert_consumption(o, limit=0)
 
             assert d['shower_num'] == o.header.id // 100
@@ -451,10 +451,10 @@ def test_2021_3_objects():
 
 
 def test_2022_3_objects():
-    from eventio.simtel.objects import SimTelTelMoni
+    from eventio.simtel.objects import CameraMonitoring
 
     with EventIOFile(prod2_file) as f:
-        for i, o in enumerate(yield_n_and_assert(f, SimTelTelMoni, n=3)):
+        for i, o in enumerate(yield_n_and_assert(f, CameraMonitoring, n=3)):
             d = parse_and_assert_consumption(o, limit=1)
 
             assert d['telescope_id'] == i + 1
@@ -525,10 +525,10 @@ def test_2022_3_objects():
 
 
 def test_2023_3_objects():
-    from eventio.simtel.objects import SimTelLasCal
+    from eventio.simtel.objects import LaserCalibration
 
     with EventIOFile(prod2_file) as f:
-        for i, o in enumerate(yield_n_and_assert(f, SimTelLasCal, n=3)):
+        for i, o in enumerate(yield_n_and_assert(f, LaserCalibration, n=3)):
             d = parse_and_assert_consumption(o, limit=0)
 
             assert d['telescope_id'] == i + 1
@@ -561,20 +561,20 @@ def test_2025():
 
 
 def test_2026_3_objects():
-    from eventio.simtel.objects import SimTelMCPeSum
+    from eventio.simtel.objects import MCPhotoelectronSum
 
     with EventIOFile(prod2_file) as f:
-        for i, o in enumerate(yield_n_and_assert(f, SimTelMCPeSum, n=3)):
+        for i, o in enumerate(yield_n_and_assert(f, MCPhotoelectronSum, n=3)):
             d = parse_and_assert_consumption(o, limit=0)
 
             assert d['event'] // 100 == d['shower_num']
 
 
 def test_2027_3_objects():
-    from eventio.simtel.objects import SimTelPixelList
+    from eventio.simtel.objects import PixelList
 
     with EventIOFile(prod2_file) as f:
-        for i, o in enumerate(yield_n_and_assert(f, SimTelPixelList, n=3)):
+        for i, o in enumerate(yield_n_and_assert(f, PixelList, n=3)):
             d = parse_and_assert_consumption(o, limit=2)
             assert d
 

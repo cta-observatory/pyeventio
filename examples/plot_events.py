@@ -9,10 +9,10 @@ from ctapipe.visualization import CameraDisplay
 
 from eventio import EventIOFile
 from eventio.simtel import (
-    SimTelCamSettings,
-    SimTelEvent,
-    SimTelTelEvent,
-    SimTelTelADCSamp
+    CameraSettings,
+    Event,
+    TelescopeEvent,
+    ADCSamples
 )
 
 input_file = resource_filename(
@@ -25,7 +25,7 @@ input_file = '/home/maxnoe/Downloads/gamma_20deg_180deg_run7360___cta-prod3-merg
 with EventIOFile(input_file) as f:
     cameras = {}
     for o in f:
-        if isinstance(o, SimTelCamSettings):
+        if isinstance(o, CameraSettings):
             cam_data = o.parse_data_field()
 
             if cam_data['pixel_shape'][0] == 2:
@@ -59,11 +59,11 @@ with EventIOFile(input_file) as f:
                 pix_rotation=pix_rotation,
             )
 
-        if isinstance(o, SimTelEvent):
+        if isinstance(o, Event):
             for subo in o:
-                if isinstance(subo, SimTelTelEvent):
+                if isinstance(subo, TelescopeEvent):
                     for subsubo in subo:
-                        if isinstance(subsubo, SimTelTelADCSamp):
+                        if isinstance(subsubo, ADCSamples):
                             data = subsubo.parse_data_field()
 
                             gain, pix, chan = np.where(data == data.max())

@@ -1,6 +1,6 @@
 import time
 from pprint import pprint
-from eventio.simtel.simtelfile import SimTelFile
+from eventio.simtel.simtelfile import File
 from argparse import ArgumentParser
 
 parser = ArgumentParser()
@@ -9,7 +9,7 @@ parser.add_argument('-p', '--print', action='store_true')
 
 args = parser.parse_args()
 
-source = SimTelFile(args.inputfile)
+source = File(args.inputfile)
 
 start_time = time.time()
 for i, (shower, event) in enumerate(source):

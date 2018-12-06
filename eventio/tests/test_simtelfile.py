@@ -5,7 +5,7 @@ import pkg_resources
 import os
 import pytest
 
-from eventio.simtel.simtelfile import SimTelFile
+from eventio.simtel.simtelfile import File
 
 prod2_path = pkg_resources.resource_filename(
     'eventio',
@@ -28,7 +28,7 @@ prod4_path = pkg_resources.resource_filename(
         'gamma_20deg_0deg_run102___cta-prod4-sst-1m_desert-2150m-Paranal-sst-1m.simtel.gz')
 )
 
-# using a zstd file ensures SimTelFile is not seeking back, when reading
+# using a zstd file ensures File is not seeking back, when reading
 # a file
 prod4_zst_path = pkg_resources.resource_filename(
     'eventio',
@@ -43,13 +43,13 @@ test_paths = [prod2_path, prod3_path, prod4_path, prod4_zst_path]
 
 def test_can_open():
     for path in test_paths:
-        assert SimTelFile(path)
+        assert File(path)
 
 
 def test_at_least_one_event_found():
     for path in test_paths:
         one_found = False
-        for event in SimTelFile(path):
+        for event in File(path):
             one_found = True
             break
         assert one_found, path
@@ -57,7 +57,7 @@ def test_at_least_one_event_found():
 
 def test_show_we_get_a_tuple_of_shower_and_event():
     for path in test_paths:
-        for shower, event in SimTelFile(path):
+        for shower, event in File(path):
             assert shower
             assert event
             break
@@ -65,7 +65,7 @@ def test_show_we_get_a_tuple_of_shower_and_event():
 
 def test_show_event_is_not_empty_and_has_some_members_for_sure():
     for path in test_paths:
-        for shower, event in SimTelFile(path):
+        for shower, event in File(path):
             assert shower.keys() == {
                 'shower',
                 'primary_id',
@@ -126,7 +126,7 @@ def test_iterate_complete_file():
     }
     for path in test_paths:
         try:
-            for counter, event in enumerate(SimTelFile(path)):
+            for counter, event in enumerate(File(path)):
                 pass
         except (EOFError, IndexError):  # truncated files might raise these...
             pass

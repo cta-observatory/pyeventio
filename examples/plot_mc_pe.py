@@ -8,7 +8,7 @@ from ctapipe.instrument import CameraGeometry
 from ctapipe.visualization import CameraDisplay
 
 from eventio import EventIOFile
-from eventio.simtel import SimTelCamSettings
+from eventio.simtel import CameraSettings
 from eventio.iact import IACTPhotoElectrons, CORSIKATelescopeData
 
 input_file = resource_filename(
@@ -20,7 +20,7 @@ input_file = resource_filename(
 with EventIOFile(input_file) as f:
     cameras = {}
     for o in f:
-        if isinstance(o, SimTelCamSettings):
+        if isinstance(o, CameraSettings):
             cam_data = o.parse_data_field()
             pix_type = 'square'
             pix_rotation = 0 * u.deg

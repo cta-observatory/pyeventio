@@ -6,47 +6,47 @@
         # 1x per telescope (n_telescopes is in RunHeader)
         # I call this TelescopeDescription
     {
-        SimTelCamSettings[2002]
-        SimTelCamOrgan[2003]
-        SimTelPixelset[2004]
-        SimTelPixelDisable[2005]
-        SimTelCamsoftset[2006]
-        SimTelTrackSet[2008]
-        SimTelPointingCor[2007]
+        CameraSettings[2002]
+        CameraOrganization[2003]
+        PixelSettings[2004]
+        DisabledPixels[2005]
+        CameraSoftwareSettings[2006]
+        DriveSettings[2008]
+        PointingCorrection[2007]
     }
 
     {
-        MCShower[2020](shower=3)
+        MCStereoReconstruction[2020](shower=3)
         {
             MCEvent[2021](event=301)
             CORSIKATelescopeData[1204](event=301)
                 # IACTPhotoElectrons inside
 
             { 1x per telescope and I don't know why they come here
-            TelMoni[2022](telescope_id=1, what=0x7f)
-            LasCal[2023](telescope_id=1)
+            CameraMonitoring[2022](telescope_id=1, what=0x7f)
+            LaserCalibration[2023](telescope_id=1)
             }
-            MCPeSum[2026](id=301)
+            MCPhotoelectronSum[2026](id=301)
             Event[2010]
             {
-                CentEvent[2009](id=301)
-                TelEvent[2229](telescope_id=29, id=301)
+                CentralEvent[2009](id=301)
+                TelescopeEvent[2229](telescope_id=29, id=301)
                 {
-                    TelEvtHead[2011](telescope_id=29)
-                    TelADCSamp[2013](telescope_id=29,
+                    TelescopeEventHeader[2011](telescope_id=29)
+                    ADCSamples[2013](telescope_id=29,
                     PixelTiming[2016](telescope_id=29)
-                    TelImage[2014](telescope_id=29,
+                    ImageParameters[2014](telescope_id=29,
                     PixelList[2027](telescope_id=29
                 }
-                TelEvent[2237](telescope_id=37, id=301)
-                TrackEvent[2113](telescope_id=13
-                TrackEvent[2117](telescope_id=17
-                TrackEvent[2123](telescope_id=23
-                TrackEvent[2129](telescope_id=29
-                TrackEvent[2131](telescope_id=31
+                TelescopeEvent[2237](telescope_id=37, id=301)
+                TrackingPosition[2113](telescope_id=13
+                TrackingPosition[2117](telescope_id=17
+                TrackingPosition[2123](telescope_id=23
+                TrackingPosition[2129](telescope_id=29
+                TrackingPosition[2131](telescope_id=31
                 ...
-                TrackEvent[2163](telescope_id=63
-                Shower[2015]
+                TrackingPosition[2163](telescope_id=63
+                StereoReconstruction[2015]
             }
         }
 
@@ -61,7 +61,7 @@ from eventio.base import EventIOFile, EventIOObject
 class WrongType(Exception):
     pass
 
-class NoTrackEvents(Exception):
+class NoTrackingPositions(Exception):
     pass
 
 class WithNextAssert:
@@ -125,39 +125,39 @@ from eventio.iact.objects import CORSIKAInputCard, CORSIKATelescopeData
 from eventio.simtel.objects import (
     History,
     TelescopeObject,
-    SimTelRunHeader,
-    SimTelMCRunHeader,
-    SimTelCamSettings,
-    SimTelCamOrgan,
-    SimTelPixelset,
-    SimTelPixelDisable,
-    SimTelCamsoftset,
-    SimTelPointingCor,
-    SimTelTrackSet,
-    SimTelCentEvent,
-    SimTelTrackEvent,
-    SimTelTelEvent,
-    SimTelEvent,
-    SimTelTelEvtHead,
-    SimTelTelADCSum,
-    SimTelTelADCSamp,
-    SimTelTelImage,
-    SimTelShower,
-    SimTelPixelTiming,
-    SimTelPixelCalib,
-    SimTelMCShower,
-    SimTelMCEvent,
-    SimTelTelMoni,
-    SimTelLasCal,
-    SimTelRunStat,
-    SimTelMCRunStat,
-    SimTelMCPeSum,
-    SimTelPixelList,
-    SimTelCalibEvent,
+    RunHeader,
+    MCRunHeader,
+    CameraSettings,
+    CameraOrganization,
+    PixelSettings,
+    DisabledPixels,
+    CameraSoftwareSettings,
+    PointingCorrection,
+    DriveSettings,
+    CentralEvent,
+    TrackingPosition,
+    TelescopeEvent,
+    Event,
+    TelescopeEventHeader,
+    ADCSum,
+    ADCSamples,
+    ImageParameters,
+    StereoReconstruction,
+    PixelTiming,
+    PixelCalibration,
+    MCStereoReconstruction,
+    MCEvent,
+    CameraMonitoring,
+    LaserCalibration,
+    RunStatistics,
+    MCRunStatistics,
+    MCPhotoelectronSum,
+    PixelList,
+    CalibrationEvent,
 )
 
 
-class SimTelFile:
+class File:
     def __init__(self, path):
         self.path = path
         self.file_ = EventIOFileWithNextAssert(path)
@@ -169,9 +169,9 @@ class SimTelFile:
             except WrongType:
                 break
 
-        self.header = self.file_.next_assert(SimTelRunHeader).parse_data_field()
+        self.header = self.file_.next_assert(RunHeader).parse_data_field()
         self.n_telescopes = self.header['n_telescopes']
-        self.mc_header = read_all_of_type(self.file_, SimTelMCRunHeader)
+        self.mc_header = read_all_of_type(self.file_, MCRunHeader)
         self.corsika_input = read_all_of_type(self.file_, CORSIKAInputCard)
         self.telescope_descriptions = [
             telescope_description_from(self.file_)
@@ -179,8 +179,8 @@ class SimTelFile:
         ]
 
         self.shower = None
-        self.tel_moni = {}  # tel_id: SimTelTelMoni
-        self.lascal = {}  # tel_id: SimTelLasCal
+        self.tel_moni = {}  # tel_id: CameraMonitoring
+        self.lascal = {}  # tel_id: LaserCalibration
 
         self.cam_settings = {}
         for telescope_description in self.telescope_descriptions:
@@ -207,15 +207,15 @@ class SimTelFile:
                 shower, event = self.fetch_next_event()
                 if 'event' in event:
                     return shower, event
-            except NoTrackEvents:
-                logging.warning('skipping event: no TrackEvents')
+            except NoTrackingPositions:
+                logging.warning('skipping event: no TrackingPositions')
     def fetch_next_event(self):
         try:
             event = self.next_mc_event()
             return self.shower, event
         except WrongType:
             try:
-                self.shower = self.file_.next_assert(SimTelMCShower).parse_data_field()
+                self.shower = self.file_.next_assert(MCStereoReconstruction).parse_data_field()
             except WrongType:
                 raise StopIteration
 
@@ -226,17 +226,17 @@ class SimTelFile:
         result = {}
 
         # There is for sure exactly one of these
-        result['mc_event'] = self.file_.next_assert(SimTelMCEvent).parse_data_field()
+        result['mc_event'] = self.file_.next_assert(MCEvent).parse_data_field()
         result['corsika_tel_data'] = self.file_.next_type_or_none(
             CORSIKATelescopeData)
 
         self.update_moni_lascal()
         try:
-            result['pe_sum'] = self.file_.next_assert(SimTelMCPeSum).parse_data_field()
+            result['pe_sum'] = self.file_.next_assert(MCPhotoelectronSum).parse_data_field()
         except WrongType:
             return result
 
-        event_ = self.file_.next_type_or_none(SimTelEvent)
+        event_ = self.file_.next_type_or_none(Event)
         if event_ is not None:
             result['event'] = parse_event(event_)
 
@@ -246,12 +246,12 @@ class SimTelFile:
         try:
             for tel_id in range(self.n_telescopes):
                 moni = self.file_.next_assert(
-                    SimTelTelMoni
+                    CameraMonitoring
                 ).parse_data_field()
                 self.tel_moni[moni['telescope_id']] = moni
 
                 lascal = self.file_.next_assert(
-                    SimTelLasCal
+                    LaserCalibration
                 ).parse_data_field()
                 self.lascal[lascal['telescope_id']] = lascal
 
@@ -267,13 +267,13 @@ class EventIOFileWithNextAssert(EventIOFile, WithNextAssert):
 
 def telescope_description_from(file_):
     return [
-        file_.next_assert(SimTelCamSettings).parse_data_field(),
-        file_.next_assert(SimTelCamOrgan),
-        file_.next_assert(SimTelPixelset).parse_data_field(),
-        file_.next_assert(SimTelPixelDisable),
-        file_.next_assert(SimTelCamsoftset),
-        file_.next_assert(SimTelTrackSet),
-        file_.next_assert(SimTelPointingCor),
+        file_.next_assert(CameraSettings).parse_data_field(),
+        file_.next_assert(CameraOrganization),
+        file_.next_assert(PixelSettings).parse_data_field(),
+        file_.next_assert(DisabledPixels),
+        file_.next_assert(CameraSoftwareSettings),
+        file_.next_assert(DriveSettings),
+        file_.next_assert(PointingCorrection),
     ]
 
 
@@ -293,17 +293,17 @@ def read_all_of_type(f, type_, converter=lambda x: x):
 
 def parse_event(event):
     '''structure of event:
-        CentEvent[2009]  <-- this knows how many TelEvents
+        CentralEvent[2009]  <-- this knows how many TelescopeEvents
 
-        TelEvent[2202]
+        TelescopeEvent[2202]
         ...
-        TelEvent[2208]
+        TelescopeEvent[2208]
 
-        TrackEvent[2101]
+        TrackingPosition[2101]
         ...
-        TrackEvent[2164]
+        TrackingPosition[2164]
 
-        Shower[2015]
+        StereoReconstruction[2015]
 
 
         In words:
@@ -313,16 +313,16 @@ def parse_event(event):
             1 shower
     '''
     result = {}
-    result['cent_event'] = event.next_assert(SimTelCentEvent).parse_data_field()
+    result['cent_event'] = event.next_assert(CentralEvent).parse_data_field()
     tel_events = read_all_of_type(
         event,
-        SimTelTelEvent,
+        TelescopeEvent,
         converter=parse_tel_event,
     )
     #assert result['tel_events'], (result, result['cent_event'].header)  # more than zero
     track_events = read_all_of_type(
         event,
-        SimTelTrackEvent,
+        TrackingPosition,
         converter=lambda x: x.parse_data_field()
     )
 
@@ -343,37 +343,37 @@ def parse_event(event):
         try:
             tel_event['track'] = track_events[telescope_id]
         except KeyError:
-            raise NoTrackEvents()
+            raise NoTrackingPositions()
     result['tel_events'] = tel_events
     #assert result['track_events'], (result, result['cent_event'].header)  # more than zero
-    result['shower'] = read_all_of_type(event, SimTelShower)
+    result['shower'] = read_all_of_type(event, StereoReconstruction)
     return result
 
 
 def parse_tel_event(tel_event):
     '''structure of tel_event
     probably: did survive cleaning and hence we have shower information
-     SimTelTelEvent[2204]
-         SimTelTelEvtHead[2011]
-         SimTelTelADCSamp[2013]
-         SimTelPixelTiming[2016]
-         SimTelTelImage[2014]
-         SimTelPixelList[2027]
+     TelescopeEvent[2204]
+         TelescopeEventHeader[2011]
+         ADCSamples[2013]
+         PixelTiming[2016]
+         ImageParameters[2014]
+         PixelList[2027]
 
     probably: did not survive cleaning
-     SimTelTelEvent[2208]
-         SimTelTelEvtHead[2011]
-         SimTelTelADCSamp[2013]
-         SimTelPixelTiming[2016]
+     TelescopeEvent[2208]
+         TelescopeEventHeader[2011]
+         ADCSamples[2013]
+         PixelTiming[2016]
     '''
     result = {}
     # These 3 are sure
-    result['header'] = tel_event.next_assert(SimTelTelEvtHead).parse_data_field()
+    result['header'] = tel_event.next_assert(TelescopeEventHeader).parse_data_field()
 
     # well could be either ADCSamp or ADCSum
-    adc_stuff = tel_event.next_type_or_none(SimTelTelADCSamp)
+    adc_stuff = tel_event.next_type_or_none(ADCSamples)
     if adc_stuff is None:
-        adc_stuff = tel_event.next_type_or_none(SimTelTelADCSum)
+        adc_stuff = tel_event.next_type_or_none(ADCSum)
         if adc_stuff is None:
             raise WrongType
         waveform = adc_stuff.parse_data_field()[..., None]
@@ -381,13 +381,13 @@ def parse_tel_event(tel_event):
         waveform = adc_stuff.parse_data_field()
 
     result['waveform'] = waveform
-    result['pixel_timing'] = tel_event.next_assert(SimTelPixelTiming)
+    result['pixel_timing'] = tel_event.next_assert(PixelTiming)
 
     # these are only sometimes there
-    image = tel_event.next_type_or_none(SimTelTelImage)
+    image = tel_event.next_type_or_none(ImageParameters)
     if image is not None:
         result['image'] = image.parse_data_field()
-    pixel_list = tel_event.next_type_or_none(SimTelPixelList)
+    pixel_list = tel_event.next_type_or_none(PixelList)
     if pixel_list is not None:
         result['pixel_list'] = pixel_list.parse_data_field()
 
