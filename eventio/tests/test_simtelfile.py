@@ -1,11 +1,7 @@
-
-import gzip
-import tempfile
 import pkg_resources
 import os
-import pytest
 
-from eventio.simtel.simtelfile import SimTelFile
+from eventio.simtel import SimTelFile
 
 prod2_path = pkg_resources.resource_filename(
     'eventio',

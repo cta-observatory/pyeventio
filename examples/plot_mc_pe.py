@@ -8,8 +8,8 @@ from ctapipe.instrument import CameraGeometry
 from ctapipe.visualization import CameraDisplay
 
 from eventio import EventIOFile
-from eventio.simtel import SimTelCamSettings
-from eventio.iact import IACTPhotoElectrons, CORSIKATelescopeData
+from eventio.simtel import CameraSettings
+from eventio.iact import PhotoElectrons, TelescopeData
 
 input_file = resource_filename(
     'eventio',
@@ -20,7 +20,7 @@ input_file = resource_filename(
 with EventIOFile(input_file) as f:
     cameras = {}
     for o in f:
-        if isinstance(o, SimTelCamSettings):
+        if isinstance(o, CameraSettings):
             cam_data = o.parse_data_field()
             pix_type = 'square'
             pix_rotation = 0 * u.deg
@@ -36,9 +36,9 @@ with EventIOFile(input_file) as f:
                 pix_rotation=pix_rotation,
             )
 
-        if isinstance(o, CORSIKATelescopeData):
+        if isinstance(o, TelescopeData):
             for subo in o:
-                if isinstance(subo, IACTPhotoElectrons):
+                if isinstance(subo, PhotoElectrons):
                     pe = subo.parse_data_field()
 
                     plt.figure()
