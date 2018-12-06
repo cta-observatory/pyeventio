@@ -2,7 +2,6 @@
 Implementation of an EventIOFile that
 loops through SimTel Array events.
 '''
-import logging
 import re
 from copy import copy
 from collections import defaultdict
@@ -33,7 +32,6 @@ from .objects import (
     PixelTiming,
     PointingCorrection,
     RunHeader,
-    StereoReconstruction,
     TelescopeEvent,
     TelescopeEventHeader,
     TrackingPosition,
@@ -114,8 +112,8 @@ class SimTelFile(EventIOFile):
 
         current_mc_shower = None
         current_mc_event = None
-        current_photon_electron_sum = None
-        current_photon_electrons = None
+        current_photoelectron_sum = None
+        current_photoelectrons = None
         camera_monitorings = defaultdict(dict)
         laser_calibrations = defaultdict(dict)
 
@@ -129,10 +127,10 @@ class SimTelFile(EventIOFile):
                 current_mc_event = o.parse_data_field()
 
             elif isinstance(o, iact.TelescopeData):
-                current_photon_electrons = parse_photo_electrons(o)
+                current_photoelectrons = parse_photoelectrons(o)
 
             elif isinstance(o, MCPhotoelectronSum):
-                current_photon_electron_sum = o.parse_data_field()
+                current_photoelectron_sum = o.parse_data_field()
 
             elif isinstance(o, ArrayEvent):
                 array_event = parse_array_event(o)
@@ -140,8 +138,8 @@ class SimTelFile(EventIOFile):
                     'mc_shower': current_mc_shower,
                     'mc_event': current_mc_event,
                     'array_event': array_event,
-                    'photon_electron_sum': current_photon_electron_sum,
-                    'photon_electrons': current_photon_electrons,
+                    'photoelectron_sums': current_photoelectron_sum,
+                    'photoelectrons': current_photoelectrons,
                 }
                 event_data['camera_monitorings'] = {
                     telescope_id: copy(camera_monitorings[telescope_id])
@@ -164,17 +162,6 @@ class SimTelFile(EventIOFile):
                 break
 
             o = next(self)
-
-
-def telescope_description_from(eventio_file, n_telescopes):
-    '''
-    Read ``n_telescopes`` telescope descriptions from EventIOFile eventio_file
-
-    Assumes that the next object in the file is already the first
-    object of the telescope descriptions: ``CameraSettings``
-    '''
-
-    return telescopes
 
 
 def parse_array_event(array_event):
@@ -230,7 +217,7 @@ def parse_array_event(array_event):
     }
 
 
-def parse_photo_electrons(telescope_data):
+def parse_photoelectrons(telescope_data):
     check_type(telescope_data, iact.TelescopeData)
 
     photo_electrons = {}
@@ -256,7 +243,7 @@ def parse_telescope_event(telescope_event):
             event['adc_samples'] = o.parse_data_field()
 
         elif isinstance(o, ADCSum):
-            event['adc_sum'] = o.parse_data_field()
+            event['adc_sums'] = o.parse_data_field()
 
         elif isinstance(o, PixelTiming):
             event['pixel_timing'] = o.parse_data_field()

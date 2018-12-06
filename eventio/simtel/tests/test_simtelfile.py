@@ -51,18 +51,19 @@ def test_at_least_one_event_found():
         assert one_found, path
 
 
-def test_show_we_get_a_tuple_of_shower_and_event():
+def test_show_we_get_a_dict_with_hower_and_event():
     for path in test_paths:
-        for shower, event in SimTelFile(path):
-            assert shower
-            assert event
+        for event in SimTelFile(path):
+            assert 'mc_shower' in event
+            assert 'array_event' in event
+            assert 'mc_event' in event
             break
 
 
 def test_show_event_is_not_empty_and_has_some_members_for_sure():
     for path in test_paths:
-        for shower, event in SimTelFile(path):
-            assert shower.keys() == {
+        for event in SimTelFile(path):
+            assert event['mc_shower'].keys() == {
                 'shower',
                 'primary_id',
                 'energy',
@@ -78,37 +79,44 @@ def test_show_event_is_not_empty_and_has_some_members_for_sure():
                 'profiles'
             }
 
+            print(event.keys())
             assert event.keys() == {
+                'mc_shower',
                 'mc_event',
-                'corsika_tel_data',
-                'pe_sum',
-                'event'
+                'array_event',
+                'photoelectron_sums',
+                'photoelectrons',
+                'camera_monitorings',
+                'laser_calibrations',
             }
 
-            inner_event = event['event']
-            assert inner_event.keys() == {'cent_event', 'tel_events', 'shower'}
+            array_event = event['array_event']
+            assert array_event.keys() == {
+                'central_event', 'telescope_events', 'tracking_positions'
+            }
 
-            tel_events = inner_event['tel_events']
+            telescope_events = array_event['telescope_events']
 
-            assert tel_events  # never empty!
+            assert telescope_events  # never empty!
 
-            for tel_event in tel_events.values():
+            for telescope_event in telescope_events.values():
                 expected_keys = {
                     'header',
-                    'waveform',
                     'pixel_timing',
-                    'track',
                 }
                 allowed_keys = {
-                    'image',
+                    'image_parameters',
                     'pixel_list',
+                    'adc_sums',
+                    'adc_samples'
                 }
 
-                found_keys = set(tel_event.keys())
+                found_keys = set(telescope_event.keys())
                 assert expected_keys.issubset(found_keys)
 
                 extra_keys = found_keys.difference(expected_keys)
                 assert extra_keys.issubset(allowed_keys)
+                assert 'adc_sums' in found_keys or 'adc_samples' in found_keys
 
             break
 
