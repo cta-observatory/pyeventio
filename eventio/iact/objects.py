@@ -7,7 +7,7 @@ from ..tools import (
     read_short, read_int, read_float, read_from, read_eventio_string,
 )
 from ..base import EventIOObject
-from ..exceptions import WrongSizeException
+from ..exceptions import WrongSize
 from .parse_corsika_data import (
     parse_corsika_event_header,
     parse_corsika_run_header,
@@ -48,7 +48,7 @@ class RunHeader(EventIOObject):
         data = self.read()
         n, = struct.unpack('i', data[:4])
         if n != 273:
-            raise WrongSizeException(
+            raise WrongSize(
                 'Expected 273 bytes, but found {}'.format(n))
 
         block = np.frombuffer(
@@ -119,7 +119,7 @@ class EventHeader(EventIOObject):
         data = self.read()
         n, = struct.unpack('i', data[:4])
         if n != 273:
-            raise WrongSizeException(
+            raise WrongSize(
                 'Expected 273 bytes, but found {}'.format(n))
 
         block = np.frombuffer(
@@ -337,7 +337,7 @@ class EventEnd(EventIOObject):
         self.seek(0)
         n = read_int(self)
         if n != 273:
-            raise WrongSizeException(
+            raise WrongSize(
                 'Expected 273 bytes, but found {}'.format(n))
 
         dtype = np.dtype('float32')

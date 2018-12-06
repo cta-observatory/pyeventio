@@ -6,7 +6,7 @@ import warnings
 from .file_types import is_gzip, is_eventio, is_zstd
 from .header import parse_header_bytes, get_bits_from_word
 from . import constants
-from .exceptions import WrongTypeException
+from .exceptions import WrongType
 
 try:
     import zstandard as zstd
@@ -176,7 +176,7 @@ class EventIOObject:
 
     def __init__(self, header, parent):
         if self.eventio_type is not None and header.type != self.eventio_type:
-            raise WrongTypeException(self.eventio_type, header.type)
+            raise WrongType(self.eventio_type, header.type)
 
         self.parent = parent
         self.header = header

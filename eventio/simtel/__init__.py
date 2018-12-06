@@ -1,6 +1,9 @@
 from ..base import KNOWN_OBJECTS, EventIOObject
 from .simtelfile import SimTelFile
 from .objects import (
+    History,
+    HistoryConfig,
+    HistoryCommandLine,
     ADCSamples,
     ADCSum,
     ArrayEvent,
@@ -34,6 +37,9 @@ from .objects import (
 )
 
 __all__ = [
+    'History',
+    'HistoryCommandLine',
+    'HistoryConfig',
     'SimTelFile',
     'ADCSamples',
     'ADCSum',
