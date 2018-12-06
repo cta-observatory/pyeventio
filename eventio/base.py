@@ -92,6 +92,10 @@ def read_next_header(byte_stream, endianness=None):
     '''Read the next header object from the file
     Assumes position of `byte_stream` is at the beginning of a new header.
 
+    endianness: char
+        '<' or '>' for little or big endiannes respectively.
+        Is either read from next header or already known.
+
     Raises stop iteration if not enough data is available.
     '''
     is_toplevel_object = endianness is None
