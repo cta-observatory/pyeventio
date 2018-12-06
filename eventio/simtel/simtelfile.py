@@ -1,4 +1,9 @@
 """
+Implementation of an EventIOFile that
+loops through SimTel Array events.
+
+We assume the follwing structure:
+
     RunHeader[2000]
     MCRunHeader[2001]
     InputCard[1212]
