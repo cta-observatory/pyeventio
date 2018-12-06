@@ -48,7 +48,7 @@ __all__ = [
 class IACTFile(EventIOFile):
     '''
     An Interface to access the data of a EventIO file
-    as produced by the   (a.k.a. bernlohr) extension
+    as produced by the CORSIKA IACT (a.k.a. bernlohr) extension
     more easily.
 
     Instead of low-level access to eventio items, it provides
