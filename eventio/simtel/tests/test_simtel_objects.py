@@ -342,10 +342,10 @@ def test_2011_3_objects():
 
 
 def test_2012_3_objects():
-    from eventio.simtel.objects import ADCSum
+    from eventio.simtel.objects import ADCSums
 
     with EventIOFile(prod4b_astri_file) as f:
-        for i, o in enumerate(yield_n_and_assert(f, ADCSum, n=3)):
+        for i, o in enumerate(yield_n_and_assert(f, ADCSums, n=3)):
             parse_and_assert_consumption(o, limit=3)
 
 

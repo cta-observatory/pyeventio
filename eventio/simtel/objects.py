@@ -690,7 +690,7 @@ class TelescopeEventHeader(TelescopeObject):
         return event_head
 
 
-class ADCSum(EventIOObject):
+class ADCSums(EventIOObject):
     eventio_type = 2012
 
     def __init__(self, header, parent):

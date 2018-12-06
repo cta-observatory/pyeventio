@@ -11,7 +11,7 @@ from .. import iact
 from ..histograms import Histograms
 from .objects import (
     ADCSamples,
-    ADCSum,
+    ADCSums,
     ArrayEvent,
     CameraMonitoring,
     CameraOrganization,
@@ -242,7 +242,7 @@ def parse_telescope_event(telescope_event):
         elif isinstance(o, ADCSamples):
             event['adc_samples'] = o.parse_data_field()
 
-        elif isinstance(o, ADCSum):
+        elif isinstance(o, ADCSums):
             event['adc_sums'] = o.parse_data_field()
 
         elif isinstance(o, PixelTiming):
