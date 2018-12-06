@@ -22,16 +22,16 @@ cdef F32 = np.float32
 
 
 @cython.wraparound(False)  # disable negative indexing
-cpdef (unsigned long, unsigned int) unsigned_varint(const unsigned char[:] data, unsigned long offset=0):
+cpdef (UINT64_t, unsigned int) unsigned_varint(const unsigned char[:] data, unsigned long offset=0):
     cdef unsigned int length
     cdef unsigned long value
-    length = get_length_of_varint(data[0])
+    length = get_length_of_varint(data[offset])
     value = parse_varint(data[offset:offset + length])
     return value, length
 
 
 @cython.wraparound(False)  # disable negative indexing
-cpdef (long, unsigned int) varint(const unsigned char[:] data, unsigned long offset=0):
+cpdef (INT64_t, unsigned int) varint(const unsigned char[:] data, unsigned long offset=0):
     cdef unsigned int length
     cdef unsigned long value
     value, length = unsigned_varint(data, offset)
@@ -60,11 +60,12 @@ cpdef unsigned int get_length_of_varint(const unsigned char first_byte):
     return 9
 
 
+@cython.boundscheck(False)
 @cython.wraparound(False)  # disable negative indexing
-cpdef unsigned long parse_varint(const unsigned char[:] var_int_bytes):
+cpdef UINT64_t parse_varint(const unsigned char[:] var_int_bytes):
     length = var_int_bytes.shape[0]
-    cdef unsigned long v[9]
-    cdef long i  = 0
+    cdef UINT64_t v[9]
+    cdef int i  = 0
     for i in range(length):
         v[i] = var_int_bytes[i]
 
@@ -146,11 +147,9 @@ cpdef unsigned_varint_array(
 ):
     cdef np.ndarray[UINT64_t, ndim=1] output = np.empty(n_elements, dtype=UINT64)
 
-    cdef int val
     cdef unsigned long i
     cdef unsigned long pos
     cdef unsigned long idx
-    cdef unsigned char v0, v1, v2, v3, v4
     cdef unsigned long length
     pos = 0
 
@@ -170,21 +169,26 @@ cpdef varint_array(
     unsigned long offset = 0,
 ):
     cdef unsigned long bytes_read
-    cdef np.ndarray[UINT64_t, ndim=1] unsigned_output
     cdef np.ndarray[INT64_t, ndim=1] output = np.empty(n_elements, dtype=INT64)
 
-    unsigned_output, bytes_read = unsigned_varint_array(data, n_elements, offset)
+    cdef UINT64_t val
+    cdef unsigned int length
 
     cdef unsigned long one = 1;
     cdef unsigned long i
+    cdef unsigned long pos = 0
 
     for i in range(n_elements):
-        if (unsigned_output[i] & one):
-            output[i] = -(unsigned_output[i] >> one) - one
-        else:
-            output[i] = unsigned_output[i] >> one
+        length = get_length_of_varint(data[pos])
+        val = parse_varint(data[pos:pos + length])
+        pos += length
 
-    return output, bytes_read
+        if (val & one):
+            output[i] = -(val >> one) - one
+        else:
+            output[i] = val >> one
+
+    return output, pos
 
 
 @cython.wraparound(False)  # disable negative indexing
@@ -448,8 +452,7 @@ cpdef simtel_pixel_timing_parse_list_type_1(
 ):
     cdef int start, stop, list_index
     cdef long pixel_list_length = pixel_list.shape[0]
-    cdef int i, j, i_pix
-    cdef unsigned long pos = 0
+    cdef int i, i_gain, i_type, i_pix
     cdef unsigned int length = 0
     cdef np.ndarray[INT64_t, ndim=1] result
 
@@ -463,34 +466,31 @@ cpdef simtel_pixel_timing_parse_list_type_1(
 
     cdef short* short_ptr
 
+    cdef unsigned long pos = 0
     for i in range(pixel_list_length):
         i_pix = pixel_list[i]
-        for j in range(num_types):
+        for i_type in range(num_types):
             short_ptr = <short*> &(data[pos])
-            timval[i_pix, j] = granularity * (short_ptr[0])
+            timval[i_pix, i_type] = granularity * (short_ptr[0])
             pos += 2
 
         if with_sum:
-            result, length = varint_array(
-                data, n_elements=num_gains, offset=pos
-            )
-            pos += length
-
-            for j in range(num_gains):
-                pulse_sum_loc[j, i_pix] = result[j]
-
-            if glob_only_selected:
-                result, length = varint_array(
-                    data, n_elements=num_gains, offset=pos
-                )
-                for j in range(num_gains):
-                    pulse_sum_glob[j, i_pix] = result[j]
+            for i_gain in range(num_gains):
+                pulse_sum_loc[i_gain, i_pix], length = varint(data, offset=pos)
                 pos += length
 
+            if glob_only_selected:
+                for j in range(num_gains):
+                    pulse_sum_glob[i_gain, i_pix], length = varint(data, offset=pos)
+                    pos += length
+
     if with_sum and len(pixel_list) > 0 and not glob_only_selected:
-        pulse_sum_glob, length = varint_array(
-            data, n_elements=num_gains * num_pixels, offset=pos,
-        ).reshape(num_gains, num_pixels)
+        for i_gain in range(num_gains):
+            for i_pix in range(num_pixels):
+                pulse_sum_glob[i_gain, i_pix], length = varint(
+                    data, offset=pos,
+                )
+                pos += length
 
     return {
         'timval': timval,
