@@ -140,6 +140,7 @@ class SimTelFile(EventIOFile):
 
         current_mc_shower = None
         current_mc_event = None
+
         # check if some showers or events were already read in __init__
         if len(self.init_mc_showers) > 0:
             current_mc_shower = self.init_mc_showers[-1]
@@ -147,7 +148,7 @@ class SimTelFile(EventIOFile):
             current_mc_event = self.init_mc_events[-1]
 
         current_photoelectron_sum = None
-        current_photoelectrons = None
+        current_photoelectrons = {}
         camera_monitorings = defaultdict(dict)
         laser_calibrations = defaultdict(dict)
 
@@ -176,6 +177,7 @@ class SimTelFile(EventIOFile):
                     continue
 
                 event_data = {
+                    'event_id': current_mc_event['event_id'],
                     'mc_shower': current_mc_shower,
                     'mc_event': current_mc_event,
                     'telescope_events': array_event['telescope_events'],
