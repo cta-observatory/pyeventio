@@ -171,6 +171,7 @@ class SimTelFile(EventIOFile):
                 # with allowed_telescopes set, it might happen there
                 # are no telescopes left
                 if self.allowed_telescopes and len(array_event['telescope_events']) == 0:
+                    o = next(self)
                     continue
 
                 event_data = {
