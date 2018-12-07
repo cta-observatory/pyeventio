@@ -1,5 +1,6 @@
 ''' Implementations of the simtel_array EventIO object types '''
 import numpy as np
+from numpy.lib.recfunctions import append_fields
 from io import BytesIO
 import struct
 from ..base import EventIOObject, read_next_header_sublevel
@@ -1157,8 +1158,8 @@ class MCEvent(EventIOObject):
 
         array = read_array(
             byte_stream, dtype=self.dtypes[self.header.version], count=1
-        )[0]
-        return array
+        )
+        return append_fields(array, 'event_id', [self.header.id])[0]
 
 
 class CameraMonitoring(EventIOObject):
