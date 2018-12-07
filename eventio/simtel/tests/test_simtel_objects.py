@@ -146,7 +146,7 @@ def test_2003_3_objects():
             for sector in cam_organ['sectors']:
                 # sector must never contain a zero, unless it is in the
                 # very first element
-                assert (sector[1:] == 0).sum() == 0
+                assert all(s != 0 for s in sector[1:])
                 # print(pixel_id, sector)
 
 
