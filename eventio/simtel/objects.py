@@ -1448,9 +1448,6 @@ class PixelList(EventIOObject):
         self.seek(0)
         byte_stream = BytesIO(self.read())
 
-        code = self.header.id // int(1e6)
-        telescope = self.header.id % int(1e6)
-
         pixels = read_short(byte_stream)
         # in version 1 pixels is a crazy int
 
@@ -1458,8 +1455,8 @@ class PixelList(EventIOObject):
         # in version 1 pixel_list is an array of crazy int
 
         return {
-            'code': code,
-            'telescope': telescope,
+            'code': self.code,
+            'telescope_id': self.telescope_id,
             'pixels': pixels,
             'pixel_list': pixel_list,
         }

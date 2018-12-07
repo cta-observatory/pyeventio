@@ -279,7 +279,7 @@ def parse_telescope_event(telescope_event):
     '''Parse a telescope event'''
     check_type(telescope_event, TelescopeEvent)
 
-    event = {'pixellists': {}}
+    event = {'pixel_lists': {}}
     for i, o in enumerate(telescope_event):
 
         if i == 0:
