@@ -167,6 +167,12 @@ class SimTelFile(EventIOFile):
 
             elif isinstance(o, ArrayEvent):
                 array_event = parse_array_event(o, self.allowed_telescopes)
+
+                # with allowed_telescopes set, it might happen there
+                # are no telescopes left
+                if self.allowed_telescopes and len(array_event['telescope_events']) == 0:
+                    continue
+
                 event_data = {
                     'mc_shower': current_mc_shower,
                     'mc_event': current_mc_event,
