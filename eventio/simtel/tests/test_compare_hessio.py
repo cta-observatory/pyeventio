@@ -33,7 +33,7 @@ def test_adc_samples():
                             tel_id = adcsamp.telescope_id
                             assert tel_id in h.get_teldata_list()
 
-                            adcsamp_eventio = adcsamp.parse_data_field()
+                            adcsamp_eventio = adcsamp.parse()
                             adcsamp_hessio = h.get_adc_sample(tel_id)
 
                             assert np.all(adcsamp_eventio == adcsamp_hessio)

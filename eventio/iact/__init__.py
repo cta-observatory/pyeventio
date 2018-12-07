@@ -85,17 +85,17 @@ class IACTFile(EventIOFile):
 
         header_object = next(self)
         check_type(header_object, RunHeader)
-        self.header = header_object.parse_data_field()
+        self.header = header_object.parse()
 
         input_card_object = next(self)
         check_type(input_card_object, InputCard)
-        self.input_card = input_card_object.parse_data_field()
+        self.input_card = input_card_object.parse()
 
         telescope_object = next(self)
         check_type(telescope_object, TelescopeDefinition)
 
         self.n_telescopes = telescope_object.n_telescopes
-        self.telescope_positions = telescope_object.parse_data_field()
+        self.telescope_positions = telescope_object.parse()
         self._first_event_byte = self.tell()
 
     def __repr__(self):
@@ -119,18 +119,18 @@ class IACTFile(EventIOFile):
 
         while not isinstance(obj, RunEnd):
             check_type(obj, EventHeader)
-            header = obj.parse_data_field()
+            header = obj.parse()
 
             reuse_object = next(self)
             check_type(reuse_object, ArrayOffsets)
 
             n_reuses = reuse_object.n_reuses
-            array_offsets = reuse_object.parse_data_field()
+            array_offsets = reuse_object.parse()
             time_offset = reuse_object.time_offset
 
             obj = next(self)
             if isinstance(obj, Longitudinal):
-                longitudinal = obj.parse_data_field()
+                longitudinal = obj.parse()
                 obj = next(self)
             else:
                 longitudinal = None
@@ -145,7 +145,7 @@ class IACTFile(EventIOFile):
                 n_bunches = {}
                 for data in telescope_data_obj:
                     if isinstance(data, Photons):
-                        photon_bunches[data.telescope] = data.parse_data_field()
+                        photon_bunches[data.telescope] = data.parse()
                         n_photons[data.telescope] = data.n_photons
                         n_bunches[data.telescope] = data.n_bunches
 
@@ -168,7 +168,7 @@ class IACTFile(EventIOFile):
 
             obj = next(self)
 
-        self.run_end = obj.parse_data_field()
+        self.run_end = obj.parse()
 
 
 EventTuple = namedtuple(

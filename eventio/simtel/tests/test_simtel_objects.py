@@ -42,8 +42,8 @@ def yield_n_and_assert(f, eventio_type, n=3):
 
 
 def parse_and_assert_consumption(o, limit=0):
-    d = o.parse_data_field()
-    # assert parse_data_field() consumed all data from o
+    d = o.parse()
+    # assert parse() consumed all data from o
     bytes_not_consumed = o.read()
     assert len(bytes_not_consumed) <= limit
     for byte_ in bytes_not_consumed:

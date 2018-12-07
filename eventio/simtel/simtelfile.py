@@ -70,18 +70,18 @@ class SimTelFile(EventIOFile):
             o = next(self)
 
         check_type(o, RunHeader)
-        self.header = o.parse_data_field()
+        self.header = o.parse()
         self.n_telescopes = self.header['n_telescopes']
 
         o = next(self)
         self.mc_run_headers = []
         while isinstance(o, MCRunHeader):
-            self.mc_run_headers.append(o.parse_data_field())
+            self.mc_run_headers.append(o.parse())
             o = next(self)
 
         self.corsika_inputcards = []
         while isinstance(o, iact.InputCard):
-            self.corsika_inputcards.append(o.parse_data_field())
+            self.corsika_inputcards.append(o.parse())
             o = next(self)
 
         expected_structure = [
@@ -110,15 +110,15 @@ class SimTelFile(EventIOFile):
 
                 while not isinstance(o, eventio_type):
                     if isinstance(o, MCRunHeader):
-                        self.mc_run_headers.append(o.parse_data_field())
+                        self.mc_run_headers.append(o.parse())
                         msg = 'Unexpectd MCRunHeader in telescope description block'
 
                     elif isinstance(o, MCShower):
-                        self.init_mc_showers.append(o.parse_data_field())
+                        self.init_mc_showers.append(o.parse())
                         msg = 'Unexpectd MCShower in telescope description block'
 
                     elif isinstance(o, MCEvent):
-                        self.init_mc_events.append(o.parse_data_field())
+                        self.init_mc_events.append(o.parse())
                         msg = 'Unexpectd MCEvent in telescope description block'
                     else:
                         msg = 'Skipping unexpected object of type {}'.format(
@@ -130,7 +130,7 @@ class SimTelFile(EventIOFile):
                     o = next(self)
 
                 key = camel_to_snake(o.__class__.__name__)
-                self.telescope_descriptions[o.telescope_id][key] = o.parse_data_field()
+                self.telescope_descriptions[o.telescope_id][key] = o.parse()
 
         self._first_event_byte = self.tell()
 
@@ -154,16 +154,16 @@ class SimTelFile(EventIOFile):
 
         while True:
             if isinstance(o, MCShower):
-                current_mc_shower = o.parse_data_field()
+                current_mc_shower = o.parse()
 
             elif isinstance(o, MCEvent):
-                current_mc_event = o.parse_data_field()
+                current_mc_event = o.parse()
 
             elif isinstance(o, iact.TelescopeData):
                 current_photoelectrons = parse_photoelectrons(o)
 
             elif isinstance(o, MCPhotoelectronSum):
-                current_photoelectron_sum = o.parse_data_field()
+                current_photoelectron_sum = o.parse()
 
             elif isinstance(o, ArrayEvent):
                 array_event = parse_array_event(o, self.allowed_telescopes)
@@ -187,13 +187,13 @@ class SimTelFile(EventIOFile):
                 yield event_data
 
             elif isinstance(o, CameraMonitoring):
-                camera_monitorings[o.telescope_id].update(o.parse_data_field())
+                camera_monitorings[o.telescope_id].update(o.parse())
 
             elif isinstance(o, LaserCalibration):
-                laser_calibrations[o.telescope_id].update(o.parse_data_field())
+                laser_calibrations[o.telescope_id].update(o.parse())
 
             elif isinstance(o, Histograms):
-                self.histograms = o.parse_data_field()
+                self.histograms = o.parse()
                 break
 
             o = next(self)
@@ -229,7 +229,7 @@ def parse_array_event(array_event, allowed_telescopes=None):
         # require first element to be a TriggerInformation
         if i == 0:
             check_type(o, TriggerInformation)
-            trigger_information = o.parse_data_field()
+            trigger_information = o.parse()
 
         elif isinstance(o, TelescopeEvent):
             if allowed_telescopes is None or o.telescope_id in allowed_telescopes:
@@ -237,7 +237,7 @@ def parse_array_event(array_event, allowed_telescopes=None):
 
         elif isinstance(o, TrackingPosition):
             if allowed_telescopes is None or o.telescope_id in allowed_telescopes:
-                tracking_positions[o.telescope_id] = o.parse_data_field()
+                tracking_positions[o.telescope_id] = o.parse()
 
     missing_tracking = set(telescope_events.keys()) - set(tracking_positions.keys())
     if missing_tracking:
@@ -260,7 +260,7 @@ def parse_photoelectrons(telescope_data):
     photo_electrons = {}
     for o in telescope_data:
         check_type(o, iact.PhotoElectrons)
-        photo_electrons[o.telescope_id] = o.parse_data_field()
+        photo_electrons[o.telescope_id] = o.parse()
 
     return photo_electrons
 
@@ -274,21 +274,21 @@ def parse_telescope_event(telescope_event):
 
         if i == 0:
             check_type(o, TelescopeEventHeader)
-            event['header'] = o.parse_data_field()
+            event['header'] = o.parse()
 
         elif isinstance(o, ADCSamples):
-            event['adc_samples'] = o.parse_data_field()
+            event['adc_samples'] = o.parse()
 
         elif isinstance(o, ADCSums):
-            event['adc_sums'] = o.parse_data_field()
+            event['adc_sums'] = o.parse()
 
         elif isinstance(o, PixelTiming):
-            event['pixel_timing'] = o.parse_data_field()
+            event['pixel_timing'] = o.parse()
 
         elif isinstance(o, ImageParameters):
-            event['image_parameters'] = o.parse_data_field()
+            event['image_parameters'] = o.parse()
 
         elif isinstance(o, PixelList):
-            event['pixel_list'] = o.parse_data_field()
+            event['pixel_list'] = o.parse()
 
     return event

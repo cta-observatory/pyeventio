@@ -25,7 +25,7 @@ with EventIOFile(input_file) as f:
     cameras = {}
     for o in f:
         if isinstance(o, CameraSettings):
-            cam_data = o.parse_data_field()
+            cam_data = o.parse()
 
             if cam_data['pixel_shape'][0] == -1:
                 pixel_shape = 'hexagonal' if cam_data['n_pixels'] < 2000 else 'square'
@@ -48,7 +48,7 @@ with EventIOFile(input_file) as f:
                 if isinstance(subo, TelescopeEvent):
                     for subsubo in subo:
                         if isinstance(subsubo, ADCSums):
-                            data = subsubo.parse_data_field()
+                            data = subsubo.parse()
 
                             plt.figure()
                             cam = cameras[subo.telescope_id]

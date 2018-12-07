@@ -7,7 +7,7 @@ from .tools import read_short, read_int, read_eventio_string, read_float, read_a
 class Histograms(EventIOObject):
     eventio_type = 100
 
-    def parse_data_field(self):
+    def parse(self):
         assert_version_in(self, [1, 2])
         self.seek(0)
 

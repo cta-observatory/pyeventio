@@ -21,7 +21,7 @@ with EventIOFile(input_file) as f:
     cameras = {}
     for o in f:
         if isinstance(o, CameraSettings):
-            cam_data = o.parse_data_field()
+            cam_data = o.parse()
             pix_type = 'square'
             pix_rotation = 0 * u.deg
 
@@ -39,7 +39,7 @@ with EventIOFile(input_file) as f:
         if isinstance(o, TelescopeData):
             for subo in o:
                 if isinstance(subo, PhotoElectrons):
-                    pe = subo.parse_data_field()
+                    pe = subo.parse()
 
                     plt.figure()
                     cam = cameras[subo.telescope_id]
