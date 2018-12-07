@@ -1,15 +1,11 @@
 # cython: language_level=3
 import cython
+from cpython cimport array
 import numpy as np
 cimport numpy as np
 
-
-INT32 = np.int32
-ctypedef np.int32_t INT32_t
-
-
-cdef short bytes_to_short(const unsigned char b0, const unsigned char b1):
-    return ((<short> b0) << 8) | (<short> b1)
+INT16 = np.int16
+ctypedef np.int16_t INT16_t
 
 
 @cython.wraparound(False)  # disable negative indexing
@@ -18,18 +14,25 @@ cpdef read_sector_information(
     unsigned long n_pixels,
     unsigned long offset = 0,
 ):
-    cdef unsigned long pos = 0
-    cdef unsigned long i
-    cdef short n = 0
-    cdef np.ndarray[INT32_t, ndim=1] sector
-    cdef list sectors = []
+    cdef unsigned long i, j
+    cdef short n
+    cdef INT16_t* short_ptr
 
+    cdef list sectors = []
+    cdef array.array sector
+
+    cdef unsigned long pos = 0
     for i in range(n_pixels):
-        n = bytes_to_short(data[pos + offset + 1], data[pos + offset])
+
+        short_ptr = <INT16_t*> &data[pos + offset]
+        n = short_ptr[0]
         pos += 2
 
-        sector = np.frombuffer(data, dtype=INT32, count=n, offset=offset + pos)
-        pos += 2 * n
+        sector = array.array('h')
+        for j in range(n):
+            short_ptr = <INT16_t*> &data[pos + offset]
+            sector.append(short_ptr[0])
+            pos += 2
 
         # FIXME:
         # according to a comment in the c-sources
