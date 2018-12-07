@@ -1427,11 +1427,17 @@ class MCPhotoelectronSum(EventIOObject):
 class PixelList(EventIOObject):
     eventio_type = 2027
 
+    def __init__(self, header, parent):
+        super().__init__(header, parent)
+        self.telescope_id = self.header.id // 1000000
+        self.code = self.telescope_id % 1000000
+
     def __repr__(self):
-        return '{}[{}](telescope_id={})'.format(
+        return '{}[{}](telescope_id={}, code={})'.format(
             self.__class__.__name__,
             self.header.type,
-            self.header.id,
+            self.telescopes_id,
+            self.code,
         )
 
     def parse(self):
