@@ -73,9 +73,9 @@ class SimTelFile(EventIOFile):
         self.n_telescopes = self.header['n_telescopes']
 
         o = next(self)
-        self.mc_header = []
+        self.mc_run_headers = []
         while isinstance(o, MCRunHeader):
-            self.mc_header.append(o.parse_data_field())
+            self.mc_run_headers.append(o.parse_data_field())
             o = next(self)
 
         self.corsika_inputcards = []
@@ -93,6 +93,12 @@ class SimTelFile(EventIOFile):
             PointingCorrection,
         ]
 
+        # in some files, the telescope description block
+        # strangely contains already MCRunHeader, MCEvent, MCShower
+        # we save them here for later use
+        self.init_mc_showers = []
+        self.init_mc_events = []
+
         self.telescope_descriptions = defaultdict(dict)
         first = True
         for i in range(self.n_telescopes):
@@ -102,19 +108,29 @@ class SimTelFile(EventIOFile):
                 first = False
 
                 while not isinstance(o, eventio_type):
-                    msg = 'Skipping unexpected object of type {}'.format(
-                        o.__class__.__name__
-                    )
+                    if isinstance(o, MCRunHeader):
+                        self.mc_run_headers.append(o.parse_data_field())
+                        msg = 'Unexpectd MCRunHeader in telescope description block'
+
+                    elif isinstance(o, MCShower):
+                        self.init_mc_showers.append(o.parse_data_field())
+                        msg = 'Unexpectd MCShower in telescope description block'
+
+                    elif isinstance(o, MCEvent):
+                        self.init_mc_events.append(o.parse_data_field())
+                        msg = 'Unexpectd MCEvent in telescope description block'
+                    else:
+                        msg = 'Skipping unexpected object of type {}'.format(
+                            o.__class__.__name__
+                        )
                     warnings.warn(msg)
                     log.warn(msg)
+
                     o = next(self)
 
                 key = camel_to_snake(o.__class__.__name__)
                 self.telescope_descriptions[o.telescope_id][key] = o.parse_data_field()
 
-        self.shower = None
-        self.camera_monitoring = {}  # tel_id: CameraMonitoring
-        self.laser_calibration = {}  # tel_id: LaserCalibration
         self._first_event_byte = self.tell()
 
     def __iter__(self):
@@ -122,6 +138,12 @@ class SimTelFile(EventIOFile):
 
         current_mc_shower = None
         current_mc_event = None
+        # check if some showers or events were already read in __init__
+        if len(self.init_mc_showers) > 0:
+            current_mc_shower = self.init_mc_showers[-1]
+        if len(self.init_mc_events) > 0:
+            current_mc_event = self.init_mc_events[-1]
+
         current_photoelectron_sum = None
         current_photoelectrons = None
         camera_monitorings = defaultdict(dict)
