@@ -100,6 +100,7 @@ class SimTelFile(EventIOFile):
         # we save them here for later use
         self.init_mc_showers = []
         self.init_mc_events = []
+        self.init_mc_event_ids = []
 
         self.telescope_descriptions = defaultdict(dict)
         first = True
@@ -120,6 +121,7 @@ class SimTelFile(EventIOFile):
 
                     elif isinstance(o, MCEvent):
                         self.init_mc_events.append(o.parse())
+                        self.init_mc_event_ids.append(o.header.id)
                         msg = 'Unexpectd MCEvent in telescope description block'
                     else:
                         msg = 'Skipping unexpected object of type {}'.format(
@@ -140,12 +142,14 @@ class SimTelFile(EventIOFile):
 
         current_mc_shower = None
         current_mc_event = None
+        current_mc_event_id = None
 
         # check if some showers or events were already read in __init__
         if len(self.init_mc_showers) > 0:
             current_mc_shower = self.init_mc_showers[-1]
         if len(self.init_mc_events) > 0:
             current_mc_event = self.init_mc_events[-1]
+            current_mc_event_id = self.init_mc_event_ids[-1]
 
         current_photoelectron_sum = None
         current_photoelectrons = {}
@@ -160,6 +164,7 @@ class SimTelFile(EventIOFile):
 
             elif isinstance(o, MCEvent):
                 current_mc_event = o.parse()
+                current_mc_event_id = o.header.id
 
             elif isinstance(o, iact.TelescopeData):
                 current_photoelectrons = parse_photoelectrons(o)
@@ -177,7 +182,7 @@ class SimTelFile(EventIOFile):
                     continue
 
                 event_data = {
-                    'event_id': current_mc_event['event_id'],
+                    'event_id': current_mc_event_id,
                     'mc_shower': current_mc_shower,
                     'mc_event': current_mc_event,
                     'telescope_events': array_event['telescope_events'],
