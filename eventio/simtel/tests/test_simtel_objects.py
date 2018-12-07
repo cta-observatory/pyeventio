@@ -33,7 +33,7 @@ expected_adc_samples_event1_tel_id_38 = np.load(
 
 def yield_n_and_assert(f, eventio_type, n=3):
     at_least_one = False
-    for x in yield_n_subobjects(f, eventio_type, n=3):
+    for x in yield_n_subobjects(f, eventio_type, n=n):
         at_least_one = True
         # assert that what we yield is not None, but somehow meaningful
         assert x
@@ -81,11 +81,11 @@ def test_72_3_objects():
             assert isinstance(d, bytes)
 
 
-def test_2000_3_objects():
+def test_2000_1_object():
     from eventio.simtel.objects import RunHeader
 
     with EventIOFile(prod2_file) as f:
-        for i, o in enumerate(yield_n_and_assert(f, RunHeader, n=3)):
+        for i, o in enumerate(yield_n_and_assert(f, RunHeader, n=1)):
             d = parse_and_assert_consumption(o, limit=2)
 
             assert d['observer'] == b'bernlohr@lfc371.mpi-hd.mpg.de'
@@ -96,7 +96,7 @@ def test_2001_3_objects():
     from eventio.simtel.objects import MCRunHeader
 
     with EventIOFile(prod2_file) as f:
-        for i, o in enumerate(yield_n_and_assert(f, MCRunHeader, n=3)):
+        for i, o in enumerate(yield_n_and_assert(f, MCRunHeader, n=2)):
             parse_and_assert_consumption(o, limit=0)
 
 

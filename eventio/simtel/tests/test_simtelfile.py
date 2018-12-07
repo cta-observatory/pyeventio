@@ -132,3 +132,17 @@ def test_iterate_complete_file():
         except (EOFError, IndexError):  # truncated files might raise these...
             pass
         assert counter == expected_counter_values[path]
+
+
+def test_allowed_tels():
+    allowed_telescopes = {1, 2, 3, 4}
+    n_read = 0
+    with SimTelFile(prod2_path, allowed_telescopes=allowed_telescopes) as f:
+        for i, event in enumerate(f):
+            print(i)
+            telescopes = set(event['telescope_events'].keys())
+            assert allowed_telescopes.issuperset(telescopes)
+            assert telescopes.issubset(allowed_telescopes)
+            n_read += 1
+
+    assert n_read == 3

@@ -75,17 +75,15 @@ class EventIOFile:
         self._filehandle.close()
 
 
-def check_size_or_stopiteration(data, expected_length, warn_zero=False):
+def check_size_or_raise(data, expected_length, zero_ok=True):
     if len(data) == 0:
-        if warn_zero:
-            log.warning('File seems to be truncated')
-            warnings.warn('File seems to be truncated')
-        raise StopIteration
+        if zero_ok:
+            raise StopIteration
+        else:
+            raise EOFError('File seems to be truncated')
 
     if len(data) < expected_length:
-        log.warning('File seems to be truncated')
-        warnings.warn('File seems to be truncated')
-        raise StopIteration
+        raise EOFError('File seems to be truncated')
 
 
 def read_next_header_toplevel(byte_stream):
@@ -95,7 +93,7 @@ def read_next_header_toplevel(byte_stream):
     Raises stop iteration if not enough data is available.
     '''
     sync = byte_stream.read(constants.SYNC_MARKER_SIZE)
-    check_size_or_stopiteration(sync, constants.SYNC_MARKER_SIZE)
+    check_size_or_raise(sync, constants.SYNC_MARKER_SIZE)
     endianness = parse_sync_bytes(sync)
 
     return read_next_header_sublevel(byte_stream, endianness)
@@ -117,10 +115,10 @@ def read_next_header_sublevel(byte_stream, endianness):
         )
 
     header_bytes = byte_stream.read(constants.OBJECT_HEADER_SIZE)
-    check_size_or_stopiteration(
+    check_size_or_raise(
         header_bytes,
         constants.OBJECT_HEADER_SIZE,
-        warn_zero=True,
+        zero_ok=False,
     )
 
     header = parse_header_bytes(header_bytes)
@@ -128,10 +126,10 @@ def read_next_header_sublevel(byte_stream, endianness):
 
     if header.extended:
         extension_field = byte_stream.read(constants.EXTENSION_SIZE)
-        check_size_or_stopiteration(
+        check_size_or_raise(
             extension_field,
             constants.EXTENSION_SIZE,
-            warn_zero=True
+            zero_ok=True
         )
         header.length += parse_extension_field(extension_field)
 
