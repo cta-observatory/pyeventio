@@ -81,6 +81,7 @@ def test_show_event_is_not_empty_and_has_some_members_for_sure():
 
             print(event.keys())
             assert event.keys() == {
+                'event_id',
                 'mc_shower',
                 'mc_event',
                 'telescope_events',
@@ -100,10 +101,10 @@ def test_show_event_is_not_empty_and_has_some_members_for_sure():
                 expected_keys = {
                     'header',
                     'pixel_timing',
+                    'pixel_lists',
                 }
                 allowed_keys = {
                     'image_parameters',
-                    'pixel_list',
                     'adc_sums',
                     'adc_samples'
                 }
