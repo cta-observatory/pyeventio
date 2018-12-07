@@ -16,8 +16,8 @@ pr.enable()
 
 with EventIOFile(args.inputfile) as f:
     for o, level in yield_all_objects_depth_first(f):
-        if hasattr(o, 'parse_data_field'):
-            o.parse_data_field()
+        if hasattr(o, 'parse'):
+            o.parse()
 
 pr.disable()
 s = StringIO()

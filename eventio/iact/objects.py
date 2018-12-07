@@ -7,7 +7,7 @@ from ..tools import (
     read_short, read_int, read_float, read_from, read_eventio_string,
 )
 from ..base import EventIOObject
-from ..exceptions import WrongSizeException
+from ..exceptions import WrongSize
 from .parse_corsika_data import (
     parse_corsika_event_header,
     parse_corsika_run_header,
@@ -38,7 +38,7 @@ class RunHeader(EventIOObject):
     '''
     eventio_type = 1200
 
-    def parse_data_field(self):
+    def parse(self):
         '''
         Read the data in this EventIOItem
 
@@ -48,7 +48,7 @@ class RunHeader(EventIOObject):
         data = self.read()
         n, = struct.unpack('i', data[:4])
         if n != 273:
-            raise WrongSizeException(
+            raise WrongSize(
                 'Expected 273 bytes, but found {}'.format(n))
 
         block = np.frombuffer(
@@ -74,7 +74,7 @@ class TelescopeDefinition(EventIOObject):
     def __len__(self):
         return self.n_telescopes
 
-    def parse_data_field(self):
+    def parse(self):
         '''
         Read the data in this EventIOItem
 
@@ -108,7 +108,7 @@ class EventHeader(EventIOObject):
     ''' This Object contains the  event header block '''
     eventio_type = 1202
 
-    def parse_data_field(self):
+    def parse(self):
         '''
         Read the data in this EventIOItem
 
@@ -119,7 +119,7 @@ class EventHeader(EventIOObject):
         data = self.read()
         n, = struct.unpack('i', data[:4])
         if n != 273:
-            raise WrongSizeException(
+            raise WrongSize(
                 'Expected 273 bytes, but found {}'.format(n))
 
         block = np.frombuffer(
@@ -141,7 +141,7 @@ class ArrayOffsets(EventIOObject):
         self.time_offset = read_float(self)
         self.n_reuses = self.n_arrays
 
-    def parse_data_field(self):
+    def parse(self):
         '''
         Read the data in this EventIOItem
 
@@ -219,7 +219,7 @@ class Photons(EventIOObject):
             self.n_bunches,
         )
 
-    def parse_data_field(self):
+    def parse(self):
         '''
         Read the data in this EventIOObject
 
@@ -302,7 +302,7 @@ class PhotoElectrons(EventIOObject):
         self.array_id = header.id // 1000
         self.telescope_id = header.id % 1000
 
-    def parse_data_field(self):
+    def parse(self):
         assert_version_in(self, [1, 2, 3])
         self.seek(0)
 
@@ -333,11 +333,11 @@ class PhotoElectrons(EventIOObject):
 class EventEnd(EventIOObject):
     eventio_type = 1209
 
-    def parse_data_field(self):
+    def parse(self):
         self.seek(0)
         n = read_int(self)
         if n != 273:
-            raise WrongSizeException(
+            raise WrongSize(
                 'Expected 273 bytes, but found {}'.format(n))
 
         dtype = np.dtype('float32')
@@ -354,7 +354,7 @@ class RunEnd(EventIOObject):
     ''' This Object contains the CORSIKA run end block '''
     eventio_type = 1210
 
-    def parse_data_field(self):
+    def parse(self):
         '''
         Read the data in this EventIOObject
 
@@ -383,7 +383,7 @@ class Longitudinal(EventIOObject):
     def __init__(self, header, parent):
         super().__init__(header, parent)
 
-    def parse_data_field(self):
+    def parse(self):
         '''
         Read the data in this EventIOObject
 
@@ -410,7 +410,7 @@ class InputCard(EventIOObject):
     ''' This Object contains the CORSIKA steering card '''
     eventio_type = 1212
 
-    def parse_data_field(self):
+    def parse(self):
         '''
         Read the data in this EventIOObject
 

@@ -65,7 +65,7 @@ class HistoryCommandLine(EventIOObject):
         super().__init__(header, parent)
         self.timestamp = read_int(self)
 
-    def parse_data_field(self):
+    def parse(self):
         self.seek(4)  # skip the int, we already read in init
         return read_eventio_string(self)
 
@@ -77,7 +77,7 @@ class HistoryConfig(EventIOObject):
         super().__init__(header, parent)
         self.timestamp = read_int(self)
 
-    def parse_data_field(self):
+    def parse(self):
         self.seek(4)  # skip the int, we already read in init
         return read_eventio_string(self)
 
@@ -93,7 +93,7 @@ class RunHeader(EventIOObject):
         super().__init__(header, parent)
         self.run_id = self.header.id
 
-    def parse_data_field(self):
+    def parse(self):
         '''See write_hess_runheader l. 184 io_hess.c '''
         assert_max_version(self, 2)
         self.seek(0)
@@ -123,7 +123,7 @@ class RunHeader(EventIOObject):
 class MCRunHeader(EventIOObject):
     eventio_type = 2001
 
-    def parse_data_field(self):
+    def parse(self):
         assert_exact_version(self, 4)
         self.seek(0)
         byte_stream = BytesIO(self.read())
@@ -165,7 +165,7 @@ class MCRunHeader(EventIOObject):
 class CameraSettings(TelescopeObject):
     eventio_type = 2002
 
-    def parse_data_field(self):
+    def parse(self):
         assert_version_in(self, [0, 1, 2, 3, 4, 5])
         self.seek(0)
         byte_stream = BytesIO(self.read())
@@ -239,7 +239,7 @@ class CameraOrganization(TelescopeObject):
 
     from .camorgan import read_sector_information
 
-    def parse_data_field(self):
+    def parse(self):
         assert_exact_version(self, supported_version=1)
         self.seek(0)
         byte_stream = BytesIO(self.read())
@@ -296,7 +296,7 @@ class PixelSettings(TelescopeObject):
     eventio_type = 2004
     from .pixelset import dt1, build_dt2, build_dt3, build_dt4
 
-    def parse_data_field(self):
+    def parse(self):
         assert_max_version(self, 2)
         self.seek(0)
         byte_stream = BytesIO(self.read())
@@ -331,7 +331,7 @@ class DisabledPixels(EventIOObject):
         super().__init__(header, parent)
         self.telescope_id = header.id
 
-    def parse_data_field(self):
+    def parse(self):
         assert_exact_version(self, supported_version=0)
         self.seek(0)
         byte_stream = BytesIO(self.read())
@@ -361,7 +361,7 @@ class CameraSoftwareSettings(EventIOObject):
         super().__init__(header, parent)
         self.telescope_id = header.id
 
-    def parse_data_field(self):
+    def parse(self):
         assert_exact_version(self, supported_version=0)
         self.seek(0)
         byte_stream = BytesIO(self.read())
@@ -407,7 +407,7 @@ class CameraSoftwareSettings(EventIOObject):
 class PointingCorrection(TelescopeObject):
     eventio_type = 2007
 
-    def parse_data_field(self):
+    def parse(self):
         assert_exact_version(self, supported_version=0)
         self.seek(0)
         byte_stream = BytesIO(self.read())
@@ -427,7 +427,7 @@ class PointingCorrection(TelescopeObject):
 class DriveSettings(TelescopeObject):
     eventio_type = 2008
 
-    def parse_data_field(self):
+    def parse(self):
         assert_exact_version(self, 0)
         self.seek(0)
         byte_stream = BytesIO(self.read())
@@ -452,7 +452,7 @@ class DriveSettings(TelescopeObject):
         return tracking_info
 
 
-class CentralEvent(EventIOObject):
+class TriggerInformation(EventIOObject):
     eventio_type = 2009
 
     def __init__(self, header, parent):
@@ -466,7 +466,7 @@ class CentralEvent(EventIOObject):
             self.header.id,
         )
 
-    def parse_data_field(self):
+    def parse(self):
         assert_max_version(self, 2)
         self.seek(0)
         byte_stream = BytesIO(self.read())
@@ -535,7 +535,7 @@ class TrackingPosition(EventIOObject):
         self.has_raw = bool(header.id & 0x100)
         self.has_cor = bool(header.id & 0x200)
 
-    def parse_data_field(self):
+    def parse(self):
         assert_exact_version(self, 0)
         self.seek(0)
         byte_stream = BytesIO(self.read())
@@ -607,7 +607,7 @@ class TelescopeEvent(EventIOObject):
         )
 
 
-class Event(EventIOObject):
+class ArrayEvent(EventIOObject):
     eventio_type = 2010
 
     def __init__(self, header, parent):
@@ -634,7 +634,7 @@ class TelescopeEventHeader(TelescopeObject):
             self.header.id,
         )
 
-    def parse_data_field(self):
+    def parse(self):
         assert_max_version(self, 2)
         self.seek(0)
         byte_stream = BytesIO(self.read())
@@ -690,7 +690,7 @@ class TelescopeEventHeader(TelescopeObject):
         return event_head
 
 
-class ADCSum(EventIOObject):
+class ADCSums(EventIOObject):
     eventio_type = 2012
 
     def __init__(self, header, parent):
@@ -707,7 +707,7 @@ class ADCSum(EventIOObject):
             self.telescope_id,
         )
 
-    def parse_data_field(self):
+    def parse(self):
         assert_exact_version(self, 3)
         self.seek(0)
         byte_stream = BytesIO(self.read())
@@ -753,7 +753,7 @@ class ADCSamples(EventIOObject):
 
         self.telescope_id = (flags_ >> 12) & 0xffff
 
-    def parse_data_field(self):
+    def parse(self):
         assert_exact_version(self, supported_version=3)
         unsupported = (
             self._zero_sup_mode != 0
@@ -852,7 +852,7 @@ class ImageParameters(EventIOObject):
             telescope_id,
         )
 
-    def parse_data_field(self):
+    def parse(self):
         assert_exact_version(self, supported_version=5)
         self.seek(0)
         byte_stream = BytesIO(self.read())
@@ -925,7 +925,7 @@ class StereoReconstruction(EventIOObject):
             np.binary_repr(self.header.id, width=12),
         )
 
-    def parse_data_field(self):
+    def parse(self):
         assert_exact_version(self, supported_version=1)
         self.seek(0)
         byte_stream = BytesIO(self.read())
@@ -991,7 +991,7 @@ class PixelTiming(EventIOObject):
             self.header.id,
         )
 
-    def parse_data_field(self):
+    def parse(self):
         assert_exact_version(self, supported_version=1)
         self.seek(0)
         byte_stream = BytesIO(self.read())
@@ -1058,7 +1058,7 @@ class PixelCalibration(EventIOObject):
     eventio_type = 2017
 
 
-class MCStereoReconstruction(EventIOObject):
+class MCShower(EventIOObject):
     eventio_type = 2020
 
     def __init__(self, header, parent):
@@ -1071,7 +1071,7 @@ class MCStereoReconstruction(EventIOObject):
             self.header.id,
         )
 
-    def parse_data_field(self):
+    def parse(self):
         assert_max_version(self, 2)
         self.seek(0)
         byte_stream = BytesIO(self.read())
@@ -1107,26 +1107,26 @@ class MCStereoReconstruction(EventIOObject):
         if self.header.version >= 2:
             h = read_next_header_sublevel(self)
             assert h.type == 1215
-            mc['mc_extra_params'] = MCExtraParams(h, self).parse_data_field()
+            mc['mc_extra_params'] = MCExtraParams(h, self).parse()
         return mc
 
 
 class MCExtraParams(EventIOObject):
     eventio_type = 1215
 
-    def parse_data_field(self):
+    def parse(self):
         self.seek(0)
         byte_stream = BytesIO(self.read())
 
         ep = {
-            'weight': read_float(self),
-            'n_iparam': read_utf8_like_unsigned_int(self),
-            'n_fparam': read_utf8_like_unsigned_int(self),
+            'weight': read_float(byte_stream),
+            'n_iparam': read_utf8_like_unsigned_int(byte_stream),
+            'n_fparam': read_utf8_like_unsigned_int(byte_stream),
         }
         if ep['n_iparam'] > 0:
-            ep['iparam'] = read_array(self, dtype='<i4', count=ep['n_iparam'])
+            ep['iparam'] = read_array(byte_stream, dtype='<i4', count=ep['n_iparam'])
         if ep['n_fparam'] > 0:
-            ep['fparam'] = read_array(self, dtype='<f4', count=ep['n_iparam'])
+            ep['fparam'] = read_array(byte_stream, dtype='<f4', count=ep['n_iparam'])
         return ep
 
 
@@ -1149,7 +1149,7 @@ class MCEvent(EventIOObject):
             self.header.id,
         )
 
-    def parse_data_field(self):
+    def parse(self):
         ''' '''
         assert_version_in(self, (1, 2))
         self.seek(0)
@@ -1179,7 +1179,7 @@ class CameraMonitoring(EventIOObject):
             self.telescope_id,
         )
 
-    def parse_data_field(self):
+    def parse(self):
         assert_exact_version(self, supported_version=0)
         self.seek(0)
         byte_stream = BytesIO(self.read())
@@ -1328,7 +1328,7 @@ class CameraMonitoring(EventIOObject):
 class LaserCalibration(TelescopeObject):
     eventio_type = 2023
 
-    def parse_data_field(self):
+    def parse(self):
         assert_exact_version(self, supported_version=2)
         self.seek(0)
         byte_stream = BytesIO(self.read())
@@ -1376,7 +1376,7 @@ class MCPhotoelectronSum(EventIOObject):
             self.header.id,
         )
 
-    def parse_data_field(self):
+    def parse(self):
         assert_exact_version(self, supported_version=2)
         self.seek(0)
         byte_stream = BytesIO(self.read())
@@ -1433,7 +1433,7 @@ class PixelList(EventIOObject):
             self.header.id,
         )
 
-    def parse_data_field(self):
+    def parse(self):
         # even in the prod3b version of Max N the objects
         # of type 2027 seem to be of version 0 only.
         # not sure if version 1 was ever produced.

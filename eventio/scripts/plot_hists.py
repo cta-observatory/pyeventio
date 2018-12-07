@@ -26,7 +26,7 @@ def main():
     hists_read = 0
     with EventIOFile(inputfile) as f:
         for o in yield_toplevel_of_type(f, Histograms):
-            hists = o.parse_data_field()
+            hists = o.parse()
 
             for hist in hists:
                 hists_read += 1

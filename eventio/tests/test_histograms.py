@@ -30,7 +30,7 @@ def test_histograms():
         assert len(objects) > 0
 
         for obj in objects:
-            hists = obj.parse_data_field()
+            hists = obj.parse()
             unread = obj.read()
             assert len(unread) == 0 or all(b == 0 for b in unread)
 

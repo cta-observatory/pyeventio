@@ -1,4 +1,5 @@
 from eventio import EventIOFile
+import warnings
 
 
 def find_type(f, eventio_type):
@@ -17,25 +18,31 @@ def collect_toplevel_of_type(f, eventio_type):
 
 
 def yield_toplevel_of_type(f, eventio_type):
-    for o in f:
-        if isinstance(o, eventio_type):
-            yield o
+    try:
+        for o in f:
+            if isinstance(o, eventio_type):
+                yield o
+    except EOFError:
+        warnings.warn("File seems to be truncated")
 
 
 def find_all_subobjects(f, structure, level=0):
     '''
     Find all subobjects expected in structure.
     So if you want all AdcSums, use
-    structure = [Event, TelescopeEvent, ADCSum]
+    structure = [Event, TelescopeEvent, ADCSums]
     '''
     objects = []
     elem = structure[level]
 
-    for o in f:
-        if isinstance(o, structure[-1]):
-            objects.append(o)
-        elif isinstance(o, elem):
-            objects.extend(find_all_subobjects(o, structure, level + 1))
+    try:
+        for o in f:
+            if isinstance(o, structure[-1]):
+                objects.append(o)
+            elif isinstance(o, elem):
+                objects.extend(find_all_subobjects(o, structure, level + 1))
+    except EOFError:
+        warnings.warn("File seems to be truncated")
     return objects
 
 
@@ -43,7 +50,7 @@ def yield_all_subobjects(f, structure, level=0):
     '''
     Find all subobjects expected in structure.
     So if you want all AdcSums, use
-    structure = [Event, TelescopeEvent, ADCSum]
+    structure = [Event, TelescopeEvent, ADCSums]
     '''
     elem = structure[level]
 
@@ -74,7 +81,9 @@ def yield_subobjects(f, eventio_type):
 
 
 def yield_n_subobjects(f, eventio_type, n=3):
-    for i, obj in enumerate(yield_subobjects(f, eventio_type)):
+    for i, obj in enumerate(yield_subobjects(f, eventio_type), start=1):
         if i >= n:
-            break
+            yield obj
+            return
+
         yield obj

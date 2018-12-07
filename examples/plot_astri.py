@@ -13,7 +13,7 @@ from eventio.simtel import (
     CameraSettings,
     Event,
     TelescopeEvent,
-    ADCSum
+    ADCSums
 )
 
 input_file = resource_filename(
@@ -25,7 +25,7 @@ with EventIOFile(input_file) as f:
     cameras = {}
     for o in f:
         if isinstance(o, CameraSettings):
-            cam_data = o.parse_data_field()
+            cam_data = o.parse()
 
             if cam_data['pixel_shape'][0] == -1:
                 pixel_shape = 'hexagonal' if cam_data['n_pixels'] < 2000 else 'square'
@@ -47,8 +47,8 @@ with EventIOFile(input_file) as f:
             for subo in o:
                 if isinstance(subo, TelescopeEvent):
                     for subsubo in subo:
-                        if isinstance(subsubo, ADCSum):
-                            data = subsubo.parse_data_field()
+                        if isinstance(subsubo, ADCSums):
+                            data = subsubo.parse()
 
                             plt.figure()
                             cam = cameras[subo.telescope_id]

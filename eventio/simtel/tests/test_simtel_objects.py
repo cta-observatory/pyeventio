@@ -33,7 +33,7 @@ expected_adc_samples_event1_tel_id_38 = np.load(
 
 def yield_n_and_assert(f, eventio_type, n=3):
     at_least_one = False
-    for x in yield_n_subobjects(f, eventio_type, n=3):
+    for x in yield_n_subobjects(f, eventio_type, n=n):
         at_least_one = True
         # assert that what we yield is not None, but somehow meaningful
         assert x
@@ -42,8 +42,8 @@ def yield_n_and_assert(f, eventio_type, n=3):
 
 
 def parse_and_assert_consumption(o, limit=0):
-    d = o.parse_data_field()
-    # assert parse_data_field() consumed all data from o
+    d = o.parse()
+    # assert parse() consumed all data from o
     bytes_not_consumed = o.read()
     assert len(bytes_not_consumed) <= limit
     for byte_ in bytes_not_consumed:
@@ -81,11 +81,11 @@ def test_72_3_objects():
             assert isinstance(d, bytes)
 
 
-def test_2000_3_objects():
+def test_2000_1_object():
     from eventio.simtel.objects import RunHeader
 
     with EventIOFile(prod2_file) as f:
-        for i, o in enumerate(yield_n_and_assert(f, RunHeader, n=3)):
+        for i, o in enumerate(yield_n_and_assert(f, RunHeader, n=1)):
             d = parse_and_assert_consumption(o, limit=2)
 
             assert d['observer'] == b'bernlohr@lfc371.mpi-hd.mpg.de'
@@ -96,7 +96,7 @@ def test_2001_3_objects():
     from eventio.simtel.objects import MCRunHeader
 
     with EventIOFile(prod2_file) as f:
-        for i, o in enumerate(yield_n_and_assert(f, MCRunHeader, n=3)):
+        for i, o in enumerate(yield_n_and_assert(f, MCRunHeader, n=2)):
             parse_and_assert_consumption(o, limit=0)
 
 
@@ -228,10 +228,10 @@ def test_2008_3_objects():
 
 
 def test_2009_3_objects():
-    from eventio.simtel.objects import CentralEvent
+    from eventio.simtel.objects import TriggerInformation
 
     with EventIOFile(prod2_file) as f:
-        for i, o in enumerate(yield_n_and_assert(f, CentralEvent, n=3)):
+        for i, o in enumerate(yield_n_and_assert(f, TriggerInformation, n=3)):
             data = parse_and_assert_consumption(o, limit=2)
             assert 'cpu_time' in data
             assert 'gps_time' in data
@@ -258,14 +258,14 @@ def test_2200():
 
 
 def test_2010():
-    from eventio.simtel.objects import CentralEvent
+    from eventio.simtel.objects import TriggerInformation
     # class under test
-    from eventio.simtel.objects import Event
+    from eventio.simtel.objects import ArrayEvent
 
     with EventIOFile(prod2_file) as f:
         n_events = 0
-        for event in yield_toplevel_of_type(f, Event):
-            assert isinstance(next(event), CentralEvent)
+        for event in yield_toplevel_of_type(f, ArrayEvent):
+            assert isinstance(next(event), TriggerInformation)
             n_events += 1
         assert n_events > 0
 
@@ -342,10 +342,10 @@ def test_2011_3_objects():
 
 
 def test_2012_3_objects():
-    from eventio.simtel.objects import ADCSum
+    from eventio.simtel.objects import ADCSums
 
     with EventIOFile(prod4b_astri_file) as f:
-        for i, o in enumerate(yield_n_and_assert(f, ADCSum, n=3)):
+        for i, o in enumerate(yield_n_and_assert(f, ADCSums, n=3)):
             parse_and_assert_consumption(o, limit=3)
 
 
@@ -416,13 +416,13 @@ def test_2017():
 
 
 def test_2020_3_objects():
-    from eventio.simtel.objects import MCStereoReconstruction
+    from eventio.simtel.objects import MCShower
 
     hessio_data = np.load(resource_filename(
         'eventio', 'resources/gamma_test_mc_shower.npy'
     ))
     with EventIOFile(prod2_file) as f:
-        for i, o in enumerate(yield_n_and_assert(f, MCStereoReconstruction, n=3)):
+        for i, o in enumerate(yield_n_and_assert(f, MCShower, n=3)):
             mc = parse_and_assert_consumption(o, limit=2)
 
             expected = hessio_data[i]

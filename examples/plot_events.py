@@ -26,7 +26,7 @@ with EventIOFile(input_file) as f:
     cameras = {}
     for o in f:
         if isinstance(o, CameraSettings):
-            cam_data = o.parse_data_field()
+            cam_data = o.parse()
 
             if cam_data['pixel_shape'][0] == 2:
                 pix_type = 'square'
@@ -64,7 +64,7 @@ with EventIOFile(input_file) as f:
                 if isinstance(subo, TelescopeEvent):
                     for subsubo in subo:
                         if isinstance(subsubo, ADCSamples):
-                            data = subsubo.parse_data_field()
+                            data = subsubo.parse()
 
                             gain, pix, chan = np.where(data == data.max())
 
