@@ -57,10 +57,11 @@ class NoTrackingPositions(Exception):
 
 
 class SimTelFile(EventIOFile):
-    def __init__(self, path):
+    def __init__(self, path, allowed_telescopes=None):
         super().__init__(path)
 
         self.path = path
+        self.allowed_telescopes = allowed_telescopes
 
         self.history = []
         o = next(self)
@@ -165,7 +166,7 @@ class SimTelFile(EventIOFile):
                 current_photoelectron_sum = o.parse_data_field()
 
             elif isinstance(o, ArrayEvent):
-                array_event = parse_array_event(o)
+                array_event = parse_array_event(o, self.allowed_telescopes)
                 event_data = {
                     'mc_shower': current_mc_shower,
                     'mc_event': current_mc_event,
@@ -198,7 +199,7 @@ class SimTelFile(EventIOFile):
             o = next(self)
 
 
-def parse_array_event(array_event):
+def parse_array_event(array_event, allowed_telescopes=None):
     '''structure of event:
         TriggerInformation[2009]  <-- this knows how many TelescopeEvents
 
@@ -231,10 +232,12 @@ def parse_array_event(array_event):
             trigger_information = o.parse_data_field()
 
         elif isinstance(o, TelescopeEvent):
-            telescope_events[o.telescope_id] = parse_telescope_event(o)
+            if allowed_telescopes is None or o.telescope_id in allowed_telescopes:
+                telescope_events[o.telescope_id] = parse_telescope_event(o)
 
         elif isinstance(o, TrackingPosition):
-            tracking_positions[o.telescope_id] = o.parse_data_field()
+            if allowed_telescopes is None or o.telescope_id in allowed_telescopes:
+                tracking_positions[o.telescope_id] = o.parse_data_field()
 
     missing_tracking = set(telescope_events.keys()) - set(tracking_positions.keys())
     if missing_tracking:
