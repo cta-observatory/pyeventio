@@ -19,8 +19,6 @@ implemented:
 +--------+-----------------------+
 | 1207   | IACT Trigger Time     |
 +--------+-----------------------+
-| 1208   | IACT PhotoElectrons   |
-+--------+-----------------------+
 | 2017   | SimTel PixelCalib     |
 +--------+-----------------------+
 | 2024   | SimTel RunStat        |
@@ -91,6 +89,20 @@ It might look similar to this picture:
    :alt: an example shower
 
    an example shower
+
+
+Open a file produced by simtel_array
+------------------------------------
+
+.. code:: python
+
+    import eventio
+
+    with eventio.SimTelFile('eventio/resources/gamma_test.simtel.gz') as f:
+
+        print(len(f.telescope_descriptions))
+        for array_event in f:
+            print(array_event['mc_shower']['energy'])
 
 
 Commandline Tools
