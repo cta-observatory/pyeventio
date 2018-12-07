@@ -62,6 +62,7 @@ class SimTelFile(EventIOFile):
 
         self.path = path
         self.allowed_telescopes = allowed_telescopes
+        self.histograms = None
 
         self.history = []
         o = next(self)
@@ -102,7 +103,7 @@ class SimTelFile(EventIOFile):
 
         self.telescope_descriptions = defaultdict(dict)
         first = True
-        for i in range(self.n_telescopes):
+        for _ in range(self.n_telescopes):
             for eventio_type in expected_structure:
                 if not first:
                     o = next(self)
@@ -125,7 +126,7 @@ class SimTelFile(EventIOFile):
                             o.__class__.__name__
                         )
                     warnings.warn(msg)
-                    log.warn(msg)
+                    log.warning(msg)
 
                     o = next(self)
 
