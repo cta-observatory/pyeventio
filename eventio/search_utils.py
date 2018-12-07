@@ -1,4 +1,5 @@
 from eventio import EventIOFile
+import warnings
 
 
 def find_type(f, eventio_type):
@@ -17,9 +18,12 @@ def collect_toplevel_of_type(f, eventio_type):
 
 
 def yield_toplevel_of_type(f, eventio_type):
-    for o in f:
-        if isinstance(o, eventio_type):
-            yield o
+    try:
+        for o in f:
+            if isinstance(o, eventio_type):
+                yield o
+    except EOFError:
+        warnings.warn("File seems to be truncated")
 
 
 def find_all_subobjects(f, structure, level=0):
@@ -31,11 +35,14 @@ def find_all_subobjects(f, structure, level=0):
     objects = []
     elem = structure[level]
 
-    for o in f:
-        if isinstance(o, structure[-1]):
-            objects.append(o)
-        elif isinstance(o, elem):
-            objects.extend(find_all_subobjects(o, structure, level + 1))
+    try:
+        for o in f:
+            if isinstance(o, structure[-1]):
+                objects.append(o)
+            elif isinstance(o, elem):
+                objects.extend(find_all_subobjects(o, structure, level + 1))
+    except EOFError:
+        warnings.warn("File seems to be truncated")
     return objects
 
 
