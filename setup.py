@@ -1,4 +1,5 @@
 from setuptools import setup, find_packages
+import os
 
 # make sure users without cython can install our extensions
 try:
@@ -33,6 +34,15 @@ extensions = [
     ),
 ]
 cmdclass = {'build_ext': build_ext}
+
+# give a nice error message if people cloned the
+# repository and do not have cython installed
+if ext == '.c':
+    sources = []
+    for ext in extensions:
+        sources.extend(ext.sources)
+    if not all(os.path.isfile(s) for s in sources):
+        raise ImportError('You need `Cython` to build this project locally')
 
 
 with open('README.rst') as f:
