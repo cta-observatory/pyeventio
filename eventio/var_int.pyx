@@ -480,7 +480,7 @@ cpdef simtel_pixel_timing_parse_list_type_1(
                 pos += length
 
             if glob_only_selected:
-                for j in range(num_gains):
+                for i_gain in range(num_gains):
                     pulse_sum_glob[i_gain, i_pix], length = varint(data, offset=pos)
                     pos += length
 
