@@ -14,7 +14,7 @@ cpdef read_sector_information(
     unsigned long n_pixels,
     unsigned long offset = 0,
 ):
-    cdef unsigned long i, j
+    cdef long i, j
     cdef short n
     cdef INT16_t* short_ptr
 
