@@ -1,6 +1,8 @@
 import pkg_resources
 import os
 
+from pytest import importorskip
+
 from eventio.simtel import SimTelFile
 
 prod2_path = pkg_resources.resource_filename(
@@ -34,7 +36,7 @@ prod4_zst_path = pkg_resources.resource_filename(
 )
 
 
-test_paths = [prod2_path, prod3_path, prod4_path, prod4_zst_path]
+test_paths = [prod2_path, prod3_path, prod4_path]
 
 
 def test_can_open():
@@ -124,15 +126,25 @@ def test_iterate_complete_file():
         prod2_path: 8,
         prod3_path: 5,
         prod4_path: 30,
-        prod4_zst_path: 30,  # the same of course
     }
-    for path in test_paths:
+    for path, expected in expected_counter_values.items():
         try:
             for counter, event in enumerate(SimTelFile(path)):
                 pass
         except (EOFError, IndexError):  # truncated files might raise these...
             pass
-        assert counter == expected_counter_values[path]
+        assert counter == expected
+
+
+def test_iterate_complete_file_zst():
+    importorskip('zstandard')
+    expected = 30
+    try:
+        for counter, event in enumerate(SimTelFile(prod4_zst_path)):
+            pass
+    except (EOFError, IndexError):  # truncated files might raise these...
+        pass
+    assert counter == expected
 
 
 def test_allowed_tels():
