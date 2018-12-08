@@ -1,5 +1,5 @@
-pyeventio |Build Status| |LoC|
-==============================
+pyeventio |PyPI| |Build| |LoC|  
+=====================================
 
 
 A Python (read-only) implementation of the EventIO data format invented
@@ -201,8 +201,9 @@ This is how our test file looks like in the low level view:
     CORSIKARunEndBlock[1210](size=16, only_subobjects=False, first_byte=10036)
 
 
-
-.. |Build Status| image:: https://travis-ci.org/fact-project/pyeventio.svg?branch=master
+.. |PyPI| image:: https://badge.fury.io/py/eventio.svg
+    :target: https://pypi.org/project/eventio/
+.. |Build| image:: https://travis-ci.org/fact-project/pyeventio.svg?branch=master
    :target: https://travis-ci.org/fact-project/pyeventio
 .. |LoC| image:: https://tokei.rs/b1/github/fact-project/pyeventio
     :target: https://github.com/fact-project/pyeventio
