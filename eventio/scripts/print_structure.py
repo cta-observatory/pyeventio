@@ -1,5 +1,5 @@
-from eventio import EventIOFile
-from eventio.search_utils import yield_all_objects_depth_first
+from ..base import EventIOFile, EventIOObject
+from ..search_utils import yield_all_objects_depth_first
 from argparse import ArgumentParser
 
 
@@ -21,16 +21,18 @@ def main():
         last_level = 0
         n_same = 0
         for o, level in yield_all_objects_depth_first(f):
-
-            if last and isinstance(o, last):
+            if last and last != EventIOObject and isinstance(o, last):
                 n_same += 1
                 last_level = level
             else:
                 last = o.__class__
                 if n_same > args.max_repeats:
-                    print('    ' * last_level, 'And {} objects more of the same type'.format(
-                        n_same - args.max_repeats
-                    ))
+                    print(
+                        '    ' * last_level,
+                        'And {} objects more of the same type'.format(
+                            n_same - args.max_repeats
+                        )
+                    )
                 n_same = 0
                 last_level = level
 
