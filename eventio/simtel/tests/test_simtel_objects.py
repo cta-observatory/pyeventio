@@ -594,6 +594,27 @@ def test_2027_3_objects():
     }
     '''
 
+
 @pytest.mark.xfail
 def test_2028():
+    assert False
+
+
+@pytest.mark.xfail
+def test_2029():
+    assert False
+
+
+@pytest.mark.xfail
+def test_2030():
+    assert False
+
+
+@pytest.mark.xfail
+def test_2031():
+    assert False
+
+
+@pytest.mark.xfail
+def test_2032():
     assert False

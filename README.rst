@@ -12,21 +12,29 @@ Most blocks of the IACT extension and SimTel are implemented.
 The following blocks are known, but reading their data is not (yet)
 implemented:
 
-+--------+-----------------------+
-| Code   | Description           |
-+========+=======================+
-| 1206   | IACT Layout           |
-+--------+-----------------------+
-| 1207   | IACT Trigger Time     |
-+--------+-----------------------+
-| 2017   | SimTel PixelCalib     |
-+--------+-----------------------+
-| 2024   | SimTel RunStat        |
-+--------+-----------------------+
-| 2025   | SimTel MC_RunStat     |
-+--------+-----------------------+
-| 2028   | SimTel CalibEvent     |
-+--------+-----------------------+
++--------+-------------------------------+
+| Code   | Description                   |
++========+===============================+
+| 1206   | IACT Layout                   |
++--------+-------------------------------+
+| 1207   | IACT Trigger Time             |
++--------+-------------------------------+
+| 2017   | SimTel PixelCalib             |
++--------+-------------------------------+
+| 2024   | SimTel RunStat                |
++--------+-------------------------------+
+| 2025   | SimTel MC_RunStat             |
++--------+-------------------------------+
+| 2028   | SimTel CalibEvent             |
++--------+-------------------------------+
+| 2029   | SimTel AuxiliaryDigitalTraces |
++--------+-------------------------------+
+| 2030   | SimTel AuxiliaryAnalogTraces  |
++--------+-------------------------------+
+| 2031   | SimTel FSPhot                 |
++--------+-------------------------------+
+| 2032   | SimTel PixelTriggerTimes      |
++--------+-------------------------------+
 
 
 install with
