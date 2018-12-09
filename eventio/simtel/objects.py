@@ -1433,7 +1433,7 @@ class PixelList(EventIOObject):
         return '{}[{}](telescope_id={}, code={})'.format(
             self.__class__.__name__,
             self.header.type,
-            self.telescopes_id,
+            self.telescope_id,
             self.code,
         )
 
