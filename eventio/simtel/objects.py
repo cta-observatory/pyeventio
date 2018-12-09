@@ -1463,6 +1463,24 @@ class CalibrationEvent(EventIOObject):
     eventio_type = 2028
 
 
+class AuxiliaryDigitalTraces(EventIOObject):
+    eventio_type = 2029
+
+
+class AuxiliaryAnalogTraces(EventIOObject):
+    eventio_type = 2030
+
+
+class FSPhot(EventIOObject):
+    '''No idea what this should be, it's only defined in io_hess.h, no
+    code that actually reads or writes this type'''
+    eventio_type = 2031
+
+
+class PixelTriggerTime(TelescopeEvent):
+    eventio_type = 2032
+
+
 def merge_structured_arrays_into_dict(arrays):
     result = dict()
     for array in arrays:
