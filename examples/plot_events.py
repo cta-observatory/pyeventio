@@ -2,7 +2,6 @@ import matplotlib.pyplot as plt
 import numpy as np
 from argparse import ArgumentParser
 from functools import lru_cache
-from pkg_resources import resource_filename
 
 import astropy.units as u
 
@@ -28,18 +27,25 @@ def build_cam_geom(simtel_file, telescope_id):
     elif cam_data['pixel_shape'][0] == 1:
         pix_type = 'hexagonal'
 
+        # LST has 0 deg rotation, MST 30 (flat top vs. pointy top hexagons)
         if cam_data['n_pixels'] == 1855:
             pix_rotation = 0 * u.deg
         else:
             pix_rotation = 30 * u.deg
 
+    # if pix_type == -1, we have to guess
     elif cam_data['pixel_shape'][0] == -1:
         if cam_data['n_pixels'] > 2000:
             pix_type = 'square'
             pix_rotation = 0 * u.deg
         else:
             pix_type = 'hexagonal'
-            pix_rotation = 0 * u.deg
+
+            # LST has 0 deg rotation, MST 30 (flat top vs. pointy top hexagons)
+            if cam_data['n_pixels'] == 1855:
+                pix_rotation = 0 * u.deg
+            else:
+                pix_rotation = 30 * u.deg
 
     return CameraGeometry(
         cam_id='CAM-{}'.format(telescope_id),
