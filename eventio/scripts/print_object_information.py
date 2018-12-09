@@ -2,14 +2,30 @@ from eventio import EventIOFile
 from argparse import ArgumentParser
 from collections import Counter
 import json
+import warnings
+from eventio.simtel import TrackingPosition, TelescopeEvent
 
 
 def count_versions(f):
     c = Counter()
-    for o in f:
-        c.update([(o.header.type, o.header.version)])
-        if o.header.only_subobjects:
-            c.update(count_versions(o))
+    try:
+        for o in f:
+            if isinstance(o, TrackingPosition):
+                eventio_type = 2100
+            elif isinstance(o, TelescopeEvent):
+                eventio_type = 2200
+            else:
+                eventio_type = o.header.type
+
+            c.update([(
+                eventio_type,
+                o.header.version,
+                o.__module__ + '.' + o.__class__.__qualname__)
+            ])
+            if o.header.only_subobjects:
+                c.update(count_versions(o))
+    except EOFError:
+        warnings.warn("File seems to be truncated")
     return c
 
 
@@ -31,13 +47,13 @@ def main():
         ]
         print(json.dumps(object_info, indent=2))
     else:
-        print(' Type | Version | #Objects')
-        print('--------------------------')
-        for (t, v), c in sorted(list(counter.items())):
-            print('{: 5d} | {: 7d} | {: 8d}'.format(
-                t, v, c
+        print(' Type | Version | #Objects | eventio-class')
+        print('-' * 60)
+        for (t, v, q), c in sorted(list(counter.items())):
+            print('{: 5d} | {: 7d} | {: 8d} | {}'.format(
+                t, v, c, q,
             ))
-        print('--------------------------')
+        print('-' * 60)
 
 
 if __name__ == '__main__':

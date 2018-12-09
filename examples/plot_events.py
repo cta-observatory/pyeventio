@@ -1,75 +1,79 @@
 import matplotlib.pyplot as plt
 import numpy as np
-from pkg_resources import resource_filename
+from argparse import ArgumentParser
+from functools import lru_cache
 
 import astropy.units as u
 
 from ctapipe.instrument import CameraGeometry
 from ctapipe.visualization import CameraDisplay
 
-from eventio import EventIOFile
-from eventio.simtel import (
-    CameraSettings,
-    Event,
-    TelescopeEvent,
-    ADCSamples
-)
-
-input_file = resource_filename(
-    'eventio',
-    'gamma_test.simtel.gz',
-)
-input_file = '/home/maxnoe/Downloads/gamma_20deg_180deg_run7360___cta-prod3-merged_desert-2150m-Paranal-3HB89-NGFD.simtel.gz'
+from eventio.simtel import SimTelFile
 
 
-with EventIOFile(input_file) as f:
-    cameras = {}
-    for o in f:
-        if isinstance(o, CameraSettings):
-            cam_data = o.parse()
+parser = ArgumentParser()
+parser.add_argument('inputfile')
+args = parser.parse_args()
 
-            if cam_data['pixel_shape'][0] == 2:
-                pix_type = 'square'
+
+@lru_cache()
+def build_cam_geom(simtel_file, telescope_id):
+    cam_data = simtel_file.telescope_descriptions[telescope_id]['camera_settings']
+
+    if cam_data['pixel_shape'][0] == 2:
+        pix_type = 'square'
+        pix_rotation = 0 * u.deg
+
+    elif cam_data['pixel_shape'][0] == 1:
+        pix_type = 'hexagonal'
+
+        # LST has 0 deg rotation, MST 30 (flat top vs. pointy top hexagons)
+        if cam_data['n_pixels'] == 1855:
+            pix_rotation = 0 * u.deg
+        else:
+            pix_rotation = 30 * u.deg
+
+    # if pix_type == -1, we have to guess
+    elif cam_data['pixel_shape'][0] == -1:
+        if cam_data['n_pixels'] > 2000:
+            pix_type = 'square'
+            pix_rotation = 0 * u.deg
+        else:
+            pix_type = 'hexagonal'
+
+            # LST has 0 deg rotation, MST 30 (flat top vs. pointy top hexagons)
+            if cam_data['n_pixels'] == 1855:
                 pix_rotation = 0 * u.deg
+            else:
+                pix_rotation = 30 * u.deg
 
-            elif cam_data['pixel_shape'][0] == 1:
-                pix_type = 'hexagonal'
+    return CameraGeometry(
+        cam_id='CAM-{}'.format(telescope_id),
+        pix_id=np.arange(cam_data['n_pixels']),
+        pix_x=cam_data['pixel_x'] * u.m,
+        pix_y=cam_data['pixel_y'] * u.m,
+        pix_area=cam_data['pixel_area'] * u.m**2,
+        pix_type=pix_type,
+        cam_rotation=cam_data['cam_rot'] * u.rad,
+        pix_rotation=pix_rotation,
+    )
 
-                if cam_data['n_pixels'] == 1855:
-                    pix_rotation = 0 * u.deg
-                else:
-                    pix_rotation = 30 * u.deg
 
-            elif cam_data['pixel_shape'][0] == -1:
-                if cam_data['n_pixels'] > 2000:
-                    pix_type = 'square'
-                    pix_rotation = 0 * u.deg
-                else:
-                    pix_type = 'hexagonal'
-                    pix_rotation = 0 * u.deg
+with SimTelFile(args.inputfile) as f:
+    for array_event in f:
+        print('Event:', array_event['event_id'])
+        for telescope_id, event in array_event['telescope_events'].items():
+            print('Telescope:', telescope_id)
 
-            cameras[o.telescope_id] = CameraGeometry(
-                cam_id='CAM-{}'.format(o.telescope_id),
-                pix_id=np.arange(cam_data['n_pixels']),
-                pix_x=cam_data['pixel_x'] * u.m,
-                pix_y=cam_data['pixel_y'] * u.m,
-                pix_area=cam_data['pixel_area'] * u.m**2,
-                pix_type=pix_type,
-                cam_rotation=cam_data['cam_rot'] * u.rad,
-                pix_rotation=pix_rotation,
-            )
+            data = event.get('adc_samples')
+            if data is None:
+                data = event['adc_sums'][:, :, np.newaxis]
 
-        if isinstance(o, Event):
-            for subo in o:
-                if isinstance(subo, TelescopeEvent):
-                    for subsubo in subo:
-                        if isinstance(subsubo, ADCSamples):
-                            data = subsubo.parse()
+            image = data[0].sum(axis=1)
 
-                            gain, pix, chan = np.where(data == data.max())
+            cam = build_cam_geom(f, telescope_id)
 
-                            plt.figure()
-                            cam = cameras[subo.telescope_id]
-                            disp = CameraDisplay(cam)
-                            disp.image = data[gain[0]].sum(axis=1)
-                            plt.show()
+            plt.figure()
+            disp = CameraDisplay(cam)
+            disp.image = image
+            plt.show()
