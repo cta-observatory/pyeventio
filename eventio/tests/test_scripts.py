@@ -1,3 +1,4 @@
+import pytest
 import os
 import pkg_resources
 from eventio import EventIOFile
@@ -15,6 +16,8 @@ def test_many_object_reprs():
     # for scripts/print_structure.py the reprs must work
     # therefore this test is here
 
-    with EventIOFile(prod2_path) as file_:
-        for obj in yield_all_objects_depth_first(file_):
-            assert repr(obj)
+    # gamma_test is truncated, so this should raise
+    with pytest.raises(EOFError):
+        with EventIOFile(prod2_path) as file_:
+            for obj in yield_all_objects_depth_first(file_):
+                assert repr(obj)
