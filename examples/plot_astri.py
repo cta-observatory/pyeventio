@@ -32,8 +32,6 @@ def build_cam_geom(f, telescope_id):
 
 
 with SimTelFile(input_file) as f:
-    cameras = {}
-
     for array_event in f:
         print('Event:', array_event['event_id'])
         for telescope_id, event in array_event['telescope_events'].items():
