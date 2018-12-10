@@ -1156,7 +1156,7 @@ class MCEvent(EventIOObject):
 
         return read_array(
             self, dtype=self.dtypes[self.header.version], count=1
-        )
+        )[0]
 
 
 class CameraMonitoring(EventIOObject):

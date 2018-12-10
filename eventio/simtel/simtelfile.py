@@ -100,7 +100,6 @@ class SimTelFile(EventIOFile):
         # we save them here for later use
         self.init_mc_showers = []
         self.init_mc_events = []
-        self.init_mc_event_ids = []
 
         self.telescope_descriptions = defaultdict(dict)
         first = True
@@ -120,8 +119,9 @@ class SimTelFile(EventIOFile):
                         msg = 'Unexpectd MCShower in telescope description block'
 
                     elif isinstance(o, MCEvent):
-                        self.init_mc_events.append(o.parse())
-                        self.init_mc_event_ids.append(o.header.id)
+                        self.init_mc_events.append(
+                            (o.header.id, o.parse(), self.init_mc_showers[-1])
+                        )
                         msg = 'Unexpectd MCEvent in telescope description block'
                     else:
                         msg = 'Skipping unexpected object of type {}'.format(
@@ -138,6 +138,38 @@ class SimTelFile(EventIOFile):
         self._first_event_byte = self.tell()
 
     def __iter__(self):
+        return self.iter_array_events()
+
+    def iter_mc_events(self):
+        self._next_header_pos = self._first_event_byte
+
+        for event_id, event, shower in self.init_mc_events:
+            yield {'event_id': event_id, 'event': event, 'shower': shower}
+
+        current_mc_shower = None
+        if len(self.init_mc_showers) > 0:
+            current_mc_shower = self.init_mc_showers[-1]
+
+        o = next(self)
+
+        while True:
+            if isinstance(o, MCShower):
+                current_mc_shower = o.parse()
+
+            elif isinstance(o, MCEvent):
+                yield {
+                    'event_id': o.header.id,
+                    'mc_shower': current_mc_shower,
+                    'mc_event': o.parse()
+                }
+
+            elif isinstance(o, Histograms):
+                self.histograms = o.parse()
+                break
+
+            o = next(self)
+
+    def iter_array_events(self):
         self._next_header_pos = self._first_event_byte
 
         current_mc_shower = None
@@ -147,9 +179,9 @@ class SimTelFile(EventIOFile):
         # check if some showers or events were already read in __init__
         if len(self.init_mc_showers) > 0:
             current_mc_shower = self.init_mc_showers[-1]
+
         if len(self.init_mc_events) > 0:
-            current_mc_event = self.init_mc_events[-1]
-            current_mc_event_id = self.init_mc_event_ids[-1]
+            current_mc_event_id, current_mc_event, _ = self.init_mc_events[-1]
 
         current_photoelectron_sum = None
         current_photoelectrons = {}
