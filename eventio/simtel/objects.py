@@ -237,7 +237,7 @@ class CameraSettings(TelescopeObject):
 class CameraOrganization(TelescopeObject):
     eventio_type = 2003
 
-    from .camorgan import read_sector_information
+    from .parsing import read_sector_information
 
     def parse(self):
         assert_exact_version(self, supported_version=1)
@@ -1132,18 +1132,11 @@ class MCExtraParams(EventIOObject):
 
 class MCEvent(EventIOObject):
     eventio_type = 2021
-    dtypes = {
-        1: np.dtype([('shower_num', 'i4'), ('xcore', 'f4'), ('ycore', 'f4')]),
-        2: np.dtype([
-            ('shower_num', 'i4'),
-            ('xcore', 'f4'),
-            ('ycore', 'f4'),
-            ('aweight', 'f4')
-        ]),
-    }
+
+    from .parsing import parse_mc_event
 
     def __repr__(self):
-        return '{}[{}](shower_event_id={})'.format(
+        return '{}[{}](event_id={})'.format(
             self.__class__.__name__,
             self.header.type,
             self.header.id,
@@ -1154,9 +1147,9 @@ class MCEvent(EventIOObject):
         assert_version_in(self, (1, 2))
         self.seek(0)
 
-        return read_array(
-            self, dtype=self.dtypes[self.header.version], count=1
-        )
+        d = MCEvent.parse_mc_event(self.read(), self.header.version)
+        d['event_id'] = self.header.id
+        return d
 
 
 class CameraMonitoring(EventIOObject):
