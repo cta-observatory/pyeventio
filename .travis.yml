@@ -1,5 +1,7 @@
 dist: xenial
+
 language: python
+
 python:
 - '3.5'
 - '3.6'
@@ -9,22 +11,22 @@ install:
 - pip install zstandard docutils pygments Cython
 - pip install https://github.com/cta-observatory/pyhessio/archive/v2.1.1.tar.gz
 - pip install .
+
 before_script:
 - pip install --upgrade pytest>=3.0.0
+
 script:
 - python setup.py test
 - python setup.py check -r -s
 
-
 deploy:
-    # test pypi
   - provider: pypi
     distributions: sdist
     skip_existing: true
     skip_cleanup: true
-    user: "fact-deploybot"
+    user: cta-observatory
     password:
-      secure: "Zk1PFwdQR0c0rOnceWr6Rs+iECVRfjugJW2DCV/3K0NohY6OPMAWvaw8TAm1QeeQxZ8JD4wc0lYGQYctFrNqXfsPrmfsSoAqg4F1yVJt5/3B/+nWgzLP2BZhVQ5TfqEd4x5TP/3KR1b4HYA/it47IrIicfzszRLO7wXRVXf+pMzmw87mHyrai2YZt2oq8xOltWMc3FxsZY5C/1XRLQ0OSeqdN7OXHIPH4w+9vlp7ameDaAMbMLBzOZcuYrYguYhvduAGBpzncv1ZhKBdvsmUNbVPF3wyy1ggfrcU3ssS4NFn9Qm20busNY4A+CtiKzPHZ++mlaygCQxTg023n3r0Sx5absM0gPDwjsJLWp3oHF+5TbW3yzmpHgNyuyrUc6l8hw1i82Rayss0T7LCLeua5gUG/FquNmB/OVSnxGatlK0xE7MNLtIxqLscjUc8mz6lwgIN8xKowJ3ircGYXIS2fJhWbg5ku2G+kd1EIQ2InBTDPCR4g3x/XBLhG2PY5LViWYuzSymym1ncHcFRtaFmricuZES/Mg1R9PX2lkYp2ajhgj2pyTrhahmyE2d9gAY9Xj0fcmg842Y3/0NPPXyKMrjIAobwamay+AHhDPS2Rsgv1kNNL9oTZxy2IE1S/6FTfO+R8+shyff8UeDHIq49KrWsEf+gNRCxgsrR9UJXH3U="
+      secure: Ne3Rf08D32yP5+w96yRk/YwVIwCQLvtld7cxRxoD4mtzs5Xmc9PTIG+dVGOMzEM9auMptg0xCg/Zcs11JA/k8yLWWhqhXGi0tJ2+cA41tK0T8/It5YszW3n9zjc2hrxDClh660BGkR90nCcbWaQRrcfz9ARGJD8f11STu+7Jpr/GjLZurJPwKPmKfcHzwp8Juxp/pcUuGj8/lC/PSOXXota9fKSV0ZZfRshnyhlQmySmcVoOow0whUp7rQt5pZODd2IaNsoxIK2hG70+K5TK1VbCJuJ9bEgWGmW1WgAS7FebKYg4tcFjIDJ4RCfEgzj/0pydYdTWhwnYnkO7xT6RHtRhx4f2m2EaBKd9VMC6olzICacpXRKyFY0FX/JRj6ZrOYM/QOcZnRCY3ikuVkYo/E8RQX+hddc8IM5b7vX8jIIyS6XXT3zI7eJuP0AvGgmNjvuuv87RCd53HS6V8WuMC9gG28nlxJomIENG748gWYUBp4Jge0TbyF7iJkEo0eH27xO8Pu1PEI6iLGA9/YXdBsirfP1hZVbrXhtItQ7UUEi13cowWNsmMeGAP0EreRIH5R74y1UXnbvpKeRapXl4C/Ka7Gce95Ajytd+tFdxk2QqIpOeXu5m/L2COgaIjXu9exq0CjKnUjMpVrECVgCT4lEfa0OPTdMLcBVoBohlfA4=
     on:
       branch: master
       tags: true
