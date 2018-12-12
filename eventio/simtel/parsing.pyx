@@ -48,3 +48,33 @@ cpdef read_sector_information(
 
     return sectors, pos
 
+
+
+@cython.wraparound(False)  # disable negative indexing
+cpdef dict parse_mc_event(
+    const unsigned char[:] data,
+    unsigned int version
+):
+
+    cdef unsigned long pos = 0
+    cdef float xcore, ycore, aweight
+    cdef int shower_num
+
+    shower_num = (<int*> &data[pos])[0]
+    pos += 4
+    xcore = (<float*> &data[pos])[0]
+    pos += 4
+    ycore = (<float*> &data[pos])[0]
+    pos += 4
+
+    if version >= 2:
+        aweight = (<float*> &data[pos])[0]
+    else:
+        aweight = 1.0
+
+    return {
+        'shower_num': shower_num,
+        'xcore': xcore,
+        'ycore': ycore,
+        'aweight': aweight
+    }

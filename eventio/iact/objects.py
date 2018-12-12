@@ -67,8 +67,8 @@ class TelescopeDefinition(EventIOObject):
     '''
     eventio_type = 1201
 
-    def __init__(self, header, parent):
-        super().__init__(header, parent)
+    def __init__(self, header, filehandle):
+        super().__init__(header, filehandle)
         self.n_telescopes = read_int(self)
 
     def __len__(self):
@@ -135,8 +135,8 @@ class EventHeader(EventIOObject):
 class ArrayOffsets(EventIOObject):
     eventio_type = 1203
 
-    def __init__(self, header, parent):
-        super().__init__(header, parent)
+    def __init__(self, header, filehandle):
+        super().__init__(header, filehandle)
         self.n_arrays = read_int(self)
         self.time_offset = read_float(self)
         self.n_reuses = self.n_arrays
@@ -201,8 +201,8 @@ class Photons(EventIOObject):
     eventio_type = 1205
     columns = ('x', 'y', 'cx', 'cy', 'time', 'zem', 'photons', 'lambda')
 
-    def __init__(self, header, parent):
-        super().__init__(header, parent)
+    def __init__(self, header, filehandle):
+        super().__init__(header, filehandle)
         self.compact = bool(self.header.version // 1000 == 1)
 
         (
@@ -297,8 +297,8 @@ class PhotoElectrons(EventIOObject):
     eventio_type = 1208
     from ..var_int import parse_1208
 
-    def __init__(self, header, parent):
-        super().__init__(header, parent)
+    def __init__(self, header, filehandle):
+        super().__init__(header, filehandle)
         self.array_id = header.id // 1000
         self.telescope_id = header.id % 1000
 
@@ -380,8 +380,8 @@ class Longitudinal(EventIOObject):
     ''' This Object contains the CORSIKA longitudinal shower data block '''
     eventio_type = 1211
 
-    def __init__(self, header, parent):
-        super().__init__(header, parent)
+    def __init__(self, header, filehandle):
+        super().__init__(header, filehandle)
 
     def parse(self):
         '''
