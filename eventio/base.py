@@ -1,7 +1,6 @@
 import struct
 import gzip
 import logging
-import warnings
 
 from .file_types import is_gzip, is_eventio, is_zstd
 from .header import parse_header_bytes, get_bits_from_word
@@ -54,7 +53,10 @@ class EventIOFile:
         self._filehandle.seek(self._next_header_pos)
         header = read_next_header_toplevel(self)
         self._next_header_pos = self._filehandle.tell() + header.length
-        return KNOWN_OBJECTS.get(header.type, EventIOObject)(header, parent=self)
+        return KNOWN_OBJECTS.get(header.type, EventIOObject)(
+            header,
+            filehandle=self._filehandle,
+        )
 
     def seek(self, position, whence=0):
         return self._filehandle.seek(position, whence)
@@ -99,7 +101,7 @@ def read_next_header_toplevel(byte_stream):
     return read_next_header_sublevel(byte_stream, endianness)
 
 
-def read_next_header_sublevel(byte_stream, endianness):
+def read_next_header_sublevel(byte_stream, endianness, parent_address=0):
     '''Read the next sublevel header object from the file
     Assumes position of `byte_stream` is at the beginning of a new header.
 
@@ -133,7 +135,7 @@ def read_next_header_sublevel(byte_stream, endianness):
         )
         header.length += parse_extension_field(extension_field)
 
-    header.data_field_first_byte = byte_stream.tell()
+    header.address = parent_address + byte_stream.tell()
 
     return header
 
@@ -162,7 +164,7 @@ class EventIOObject:
     python objects.
 
     EventIO objects can basically play two roles:
-        - a binary or ascii data blob
+        - a binary data blob
         - A list of other `EventIOObject`s
 
     If an `EventIOObject` is a pure list of other `EventIOObject`s,
@@ -172,13 +174,13 @@ class EventIOObject:
     '''
     eventio_type = None
 
-    def __init__(self, header, parent):
+    def __init__(self, header, filehandle):
         if self.eventio_type is not None and header.type != self.eventio_type:
             raise WrongType(self.eventio_type, header.type)
 
-        self.parent = parent
+        self._filehandle = filehandle
         self.header = header
-        self.first_byte = self.header.data_field_first_byte
+        self.address = self.header.address
         self.length = self.header.length
         self.only_subobjects = self.header.only_subobjects
         self._next_header_pos = 0
@@ -198,7 +200,7 @@ class EventIOObject:
         if size == -1 or size > self.length - pos:
             size = self.length - pos
 
-        data = self.parent.read(size=size)
+        data = self._filehandle.read(size)
 
         return data
 
@@ -220,21 +222,25 @@ class EventIOObject:
             raise StopIteration
 
         self.seek(self._next_header_pos)
-        header = read_next_header_sublevel(self, self.header.endianness)
+        header = read_next_header_sublevel(
+            self, self.header.endianness, parent_address=self.address
+        )
         self._next_header_pos = self.tell() + header.length
-        return KNOWN_OBJECTS.get(header.type, EventIOObject)(header, parent=self)
+        return KNOWN_OBJECTS.get(header.type, EventIOObject)(
+            header, filehandle=self._filehandle
+        )
 
     def seek(self, offset, whence=0):
-        first = self.first_byte
+        address = self.address
         if whence == 0:
             assert offset >= 0
-            self.parent.seek(first + offset, whence)
+            self._filehandle.seek(address + offset, whence)
         elif whence == 1:
-            self.parent.seek(offset, whence)
+            self._filehandle.seek(offset, whence)
         elif whence == 2:
             if offset > self.length:
                 offset = self.length
-            self._position = self.parent.seek(first + self.length - offset, 0)
+            self._position = self._filehandle.seek(address + self.length - offset, 0)
         else:
             raise ValueError(
                 'invalid whence ({}, should be 0, 1 or 2)'.format(whence)
@@ -242,15 +248,15 @@ class EventIOObject:
         return self.tell()
 
     def tell(self):
-        return self.parent.tell() - self.first_byte
+        return self._filehandle.tell() - self.address
 
     def __repr__(self):
-        return '{}[{}](size={}, only_subobjects={}, first_byte={})'.format(
+        return '{}[{}](size={}, only_subobjects={}, address={})'.format(
             self.__class__.__name__,
             self.header.type,
             self.header.length,
             self.header.only_subobjects,
-            self.header.data_field_first_byte
+            self.header.address
         )
 
 

@@ -40,8 +40,8 @@ class TelescopeObject(EventIOObject):
     BaseClass that reads telescope id from header.id and puts it in repr
     '''
 
-    def __init__(self, header, parent):
-        super().__init__(header, parent)
+    def __init__(self, header, filehandle):
+        super().__init__(header, filehandle)
         self.telescope_id = header.id
 
     def __repr__(self):
@@ -50,7 +50,7 @@ class TelescopeObject(EventIOObject):
             self.eventio_type,
             self.telescope_id,
             self.header.length,
-            self.header.data_field_first_byte
+            self.header.address,
         )
 
 
@@ -61,8 +61,8 @@ class History(EventIOObject):
 class HistoryCommandLine(EventIOObject):
     eventio_type = 71
 
-    def __init__(self, header, parent):
-        super().__init__(header, parent)
+    def __init__(self, header, filehandle):
+        super().__init__(header, filehandle)
         self.timestamp = read_int(self)
 
     def parse(self):
@@ -73,8 +73,8 @@ class HistoryCommandLine(EventIOObject):
 class HistoryConfig(EventIOObject):
     eventio_type = 72
 
-    def __init__(self, header, parent):
-        super().__init__(header, parent)
+    def __init__(self, header, filehandle):
+        super().__init__(header, filehandle)
         self.timestamp = read_int(self)
 
     def parse(self):
@@ -89,8 +89,8 @@ class RunHeader(EventIOObject):
         build_dtype_part2
     )
 
-    def __init__(self, header, parent):
-        super().__init__(header, parent)
+    def __init__(self, header, filehandle):
+        super().__init__(header, filehandle)
         self.run_id = self.header.id
 
     def parse(self):
@@ -327,8 +327,8 @@ class PixelSettings(TelescopeObject):
 class DisabledPixels(EventIOObject):
     eventio_type = 2005
 
-    def __init__(self, header, parent):
-        super().__init__(header, parent)
+    def __init__(self, header, filehandle):
+        super().__init__(header, filehandle)
         self.telescope_id = header.id
 
     def parse(self):
@@ -357,8 +357,8 @@ class DisabledPixels(EventIOObject):
 class CameraSoftwareSettings(EventIOObject):
     eventio_type = 2006
 
-    def __init__(self, header, parent):
-        super().__init__(header, parent)
+    def __init__(self, header, filehandle):
+        super().__init__(header, filehandle)
         self.telescope_id = header.id
 
     def parse(self):
@@ -455,8 +455,8 @@ class DriveSettings(TelescopeObject):
 class TriggerInformation(EventIOObject):
     eventio_type = 2009
 
-    def __init__(self, header, parent):
-        super().__init__(header, parent)
+    def __init__(self, header, filehandle):
+        super().__init__(header, filehandle)
         self.global_count = self.header.id
 
     def __repr__(self):
@@ -525,9 +525,9 @@ class TrackingPosition(EventIOObject):
     '''
     eventio_type = None
 
-    def __init__(self, header, parent):
+    def __init__(self, header, filehandle):
         self.eventio_type = header.type
-        super().__init__(header, parent)
+        super().__init__(header, filehandle)
         self.telescope_id = self.type_to_telid(header.type)
         if not self.id_to_telid(header.id) == self.telescope_id:
             raise ValueError('Telescope IDs in type and header do not match')
@@ -582,9 +582,9 @@ class TelescopeEvent(EventIOObject):
     '''
     eventio_type = None
 
-    def __init__(self, header, parent):
+    def __init__(self, header, filehandle):
         self.eventio_type = header.type
-        super().__init__(header, parent)
+        super().__init__(header, filehandle)
         self.telescope_id = self.type_to_telid(header.type)
         self.global_count = header.id
 
@@ -603,15 +603,15 @@ class TelescopeEvent(EventIOObject):
             self.eventio_type,
             self.telescope_id,
             self.header.length,
-            self.header.data_field_first_byte
+            self.header.address,
         )
 
 
 class ArrayEvent(EventIOObject):
     eventio_type = 2010
 
-    def __init__(self, header, parent):
-        super().__init__(header, parent)
+    def __init__(self, header, filehandle):
+        super().__init__(header, filehandle)
         self.glob_count = header.id
 
     def __repr__(self):
@@ -620,7 +620,7 @@ class ArrayEvent(EventIOObject):
             self.eventio_type,
             self.glob_count,
             self.header.length,
-            self.header.data_field_first_byte
+            self.header.address,
         )
 
 
@@ -693,8 +693,8 @@ class TelescopeEventHeader(TelescopeObject):
 class ADCSums(EventIOObject):
     eventio_type = 2012
 
-    def __init__(self, header, parent):
-        super().__init__(header, parent)
+    def __init__(self, header, filehandle):
+        super().__init__(header, filehandle)
         if self.header.version <= 1:
             self.telescope_id = (header.id >> 25) & 0x1f
         else:
@@ -742,8 +742,8 @@ class ADCSums(EventIOObject):
 class ADCSamples(EventIOObject):
     eventio_type = 2013
 
-    def __init__(self, header, parent):
-        super().__init__(header, parent)
+    def __init__(self, header, filehandle):
+        super().__init__(header, filehandle)
         flags_ = header.id
         self._zero_sup_mode = flags_ & 0x1f
         self._data_red_mode = (flags_ >> 5) & 0x1f
@@ -1061,8 +1061,8 @@ class PixelCalibration(EventIOObject):
 class MCShower(EventIOObject):
     eventio_type = 2020
 
-    def __init__(self, header, parent):
-        super().__init__(header, parent)
+    def __init__(self, header, filehandle):
+        super().__init__(header, filehandle)
 
     def __repr__(self):
         return '{}[{}](shower_id={})'.format(
@@ -1155,8 +1155,8 @@ class MCEvent(EventIOObject):
 class CameraMonitoring(EventIOObject):
     eventio_type = 2022
 
-    def __init__(self, header, parent):
-        super().__init__(header, parent)
+    def __init__(self, header, filehandle):
+        super().__init__(header, filehandle)
 
         self.telescope_id = (
             (self.header.id & 0xff)
@@ -1417,8 +1417,8 @@ class MCPhotoelectronSum(EventIOObject):
 class PixelList(EventIOObject):
     eventio_type = 2027
 
-    def __init__(self, header, parent):
-        super().__init__(header, parent)
+    def __init__(self, header, filehandle):
+        super().__init__(header, filehandle)
         self.telescope_id = self.header.id // 1000000
         self.code = self.telescope_id % 1000000
 
