@@ -147,6 +147,17 @@ def test_iterate_complete_file_zst():
     assert counter == expected
 
 
+def test_iterate_mc_events():
+    expected = 200
+    try:
+        with SimTelFile(prod4_path) as f:
+            for counter, event in enumerate(f.iter_mc_events(), start=1):
+                pass
+    except (EOFError, IndexError):  # truncated files might raise these...
+        pass
+    assert counter == expected
+
+
 def test_allowed_tels():
     allowed_telescopes = {1, 2, 3, 4}
     n_read = 0
