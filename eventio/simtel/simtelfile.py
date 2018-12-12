@@ -188,7 +188,10 @@ class SimTelFile(EventIOFile):
         camera_monitorings = defaultdict(dict)
         laser_calibrations = defaultdict(dict)
 
-        o = next(self)
+        try:
+            o = next(self)
+        except StopIteration:
+            return
 
         while True:
             if isinstance(o, MCShower):
@@ -210,7 +213,10 @@ class SimTelFile(EventIOFile):
                 # with allowed_telescopes set, it might happen there
                 # are no telescopes left
                 if self.allowed_telescopes and len(array_event['telescope_events']) == 0:
-                    o = next(self)
+                    try:
+                        o = next(self)
+                    except StopIteration:
+                        return
                     continue
 
                 event_data = {
@@ -243,7 +249,10 @@ class SimTelFile(EventIOFile):
                 self.histograms = o.parse()
                 break
 
-            o = next(self)
+            try:
+                o = next(self)
+            except StopIteration:
+                return
 
 
 def parse_array_event(array_event, allowed_telescopes=None):

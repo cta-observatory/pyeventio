@@ -34,7 +34,7 @@ cdef class ObjectHeader:
     cdef readonly bint only_subobjects
     cdef public unsigned long length
     cdef readonly unsigned long id
-    cdef public unsigned long data_field_first_byte
+    cdef public unsigned long address
 
     def __repr__(self):
         return (
@@ -46,7 +46,7 @@ cdef class ObjectHeader:
             + 'extended={}, '.format(self.extended)
             + 'only_subobjects={}, '.format(self.only_subobjects)
             + 'length={}, '.format(self.length)
-            + 'first_byte={})'.format(self.data_field_first_byte)
+            + 'address={})'.format(self.address)
         )
 
 

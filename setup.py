@@ -29,8 +29,8 @@ extensions = [
     Extension('eventio.header', sources=['eventio/header' + ext]),
     Extension('eventio.var_int', sources=['eventio/var_int' + ext]),
     Extension(
-        'eventio.simtel.camorgan',
-        sources=['eventio/simtel/camorgan' + ext]
+        'eventio.simtel.parsing',
+        sources=['eventio/simtel/parsing' + ext]
     ),
 ]
 cmdclass = {'build_ext': build_ext}
