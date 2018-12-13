@@ -1,23 +1,12 @@
 import eventio
-import pkg_resources
-from os import path
 
 from pytest import approx, raises, importorskip
 
 
-testfile = pkg_resources.resource_filename(
-    'eventio', path.join('resources', 'one_shower.dat')
-)
-testfile_reuse = pkg_resources.resource_filename(
-    'eventio', path.join('resources', '3_gammas_reuse_5.dat')
-)
-testfile_two_telescopes = pkg_resources.resource_filename(
-    'eventio', path.join('resources', 'two_telescopes.dat')
-)
-testfile_zstd = pkg_resources.resource_filename(
-    'eventio',
-    path.join('resources', 'run102_gamma_za20deg_azm0deg-paranal-sst.corsika.zst')
-)
+testfile = 'tests/resources/one_shower.dat'
+testfile_reuse = 'tests/resources/3_gammas_reuse_5.dat'
+testfile_two_telescopes = 'tests/resources/two_telescopes.dat'
+testfile_zstd = 'tests/resources/run102_gamma_za20deg_azm0deg-paranal-sst.corsika.zst'
 
 
 def test_file_open():

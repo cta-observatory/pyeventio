@@ -3,7 +3,7 @@ from pkg_resources import resource_filename
 import numpy as np
 pyhessio = pytest.importorskip("pyhessio")
 
-testfile = resource_filename('eventio', 'resources/gamma_test_large_truncated.simtel.gz')
+testfile = 'tests/resources/gamma_test_large_truncated.simtel.gz'
 
 
 def test_adc_samples():
