@@ -89,11 +89,11 @@ Second Example
 If you like to plot the origin of the Cherenkov photons of the first
 event in file ``eventio/resources/one_shower.data`` for the first telescope,
 have a look into
-`this example <https://github.com/fact-project/pyeventio/blob/new_api/examples/plot_production_3d.py>`__
+`this example <https://github.com/cta-observatory/pyeventio/blob/master/examples/plot_production_3d.py>`__
 
 It might look similar to this picture:
 
-.. figure:: https://raw.githubusercontent.com/fact-project/pyeventio/master/shower.png
+.. figure:: https://raw.githubusercontent.com/cta-observatory/pyeventio/master/shower.png
    :alt: an example shower
 
    an example shower
@@ -174,7 +174,7 @@ use ``eventio_plot_histograms``.
     $ eventio_plot_histograms gamma_20deg_180deg_run99___cta-prod3_desert-2150m-Paranal-merged_cone10.simtel.gz
 
 
-.. figure:: https://raw.githubusercontent.com/fact-project/pyeventio/master/first_hist.png
+.. figure:: https://raw.githubusercontent.com/cta-observatory/pyeventio/master/first_hist.png
    :alt: First histogram of a prod3b file
 
    Histogram of Impact distance vs log10(E / TeV)
@@ -211,7 +211,7 @@ This is how our test file looks like in the low level view:
 
 .. |PyPI| image:: https://badge.fury.io/py/eventio.svg
     :target: https://pypi.org/project/eventio/
-.. |Build| image:: https://travis-ci.org/fact-project/pyeventio.svg?branch=master
-   :target: https://travis-ci.org/fact-project/pyeventio
-.. |LoC| image:: https://tokei.rs/b1/github/fact-project/pyeventio
-    :target: https://github.com/fact-project/pyeventio
+.. |Build| image:: https://travis-ci.org/cta-observatory/pyeventio.svg?branch=master
+   :target: https://travis-ci.org/cta-observatory/pyeventio
+.. |LoC| image:: https://tokei.rs/b1/github/cta-observatory/pyeventio
+    :target: https://github.com/cta-observatory/pyeventio
