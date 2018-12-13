@@ -89,7 +89,7 @@ Second Example
 If you like to plot the origin of the Cherenkov photons of the first
 event in file ``eventio/resources/one_shower.data`` for the first telescope,
 have a look into
-`this example <https://github.com/cta-observatory/pyeventio/blob/new_api/examples/plot_production_3d.py>`__
+`this example <https://github.com/cta-observatory/pyeventio/blob/master/examples/plot_production_3d.py>`__
 
 It might look similar to this picture:
 
