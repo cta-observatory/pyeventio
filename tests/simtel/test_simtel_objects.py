@@ -1,4 +1,3 @@
-from pkg_resources import resource_filename
 import pytest
 from pytest import approx
 import numpy as np
@@ -8,15 +7,9 @@ from eventio.search_utils import (
     yield_n_subobjects,
 )
 
-prod2_file = resource_filename('eventio', 'resources/gamma_test.simtel.gz')
-prod4b_sst1m_file = resource_filename(
-    'eventio',
-    'resources/gamma_20deg_0deg_run102___cta-prod4-sst-1m_desert-2150m-Paranal-sst-1m.simtel.gz'
-)
-prod4b_astri_file = resource_filename(
-    'eventio',
-    'resources/gamma_20deg_0deg_run103___cta-prod4-sst-astri_desert-2150m-Paranal-sst-astri.simtel.gz'
-)
+prod2_file = 'tests/resources/gamma_test.simtel.gz'
+prod4b_sst1m_file = 'tests/resources/gamma_20deg_0deg_run102___cta-prod4-sst-1m_desert-2150m-Paranal-sst-1m.simtel.gz'
+prod4b_astri_file = 'tests/resources/gamma_20deg_0deg_run103___cta-prod4-sst-astri_desert-2150m-Paranal-sst-astri.simtel.gz'
 
 test_files = [
     EventIOFile(path) for path in
@@ -24,10 +17,7 @@ test_files = [
 ]
 
 expected_adc_samples_event1_tel_id_38 = np.load(
-    resource_filename(
-        'eventio',
-        'resources/gamma_test.simtel_event1_tel_id_38_adc_samples.npy'
-    )
+    'tests/resources/gamma_test.simtel_event1_tel_id_38_adc_samples.npy'
 )
 
 
@@ -418,9 +408,7 @@ def test_2017():
 def test_2020_3_objects():
     from eventio.simtel.objects import MCShower
 
-    hessio_data = np.load(resource_filename(
-        'eventio', 'resources/gamma_test_mc_shower.npy'
-    ))
+    hessio_data = np.load('tests/resources/gamma_test_mc_shower.npy')
     with EventIOFile(prod2_file) as f:
         for i, o in enumerate(yield_n_and_assert(f, MCShower, n=3)):
             mc = parse_and_assert_consumption(o, limit=2)

@@ -1,7 +1,4 @@
-from pkg_resources import resource_filename
-
-
-test_file = resource_filename('eventio', 'resources/gamma_test.simtel.gz')
+test_file = 'tests/resources/gamma_test.simtel.gz'
 
 
 def test_find_all_subobjects():

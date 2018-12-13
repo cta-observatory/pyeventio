@@ -1,19 +1,10 @@
 import gzip
 import tempfile
-import pkg_resources
-import os
 import pytest
 
-testfile = pkg_resources.resource_filename(
-    'eventio', os.path.join('resources', 'one_shower.dat')
-)
-testfile_gz = pkg_resources.resource_filename(
-    'eventio', os.path.join('resources', 'one_shower.dat.gz')
-)
-testfile_zstd = pkg_resources.resource_filename(
-    'eventio',
-    os.path.join('resources', 'run102_gamma_za20deg_azm0deg-paranal-sst.corsika.zst')
-)
+testfile = 'tests/resources/one_shower.dat'
+testfile_gz = 'tests/resources/one_shower.dat.gz'
+testfile_zstd = 'tests/resources/run102_gamma_za20deg_azm0deg-paranal-sst.corsika.zst'
 
 
 def test_is_gzip():

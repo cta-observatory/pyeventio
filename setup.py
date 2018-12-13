@@ -50,7 +50,7 @@ with open('README.rst') as f:
 
 setup(
     name='eventio',
-    version='0.11.0',
+    version='0.12.0',
     description='Python read-only implementation of the EventIO file format',
     long_description=long_description,
     url='https://github.com/fact-project/pyeventio',
@@ -64,7 +64,7 @@ setup(
     cmdclass=cmdclass,
 
     package_data={
-        'eventio': ['resources/*', '*.c'],
+        'eventio': ['*.c'],
         'eventio.simtel': ['*.c'],
     },
     install_requires=[

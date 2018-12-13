@@ -1,16 +1,9 @@
 import eventio
-import pkg_resources
-from os import path
 
 from pytest import approx
 
-testfile = pkg_resources.resource_filename(
-    'eventio', path.join('resources', 'one_shower.dat')
-)
-
-prod4_simtel = pkg_resources.resource_filename(
-    'eventio', path.join('resources', 'gamma_20deg_0deg_run103___cta-prod4-sst-astri_desert-2150m-Paranal-sst-astri.simtel.gz')
-)
+testfile = 'tests/resources/one_shower.dat'
+prod4_simtel = 'tests/resources/gamma_20deg_0deg_run103___cta-prod4-sst-astri_desert-2150m-Paranal-sst-astri.simtel.gz'
 
 
 def test_photo_electrons():

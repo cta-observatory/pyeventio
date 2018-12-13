@@ -1,39 +1,13 @@
-import pkg_resources
-import os
-
 from pytest import importorskip
-
 from eventio.simtel import SimTelFile
 
-prod2_path = pkg_resources.resource_filename(
-    'eventio',
-    os.path.join(
-        'resources',
-        'gamma_test.simtel.gz')
-)
-
-prod3_path = pkg_resources.resource_filename(
-    'eventio',
-    os.path.join(
-        'resources',
-        'gamma_test_large_truncated.simtel.gz')
-)
-
-prod4_path = pkg_resources.resource_filename(
-    'eventio',
-    os.path.join(
-        'resources',
-        'gamma_20deg_0deg_run102___cta-prod4-sst-1m_desert-2150m-Paranal-sst-1m.simtel.gz')
-)
+prod2_path = 'tests/resources/gamma_test.simtel.gz'
+prod3_path = 'tests/resources/gamma_test_large_truncated.simtel.gz'
+prod4_path = 'tests/resources/gamma_20deg_0deg_run102___cta-prod4-sst-1m_desert-2150m-Paranal-sst-1m.simtel.gz'
 
 # using a zstd file ensures SimTelFile is not seeking back, when reading
 # a file
-prod4_zst_path = pkg_resources.resource_filename(
-    'eventio',
-    os.path.join(
-        'resources',
-        'gamma_20deg_0deg_run102___cta-prod4-sst-1m_desert-2150m-Paranal-sst-1m.simtel.zst')
-)
+prod4_zst_path = 'tests/resources/gamma_20deg_0deg_run102___cta-prod4-sst-1m_desert-2150m-Paranal-sst-1m.simtel.zst'
 
 
 test_paths = [prod2_path, prod3_path, prod4_path]
