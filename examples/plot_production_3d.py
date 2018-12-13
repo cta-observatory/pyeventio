@@ -14,7 +14,7 @@ args = parser.parse_args()
 
 testfile = resource_filename('eventio', 'resources/3_gammas_reuse_5.dat')
 
-with eventio.File(args.inputfile or testfile) as f:
+with eventio.IACTFile(args.inputfile or testfile) as f:
     it = iter(f)
     event = next(it)
     for i in range(args.event):
