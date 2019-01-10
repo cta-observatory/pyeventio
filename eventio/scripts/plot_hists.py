@@ -55,6 +55,7 @@ def main():
 
                     non_zero_y, = np.where(marginal_y != 0)
                     plt.ylim(y_bins[non_zero_y[0]], y_bins[non_zero_y[-1] + 1])
+                    plt.colorbar(label='Number of Events')
 
                 else:
                     centers = 0.5 * (x_bins[:-1] + x_bins[1:])
