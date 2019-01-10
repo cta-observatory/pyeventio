@@ -7,6 +7,10 @@ python:
 - '3.6'
 - '3.7'
 
+os:
+    - linux
+    - osx
+
 install:
 - pip install zstandard docutils pygments Cython
 - pip install https://github.com/cta-observatory/pyhessio/archive/v2.1.1.tar.gz
