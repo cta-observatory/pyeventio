@@ -15,8 +15,7 @@ matrix:
 
 
 install:
-  - ./.travis/install.sh
-  - if [[ $TRAVIS_OS_NAME == 'osx' ]]; then conda activate travis; fi
+  - source .travis/install.sh
   - which pip
 
   - pip install zstandard docutils pygments Cython
