@@ -6,5 +6,4 @@ if [[ $TRAVIS_OS_NAME == 'osx' ]]; then
 	. $HOME/miniconda/etc/profile.d/conda.sh
 	conda activate
 	conda create --yes -n travis python=$PYTHON
-	conda activate travis
 fi
