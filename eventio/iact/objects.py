@@ -2,17 +2,20 @@
 import struct
 import numpy as np
 from numpy.lib.recfunctions import append_fields
+from io import BytesIO
+from corsikaio.subblocks import (
+    parse_run_header,
+    parse_event_header,
+)
+
 
 from ..tools import (
     read_short, read_int, read_float, read_from, read_eventio_string,
 )
 from ..base import EventIOObject
 from ..exceptions import WrongSize
-from .parse_corsika_data import (
-    parse_corsika_event_header,
-    parse_corsika_run_header,
-)
 from ..version_handling import assert_version_in
+
 
 
 __all__ = [
@@ -45,19 +48,12 @@ class RunHeader(EventIOObject):
         Returns a dictionary with the items of the  run header block
         '''
         self.seek(0)
-        data = self.read()
-        n, = struct.unpack('i', data[:4])
+        stream = BytesIO(self.read())
+        n = read_int(stream)
         if n != 273:
-            raise WrongSize(
-                'Expected 273 bytes, but found {}'.format(n))
+            raise WrongSize('Expected 273 bytes, but found {}'.format(n))
 
-        block = np.frombuffer(
-            data,
-            dtype=np.float32,
-            count=n,
-            offset=4,
-        )
-        return parse_corsika_run_header(block)
+        return parse_run_header(stream.read())
 
 
 class TelescopeDefinition(EventIOObject):
@@ -122,14 +118,7 @@ class EventHeader(EventIOObject):
             raise WrongSize(
                 'Expected 273 bytes, but found {}'.format(n))
 
-        block = np.frombuffer(
-            data,
-            dtype=np.float32,
-            count=n,
-            offset=4,
-        )
-
-        return parse_corsika_event_header(block)
+        return parse_event_header(data[4:])
 
 
 class ArrayOffsets(EventIOObject):
