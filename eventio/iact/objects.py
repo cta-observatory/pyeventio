@@ -5,7 +5,9 @@ from numpy.lib.recfunctions import append_fields
 from io import BytesIO
 from corsikaio.subblocks import (
     parse_run_header,
+    parse_run_end,
     parse_event_header,
+    parse_event_end,
 )
 
 
@@ -326,17 +328,9 @@ class EventEnd(EventIOObject):
         self.seek(0)
         n = read_int(self)
         if n != 273:
-            raise WrongSize(
-                'Expected 273 bytes, but found {}'.format(n))
+            raise WrongSize('Expected 273 bytes, but found {}'.format(n))
 
-        dtype = np.dtype('float32')
-        block = np.frombuffer(
-            self.read(n * dtype.itemsize),
-            dtype=dtype,
-            count=n,
-        )
-
-        return block
+        return parse_event_end(self.read())
 
 
 class RunEnd(EventIOObject):
@@ -354,15 +348,10 @@ class RunEnd(EventIOObject):
 
         self.seek(0)
         n = read_int(self)
+        if n != 273:
+            raise WrongSize('Expected 273 bytes, but found {}'.format(n))
 
-        dtype = np.dtype('float32')
-        block = np.frombuffer(
-            self.read(n * dtype.itemsize),
-            dtype=dtype,
-            count=n,
-        )
-
-        return block
+        return parse_run_end(self.read())
 
 
 class Longitudinal(EventIOObject):
