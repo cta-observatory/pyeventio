@@ -53,7 +53,7 @@ class RunHeader(EventIOObject):
         stream = BytesIO(self.read())
         n = read_int(stream)
         if n != 273:
-            raise WrongSize('Expected 273 bytes, but found {}'.format(n))
+            raise WrongSize('Expected 273 floats, but found {}'.format(n))
 
         return parse_run_header(stream.read())
 
@@ -118,7 +118,7 @@ class EventHeader(EventIOObject):
         n, = struct.unpack('i', data[:4])
         if n != 273:
             raise WrongSize(
-                'Expected 273 bytes, but found {}'.format(n))
+                'Expected 273 floats, but found {}'.format(n))
 
         return parse_event_header(data[4:])
 
@@ -328,7 +328,7 @@ class EventEnd(EventIOObject):
         self.seek(0)
         n = read_int(self)
         if n != 273:
-            raise WrongSize('Expected 273 bytes, but found {}'.format(n))
+            raise WrongSize('Expected 3 floats, but found {}'.format(n))
 
         return parse_event_end(self.read())
 
@@ -348,10 +348,11 @@ class RunEnd(EventIOObject):
 
         self.seek(0)
         n = read_int(self)
-        if n != 273:
-            raise WrongSize('Expected 273 bytes, but found {}'.format(n))
-
-        return parse_run_end(self.read())
+        if n != 3:
+            raise WrongSize('Expected 3 floats, but found {}'.format(n))
+        d = bytearray(self.read())
+        d.extend(b'\x00' * (270 * 4))
+        return parse_run_end(d)
 
 
 class Longitudinal(EventIOObject):
@@ -401,9 +402,3 @@ class InputCard(EventIOObject):
             input_card.extend(read_eventio_string(self))
             input_card.append(ord('\n'))
         return input_card
-
-
-def remove_ascii_control_characters(string):
-    ''' See http://stackoverflow.com/a/4324823/3838691 '''
-    mapping = dict.fromkeys(range(32))
-    return string.translate(mapping)

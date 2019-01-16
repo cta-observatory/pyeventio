@@ -162,6 +162,7 @@ class IACTFile(EventIOFile):
                     n_bunches=n_bunches,
                     longitudinal=longitudinal,
                 )
+
                 obj = next(self)
 
             check_type(obj, EventEnd)
