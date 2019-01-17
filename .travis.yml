@@ -1,23 +1,39 @@
-dist: xenial
-
 language: python
 
-python:
-- '3.5'
-- '3.6'
-- '3.7'
+matrix:
+  include:
+    - os: linux
+      python: "3.5"
+    - os: linux
+      python: "3.6"
+    - os: linux
+      dist: xenial
+      python: "3.7"
+    - os: osx
+      language: generic
+      env: PYTHON="3.5"
+    - os: osx
+      language: generic
+      env: PYTHON="3.6"
+    - os: osx
+      language: generic
+      env: PYTHON="3.7"
+
 
 install:
-- pip install zstandard docutils pygments Cython
-- pip install https://github.com/cta-observatory/pyhessio/archive/v2.1.1.tar.gz
-- pip install .
+  - source .travis/install.sh
+  - which pip
+
+  - pip install zstandard docutils pygments Cython
+  - pip install https://github.com/cta-observatory/pyhessio/archive/v2.1.1.tar.gz
+  - pip install .
 
 before_script:
-- pip install --upgrade pytest>=3.0.0
+  - pip install --upgrade pytest>=3.0.0
 
 script:
-- python setup.py test
-- python setup.py check -r -s
+  - python setup.py test
+  - python setup.py check -r -s
 
 deploy:
   - provider: pypi

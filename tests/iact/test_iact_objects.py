@@ -29,17 +29,17 @@ def test_read_run_header():
     with eventio.EventIOFile(testfile) as f:
         run_header = next(f).parse()
 
-        assert run_header.energy_range[0] == approx(5.0)
-        assert run_header.energy_range[1] == approx(100.0)
-        assert run_header.energy_slope == approx(-2.7)
+        assert run_header['energy_min'] == approx(5.0)
+        assert run_header['energy_max'] == approx(100.0)
+        assert run_header['energy_spectrum_slope'] == approx(-2.7)
 
 
 def test_telescope_definition():
     from eventio.iact import TelescopeDefinition
 
     with eventio.EventIOFile(testfile) as f:
-        next(f) # skip run_header
-        next(f) # skip inputcard
+        next(f)  # skip run_header
+        next(f)  # skip inputcard
 
         telescope_definition = next(f)
         assert isinstance(telescope_definition, TelescopeDefinition)
@@ -61,10 +61,10 @@ def test_corsika_event_header():
 
         assert isinstance(obj, EventHeader)
         event_header = obj.parse()
-        assert event_header.event_id == 1
-        assert event_header.zenith_angle == approx(0.0)
-        assert event_header.azimuth_angle == approx(0.0)
-        assert event_header.total_energy == approx(9.3249321)
+        assert event_header['event_number'] == 1
+        assert event_header['zenith'] == approx(0.0)
+        assert event_header['azimuth'] == approx(0.0)
+        assert event_header['total_energy'] == approx(9.3249321)
 
 
 def test_corsika_array_offsets():
