@@ -2,17 +2,22 @@
 import struct
 import numpy as np
 from numpy.lib.recfunctions import append_fields
+from io import BytesIO
+from corsikaio.subblocks import (
+    parse_run_header,
+    parse_run_end,
+    parse_event_header,
+    parse_event_end,
+)
+
 
 from ..tools import (
     read_short, read_int, read_float, read_from, read_eventio_string,
 )
 from ..base import EventIOObject
 from ..exceptions import WrongSize
-from .parse_corsika_data import (
-    parse_corsika_event_header,
-    parse_corsika_run_header,
-)
 from ..version_handling import assert_version_in
+
 
 
 __all__ = [
@@ -45,19 +50,12 @@ class RunHeader(EventIOObject):
         Returns a dictionary with the items of the  run header block
         '''
         self.seek(0)
-        data = self.read()
-        n, = struct.unpack('i', data[:4])
+        stream = BytesIO(self.read())
+        n = read_int(stream)
         if n != 273:
-            raise WrongSize(
-                'Expected 273 bytes, but found {}'.format(n))
+            raise WrongSize('Expected 273 floats, but found {}'.format(n))
 
-        block = np.frombuffer(
-            data,
-            dtype=np.float32,
-            count=n,
-            offset=4,
-        )
-        return parse_corsika_run_header(block)
+        return parse_run_header(stream.read())
 
 
 class TelescopeDefinition(EventIOObject):
@@ -120,16 +118,9 @@ class EventHeader(EventIOObject):
         n, = struct.unpack('i', data[:4])
         if n != 273:
             raise WrongSize(
-                'Expected 273 bytes, but found {}'.format(n))
+                'Expected 273 floats, but found {}'.format(n))
 
-        block = np.frombuffer(
-            data,
-            dtype=np.float32,
-            count=n,
-            offset=4,
-        )
-
-        return parse_corsika_event_header(block)
+        return parse_event_header(data[4:])
 
 
 class ArrayOffsets(EventIOObject):
@@ -337,17 +328,9 @@ class EventEnd(EventIOObject):
         self.seek(0)
         n = read_int(self)
         if n != 273:
-            raise WrongSize(
-                'Expected 273 bytes, but found {}'.format(n))
+            raise WrongSize('Expected 3 floats, but found {}'.format(n))
 
-        dtype = np.dtype('float32')
-        block = np.frombuffer(
-            self.read(n * dtype.itemsize),
-            dtype=dtype,
-            count=n,
-        )
-
-        return block
+        return parse_event_end(self.read())
 
 
 class RunEnd(EventIOObject):
@@ -365,15 +348,11 @@ class RunEnd(EventIOObject):
 
         self.seek(0)
         n = read_int(self)
-
-        dtype = np.dtype('float32')
-        block = np.frombuffer(
-            self.read(n * dtype.itemsize),
-            dtype=dtype,
-            count=n,
-        )
-
-        return block
+        if n != 3:
+            raise WrongSize('Expected 3 floats, but found {}'.format(n))
+        d = bytearray(self.read())
+        d.extend(b'\x00' * (270 * 4))
+        return parse_run_end(d)
 
 
 class Longitudinal(EventIOObject):
@@ -423,9 +402,3 @@ class InputCard(EventIOObject):
             input_card.extend(read_eventio_string(self))
             input_card.append(ord('\n'))
         return input_card
-
-
-def remove_ascii_control_characters(string):
-    ''' See http://stackoverflow.com/a/4324823/3838691 '''
-    mapping = dict.fromkeys(range(32))
-    return string.translate(mapping)

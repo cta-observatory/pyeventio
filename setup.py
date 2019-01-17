@@ -50,7 +50,7 @@ with open('README.rst') as f:
 
 setup(
     name='eventio',
-    version='0.12.0',
+    version='0.14.0',
     description='Python read-only implementation of the EventIO file format',
     long_description=long_description,
     url='https://github.com/fact-project/pyeventio',
@@ -69,6 +69,7 @@ setup(
     },
     install_requires=[
         'numpy',
+        'corsikaio ~= 0.2.0',
     ],
     entry_points={
         'console_scripts': [

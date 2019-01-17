@@ -156,12 +156,13 @@ class IACTFile(EventIOFile):
                     x_offset=array_offsets[reuse]['x'],
                     y_offset=array_offsets[reuse]['y'],
                     weight=array_offsets[reuse]['weight'],
-                    event_id=header.event_id,
+                    event_number=header['event_number'],
                     reuse=reuse + 1,
                     n_photons=n_photons,
                     n_bunches=n_bunches,
                     longitudinal=longitudinal,
                 )
+
                 obj = next(self)
 
             check_type(obj, EventEnd)
@@ -176,7 +177,7 @@ EventTuple = namedtuple(
     [
         'header', 'photon_bunches',
         'time_offset', 'x_offset', 'y_offset', 'weight',
-        'event_id', 'reuse',
+        'event_number', 'reuse',
         'n_photons', 'n_bunches',
         'longitudinal',
     ]
@@ -228,9 +229,9 @@ class Event(EventTuple):
         Only different from 1 if importance sampling was used.
     '''
     def __repr__(self):
-        return '{}(event_id={}, reuse={}, n_telescopes={}, n_photons={})'.format(
+        return '{}(event_number={}, reuse={}, n_telescopes={}, n_photons={})'.format(
             self.__class__.__name__,
-            self.event_id,
+            self.event_number,
             self.reuse,
             len(self.n_bunches),
             self.n_photons,
