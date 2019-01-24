@@ -260,8 +260,11 @@ class SimTelFile(EventIOFile):
                 except StopIteration:
                     return
 
-            self.setup_run()
-
+            try:
+                self.setup_run()
+            except StopIteration:
+                return
+                break
 
 def parse_array_event(array_event, allowed_telescopes=None):
     '''structure of event:
