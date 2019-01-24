@@ -64,6 +64,7 @@ class SimTelFile(EventIOFile):
         self.allowed_telescopes = allowed_telescopes
         self.histograms = None
 
+    def setup_run(self):
         self.history = []
         o = next(self)
         while isinstance(o, History):
@@ -141,6 +142,8 @@ class SimTelFile(EventIOFile):
         return self.iter_array_events()
 
     def iter_mc_events(self):
+
+
         self._next_header_pos = self._first_event_byte
 
         for event_id, event, shower in self.init_mc_events:
@@ -170,89 +173,92 @@ class SimTelFile(EventIOFile):
             o = next(self)
 
     def iter_array_events(self):
-        self._next_header_pos = self._first_event_byte
-
-        current_mc_shower = None
-        current_mc_event = None
-        current_mc_event_id = None
-
-        # check if some showers or events were already read in __init__
-        if len(self.init_mc_showers) > 0:
-            current_mc_shower = self.init_mc_showers[-1]
-
-        if len(self.init_mc_events) > 0:
-            current_mc_event_id, current_mc_event, _ = self.init_mc_events[-1]
-
-        current_photoelectron_sum = None
-        current_photoelectrons = {}
-        camera_monitorings = defaultdict(dict)
-        laser_calibrations = defaultdict(dict)
-
-        try:
-            o = next(self)
-        except StopIteration:
-            return
-
         while True:
-            if isinstance(o, MCShower):
-                current_mc_shower = o.parse()
+            self.setup_run()
 
-            elif isinstance(o, MCEvent):
-                current_mc_event = o.parse()
-                current_mc_event_id = o.header.id
+            self._next_header_pos = self._first_event_byte
 
-            elif isinstance(o, iact.TelescopeData):
-                current_photoelectrons = parse_photoelectrons(o)
+            current_mc_shower = None
+            current_mc_event = None
+            current_mc_event_id = None
 
-            elif isinstance(o, MCPhotoelectronSum):
-                current_photoelectron_sum = o.parse()
+            # check if some showers or events were already read in __init__
+            if len(self.init_mc_showers) > 0:
+                current_mc_shower = self.init_mc_showers[-1]
 
-            elif isinstance(o, ArrayEvent):
-                array_event = parse_array_event(o, self.allowed_telescopes)
+            if len(self.init_mc_events) > 0:
+                current_mc_event_id, current_mc_event, _ = self.init_mc_events[-1]
 
-                # with allowed_telescopes set, it might happen there
-                # are no telescopes left
-                if self.allowed_telescopes and len(array_event['telescope_events']) == 0:
-                    try:
-                        o = next(self)
-                    except StopIteration:
-                        return
-                    continue
-
-                event_data = {
-                    'event_id': current_mc_event_id,
-                    'mc_shower': current_mc_shower,
-                    'mc_event': current_mc_event,
-                    'telescope_events': array_event['telescope_events'],
-                    'tracking_positions': array_event['tracking_positions'],
-                    'trigger_information': array_event['trigger_information'],
-                    'photoelectron_sums': current_photoelectron_sum,
-                    'photoelectrons': current_photoelectrons,
-                }
-                event_data['camera_monitorings'] = {
-                    telescope_id: copy(camera_monitorings[telescope_id])
-                    for telescope_id in array_event['telescope_events'].keys()
-                }
-                event_data['laser_calibrations'] = {
-                    telescope_id: copy(laser_calibrations[telescope_id])
-                    for telescope_id in array_event['telescope_events'].keys()
-                }
-                yield event_data
-
-            elif isinstance(o, CameraMonitoring):
-                camera_monitorings[o.telescope_id].update(o.parse())
-
-            elif isinstance(o, LaserCalibration):
-                laser_calibrations[o.telescope_id].update(o.parse())
-
-            elif isinstance(o, Histograms):
-                self.histograms = o.parse()
-                break
+            current_photoelectron_sum = None
+            current_photoelectrons = {}
+            camera_monitorings = defaultdict(dict)
+            laser_calibrations = defaultdict(dict)
 
             try:
                 o = next(self)
             except StopIteration:
                 return
+
+            while True:
+                if isinstance(o, MCShower):
+                    current_mc_shower = o.parse()
+
+                elif isinstance(o, MCEvent):
+                    current_mc_event = o.parse()
+                    current_mc_event_id = o.header.id
+
+                elif isinstance(o, iact.TelescopeData):
+                    current_photoelectrons = parse_photoelectrons(o)
+
+                elif isinstance(o, MCPhotoelectronSum):
+                    current_photoelectron_sum = o.parse()
+
+                elif isinstance(o, ArrayEvent):
+                    array_event = parse_array_event(o, self.allowed_telescopes)
+
+                    # with allowed_telescopes set, it might happen there
+                    # are no telescopes left
+                    if self.allowed_telescopes and len(array_event['telescope_events']) == 0:
+                        try:
+                            o = next(self)
+                        except StopIteration:
+                            return
+                        continue
+
+                    event_data = {
+                        'event_id': current_mc_event_id,
+                        'mc_shower': current_mc_shower,
+                        'mc_event': current_mc_event,
+                        'telescope_events': array_event['telescope_events'],
+                        'tracking_positions': array_event['tracking_positions'],
+                        'trigger_information': array_event['trigger_information'],
+                        'photoelectron_sums': current_photoelectron_sum,
+                        'photoelectrons': current_photoelectrons,
+                    }
+                    event_data['camera_monitorings'] = {
+                        telescope_id: copy(camera_monitorings[telescope_id])
+                        for telescope_id in array_event['telescope_events'].keys()
+                    }
+                    event_data['laser_calibrations'] = {
+                        telescope_id: copy(laser_calibrations[telescope_id])
+                        for telescope_id in array_event['telescope_events'].keys()
+                    }
+                    yield event_data
+
+                elif isinstance(o, CameraMonitoring):
+                    camera_monitorings[o.telescope_id].update(o.parse())
+
+                elif isinstance(o, LaserCalibration):
+                    laser_calibrations[o.telescope_id].update(o.parse())
+
+                elif isinstance(o, Histograms):
+                    self.histograms = o.parse()
+                    break
+
+                try:
+                    o = next(self)
+                except StopIteration:
+                    return
 
 
 def parse_array_event(array_event, allowed_telescopes=None):

@@ -13,9 +13,17 @@ start_time = time.time()
 
 with SimTelFile(args.inputfile) as f:
     for i, event in enumerate(f):
-        print('Event count: {: 04d}, E = {:8.3f} Tev, #Telescopes={: 3d}'.format(
-            i, event['mc_shower']['energy'], len(event['telescope_events'])
-        ))
+        print(
+            (
+                'Event count:{: 04d}, '
+                'E={:8.3f}Tev, #Telescopes={: 3d} run={}'
+            ).format(
+                i,
+                event['mc_shower']['energy'],
+                len(event['telescope_events']),
+                f.header['run'],
+            )
+        )
         if args.print:
             pprint(event)
 
