@@ -144,35 +144,40 @@ class SimTelFile(EventIOFile):
         return self.iter_array_events()
 
     def iter_mc_events(self):
-
-
-        self._next_header_pos = self._first_event_byte
-
-        for event_id, event, shower in self.init_mc_events:
-            yield {'event_id': event_id, 'event': event, 'shower': shower}
-
-        current_mc_shower = None
-        if len(self.init_mc_showers) > 0:
-            current_mc_shower = self.init_mc_showers[-1]
-
-        o = next(self)
-
         while True:
-            if isinstance(o, MCShower):
-                current_mc_shower = o.parse()
+            self._next_header_pos = self._first_event_byte
 
-            elif isinstance(o, MCEvent):
-                yield {
-                    'event_id': o.header.id,
-                    'mc_shower': current_mc_shower,
-                    'mc_event': o.parse()
-                }
+            for event_id, event, shower in self.init_mc_events:
+                yield {'event_id': event_id, 'event': event, 'shower': shower}
 
-            elif isinstance(o, Histograms):
-                self.histograms = o.parse()
-                break
+            current_mc_shower = None
+            if len(self.init_mc_showers) > 0:
+                current_mc_shower = self.init_mc_showers[-1]
 
             o = next(self)
+
+            while True:
+                if isinstance(o, MCShower):
+                    current_mc_shower = o.parse()
+
+                elif isinstance(o, MCEvent):
+                    yield {
+                        'event_id': o.header.id,
+                        'mc_shower': current_mc_shower,
+                        'mc_event': o.parse()
+                    }
+
+                elif isinstance(o, Histograms):
+                    self.histograms = o.parse()
+                    break
+
+                o = next(self)
+
+            try:
+                self.setup_run()
+            except StopIteration:
+                return
+                break
 
     def iter_array_events(self):
         while True:
