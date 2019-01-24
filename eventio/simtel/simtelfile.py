@@ -64,6 +64,8 @@ class SimTelFile(EventIOFile):
         self.allowed_telescopes = allowed_telescopes
         self.histograms = None
 
+        self.setup_run()
+
     def setup_run(self):
         self.history = []
         o = next(self)
@@ -174,8 +176,6 @@ class SimTelFile(EventIOFile):
 
     def iter_array_events(self):
         while True:
-            self.setup_run()
-
             self._next_header_pos = self._first_event_byte
 
             current_mc_shower = None
@@ -259,6 +259,8 @@ class SimTelFile(EventIOFile):
                     o = next(self)
                 except StopIteration:
                     return
+
+            self.setup_run()
 
 
 def parse_array_event(array_event, allowed_telescopes=None):
