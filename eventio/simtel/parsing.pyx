@@ -9,7 +9,7 @@ ctypedef np.int16_t INT16_t
 
 
 @cython.wraparound(False)  # disable negative indexing
-cpdef read_sector_information(
+cpdef read_sector_information_v1(
     const unsigned char[:] data,
     unsigned long n_pixels,
     unsigned long offset = 0,

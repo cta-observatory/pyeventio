@@ -497,3 +497,40 @@ cpdef simtel_pixel_timing_parse_list_type_1(
         'pulse_sum_glob': pulse_sum_glob,
         'pulse_sum_loc': pulse_sum_loc,
     }, pos
+
+
+
+@cython.wraparound(False)  # disable negative indexing
+cpdef read_sector_information_v2(
+    const unsigned char[:] data,
+    unsigned long n_pixels,
+    unsigned long offset = 0,
+):
+    cdef unsigned long i
+    cdef unsigned long length
+    cdef short j, n
+    cdef INT16_t* short_ptr
+
+    cdef list sectors = []
+    cdef np.ndarray[INT64_t, ndim=1] sector
+
+    cdef unsigned long pos = 0
+    for i in range(n_pixels):
+
+        n, length = varint(data, offset=pos)
+        pos += length
+
+        sector, length = varint_array(data, n, offset=pos)
+        # FIXME:
+        # according to a comment in the c-sources
+        # there is might be an old bug here,
+        # which is trailing zeros.
+        # is an ascending list of numbes, so any zero
+        # after the first position indicates the end of sector.
+        #
+        # DN: maybe this bug was fixed long ago,
+        # so maybe we do not have to account for it here
+        # I will check for it in the tests.
+        sectors.append(sector)
+
+    return sectors, pos
