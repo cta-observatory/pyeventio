@@ -21,16 +21,16 @@ cpdef read_sector_information_v1(
     cdef list sectors = []
     cdef array.array sector
 
-    cdef unsigned long pos = 0
+    cdef unsigned long pos = offset
     for i in range(n_pixels):
 
-        short_ptr = <INT16_t*> &data[pos + offset]
+        short_ptr = <INT16_t*> &data[pos]
         n = short_ptr[0]
         pos += 2
 
         sector = array.array('h')
         for j in range(n):
-            short_ptr = <INT16_t*> &data[pos + offset]
+            short_ptr = <INT16_t*> &data[pos]
             sector.append(short_ptr[0])
             pos += 2
 
@@ -46,7 +46,7 @@ cpdef read_sector_information_v1(
         # I will check for it in the tests.
         sectors.append(sector)
 
-    return sectors, pos
+    return sectors, pos - offset
 
 
 
