@@ -9,7 +9,7 @@ ctypedef np.int16_t INT16_t
 
 
 @cython.wraparound(False)  # disable negative indexing
-cpdef read_sector_information(
+cpdef read_sector_information_v1(
     const unsigned char[:] data,
     unsigned long n_pixels,
     unsigned long offset = 0,
@@ -21,16 +21,16 @@ cpdef read_sector_information(
     cdef list sectors = []
     cdef array.array sector
 
-    cdef unsigned long pos = 0
+    cdef unsigned long pos = offset
     for i in range(n_pixels):
 
-        short_ptr = <INT16_t*> &data[pos + offset]
+        short_ptr = <INT16_t*> &data[pos]
         n = short_ptr[0]
         pos += 2
 
         sector = array.array('h')
         for j in range(n):
-            short_ptr = <INT16_t*> &data[pos + offset]
+            short_ptr = <INT16_t*> &data[pos]
             sector.append(short_ptr[0])
             pos += 2
 
@@ -46,7 +46,7 @@ cpdef read_sector_information(
         # I will check for it in the tests.
         sectors.append(sector)
 
-    return sectors, pos
+    return sectors, pos - offset
 
 
 
