@@ -65,17 +65,24 @@ class SimTelFile(EventIOFile):
         self.histograms = None
 
         self.history = []
-        o = next(self)
-        while isinstance(o, History):
-            self.history.append(o)
+        self.mc_run_headers = []
+        while True:
             o = next(self)
+            if isinstance(o, History):
+                self.history.append(o)
+            elif isinstance(o, MCRunHeader):
+                msg = 'Unexpectd MCRunHeader in History block'
+                self.mc_run_headers.append(o.parse())
+                warnings.warn(msg)
+                log.warning(msg)
+            else:
+                break
 
         check_type(o, RunHeader)
         self.header = o.parse()
         self.n_telescopes = self.header['n_telescopes']
 
         o = next(self)
-        self.mc_run_headers = []
         while isinstance(o, MCRunHeader):
             self.mc_run_headers.append(o.parse())
             o = next(self)
