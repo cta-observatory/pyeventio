@@ -1239,7 +1239,7 @@ class CameraMonitoring(EventIOObject):
         )
 
     def parse(self):
-        assert_exact_version(self, supported_version=0)
+        assert_version_in(self, supported_versions=(0, 1))
         self.seek(0)
         byte_stream = BytesIO(self.read())
 
@@ -1251,13 +1251,13 @@ class CameraMonitoring(EventIOObject):
         moni_time = read_time(byte_stream)
 
         #  Dimensions of various things
-        # version 0
-        ns, np, nd, ng = read_from(byte_stream, '<hhhh')
-        # in version 1 this uses crazy 32bit ints
-        # ns = read_utf8_like_signed_int(byte_stream)
-        # np = read_utf8_like_signed_int(byte_stream)
-        # nd = read_utf8_like_signed_int(byte_stream)
-        # ng = read_utf8_like_signed_int(byte_stream)
+        if self.header.version == 0:
+            ns, np, nd, ng = read_from(byte_stream, '<hhhh')
+        else:  # version == 1
+            ns = read_utf8_like_signed_int(byte_stream)
+            np = read_utf8_like_signed_int(byte_stream)
+            nd = read_utf8_like_signed_int(byte_stream)
+            ng = read_utf8_like_signed_int(byte_stream)
 
         result = {
             'telescope_id': self.telescope_id,
