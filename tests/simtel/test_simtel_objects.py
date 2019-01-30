@@ -8,8 +8,10 @@ from eventio.search_utils import (
 )
 
 prod2_file = 'tests/resources/gamma_test.simtel.gz'
+camorgan_v2_file = 'tests/resources/test_camorganv2.simtel.gz'
 prod4b_sst1m_file = 'tests/resources/gamma_20deg_0deg_run102___cta-prod4-sst-1m_desert-2150m-Paranal-sst-1m.simtel.gz'
 prod4b_astri_file = 'tests/resources/gamma_20deg_0deg_run103___cta-prod4-sst-astri_desert-2150m-Paranal-sst-astri.simtel.gz'
+
 
 test_files = [
     EventIOFile(path) for path in
@@ -130,6 +132,24 @@ def test_2003_3_objects():
 
     with EventIOFile(prod2_file) as f:
         for i, o in enumerate(yield_n_and_assert(f, CameraOrganization, n=3)):
+            cam_organ = parse_and_assert_consumption(o, limit=1)
+            assert cam_organ['telescope_id'] == i + 1
+
+            for sector in cam_organ['sectors']:
+                # sector must never contain a zero, unless it is in the
+                # very first element
+                assert all(s != 0 for s in sector[1:])
+                # print(pixel_id, sector)
+
+
+def test_2003_v2():
+    from eventio.simtel.objects import CameraOrganization
+
+    with EventIOFile(camorgan_v2_file) as f:
+        for i, o in enumerate(yield_toplevel_of_type(f, CameraOrganization)):
+            if o.header.version != 2:
+                continue
+
             cam_organ = parse_and_assert_consumption(o, limit=1)
             assert cam_organ['telescope_id'] == i + 1
 

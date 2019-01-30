@@ -237,13 +237,20 @@ class CameraSettings(TelescopeObject):
 class CameraOrganization(TelescopeObject):
     eventio_type = 2003
 
-    from .parsing import read_sector_information
+    from .parsing import read_sector_information_v1
+    from ..var_int import read_sector_information_v2
 
     def parse(self):
-        assert_exact_version(self, supported_version=1)
+        assert_version_in(self, supported_versions={1, 2})
+
+        if self.header.version == 1:
+            return self.parse_v1()
+        elif self.header.version == 2:
+            return self.parse_v2()
+
+    def parse_v1(self):
         self.seek(0)
         byte_stream = BytesIO(self.read())
-
         num_pixels = read_int(byte_stream)
         num_drawers = read_int(byte_stream)
         num_gains = read_int(byte_stream)
@@ -262,8 +269,69 @@ class CameraOrganization(TelescopeObject):
 
         data = read_remaining_with_check(byte_stream, self.header.length)
         pos = 0
-        sectors, bytes_read = CameraOrganization.read_sector_information(
+        sectors, bytes_read = CameraOrganization.read_sector_information_v1(
             data, num_pixels
+        )
+        pos += bytes_read
+
+        sector_data = np.frombuffer(
+            data,
+            dtype=[
+                ('type', 'uint8'),
+                ('thresh', 'float32'),
+                ('pix_thresh', 'float32')
+            ],
+            count=num_sectors,
+            offset=pos,
+        )
+
+        return {
+            'telescope_id': self.telescope_id,
+            'num_drawers': num_drawers,
+            'drawer': drawer,
+            'card': card,
+            'chip': chip,
+            'channel': channel,
+            'sectors': sectors,
+            'sector_type': sector_data['type'],
+            'sector_threshold': sector_data['thresh'],
+            'sector_pixthresh': sector_data['pix_thresh'],
+        }
+
+    def parse_v2(self):
+        self.seek(0)
+        byte_stream = BytesIO(self.read())
+        num_pixels = read_int(byte_stream)
+        num_drawers = read_int(byte_stream)
+        num_gains = read_int(byte_stream)
+        num_sectors = read_int(byte_stream)
+
+        data = read_remaining_with_check(byte_stream, self.header.length)
+        pos = 0
+
+        drawer, length = varint_array(data, num_pixels, offset=pos)
+        pos += length
+
+        card, length = varint_array(
+            data, num_pixels * num_gains, offset=pos
+        )
+        card.shape = (num_pixels, num_gains)
+        pos += length
+
+        chip, length = varint_array(
+            data, num_pixels * num_gains, offset=pos
+        )
+        chip.shape = (num_pixels, num_gains)
+        pos += length
+
+        channel, length = varint_array(
+            data, num_pixels * num_gains, offset=pos
+        )
+        channel.shape = (num_pixels, num_gains)
+        pos += length
+
+        sectors, bytes_read = CameraOrganization.read_sector_information_v2(
+            data, num_pixels, offset=pos,
         )
         pos += bytes_read
 

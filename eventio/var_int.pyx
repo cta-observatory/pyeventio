@@ -171,12 +171,12 @@ cpdef varint_array(
     cdef unsigned long bytes_read
     cdef np.ndarray[INT64_t, ndim=1] output = np.empty(n_elements, dtype=INT64)
 
-    cdef UINT64_t val
+    cdef INT64_t val
     cdef unsigned int length
 
-    cdef unsigned long one = 1;
+    cdef int one = 1;
     cdef unsigned long i
-    cdef unsigned long pos = 0
+    cdef unsigned long pos = offset
 
     for i in range(n_elements):
         length = get_length_of_varint(data[pos])
@@ -188,7 +188,7 @@ cpdef varint_array(
         else:
             output[i] = val >> one
 
-    return output, pos
+    return output, pos - offset
 
 
 @cython.wraparound(False)  # disable negative indexing
@@ -497,3 +497,30 @@ cpdef simtel_pixel_timing_parse_list_type_1(
         'pulse_sum_glob': pulse_sum_glob,
         'pulse_sum_loc': pulse_sum_loc,
     }, pos
+
+
+
+@cython.wraparound(False)  # disable negative indexing
+cpdef read_sector_information_v2(
+    const unsigned char[:] data,
+    unsigned long n_pixels,
+    unsigned long offset = 0,
+):
+    cdef unsigned long i
+    cdef unsigned long length
+    cdef int n
+
+    cdef list sectors = []
+    cdef np.ndarray[INT64_t, ndim=1] sector
+
+    cdef unsigned long pos = offset
+    for i in range(n_pixels):
+
+        n, length = varint(data, offset=pos)
+        pos += length
+
+        sector, length = varint_array(data, n, offset=pos)
+        pos += length
+        sectors.append(sector)
+
+    return sectors, pos - offset
