@@ -65,27 +65,24 @@ class SimTelFile(EventIOFile):
         self.histograms = None
 
         self.history = []
-        o = next(self)
-        while isinstance(o, History):
-            self.history.append(o)
-            o = next(self)
-
-        check_type(o, RunHeader)
-        self.header = o.parse()
-        self.n_telescopes = self.header['n_telescopes']
-
-        o = next(self)
         self.mc_run_headers = []
-        while isinstance(o, MCRunHeader):
-            self.mc_run_headers.append(o.parse())
-            o = next(self)
-
         self.corsika_inputcards = []
-        while isinstance(o, iact.InputCard):
-            self.corsika_inputcards.append(o.parse())
-            o = next(self)
+        self.header = None
+        self.n_telescopes = 0
+        self.telescope_descriptions = defaultdict(dict)
+        self.camera_monitorings = defaultdict(dict)
+        self.laser_calibrations = defaultdict(dict)
+        self.current_photoelectrons = None
+        self.current_mc_event = None
+        self.current_mc_shower = None
+        self.current_photoelectron_sum = None
+        self.array_event = defaultdict(int)
 
-        expected_structure = [
+    def __iter__(self):
+        return self.iter_array_events()
+
+    def next_low_level(self):
+        telescope_descriptions_types = (
             CameraSettings,
             CameraOrganization,
             PixelSettings,
@@ -93,167 +90,103 @@ class SimTelFile(EventIOFile):
             CameraSoftwareSettings,
             DriveSettings,
             PointingCorrection,
-        ]
-
-        # in some files, the telescope description block
-        # strangely contains already MCRunHeader, MCEvent, MCShower
-        # we save them here for later use
-        self.init_mc_showers = []
-        self.init_mc_events = []
-
-        self.telescope_descriptions = defaultdict(dict)
-        first = True
-        for _ in range(self.n_telescopes):
-            for eventio_type in expected_structure:
-                if not first:
-                    o = next(self)
-                first = False
-
-                while not isinstance(o, eventio_type):
-                    if isinstance(o, MCRunHeader):
-                        self.mc_run_headers.append(o.parse())
-                        msg = 'Unexpectd MCRunHeader in telescope description block'
-
-                    elif isinstance(o, MCShower):
-                        self.init_mc_showers.append(o.parse())
-                        msg = 'Unexpectd MCShower in telescope description block'
-
-                    elif isinstance(o, MCEvent):
-                        self.init_mc_events.append(
-                            (o.header.id, o.parse(), self.init_mc_showers[-1])
-                        )
-                        msg = 'Unexpectd MCEvent in telescope description block'
-                    else:
-                        msg = 'Skipping unexpected object of type {}'.format(
-                            o.__class__.__name__
-                        )
-                    warnings.warn(msg)
-                    log.warning(msg)
-
-                    o = next(self)
-
-                key = camel_to_snake(o.__class__.__name__)
-                self.telescope_descriptions[o.telescope_id][key] = o.parse()
-
-        self._first_event_byte = self.tell()
-
-    def __iter__(self):
-        return self.iter_array_events()
-
-    def iter_mc_events(self):
-        self._next_header_pos = self._first_event_byte
-
-        for event_id, event, shower in self.init_mc_events:
-            yield {'event_id': event_id, 'event': event, 'shower': shower}
-
-        current_mc_shower = None
-        if len(self.init_mc_showers) > 0:
-            current_mc_shower = self.init_mc_showers[-1]
-
+        )
         o = next(self)
 
-        while True:
-            if isinstance(o, MCShower):
-                current_mc_shower = o.parse()
-
-            elif isinstance(o, MCEvent):
-                yield {
-                    'event_id': o.header.id,
-                    'mc_shower': current_mc_shower,
-                    'mc_event': o.parse()
-                }
-
-            elif isinstance(o, Histograms):
-                self.histograms = o.parse()
-                break
-
+        if isinstance(o, History):
+            self.history.append(o)
+        elif isinstance(o, RunHeader):
+            self.header = o.parse()
+            self.n_telescopes = self.header['n_telescopes']
+        elif isinstance(o, MCRunHeader):
+            self.mc_run_headers.append(o.parse())
+        elif isinstance(o, iact.InputCard):
+            self.corsika_inputcards.append(o.parse())
             o = next(self)
+        elif isinstance(o, telescope_descriptions_types):
+            key = camel_to_snake(o.__class__.__name__)
+            self.telescope_descriptions[o.telescope_id][key] = o.parse()
+
+        elif isinstance(o, MCShower):
+            self.current_mc_shower = o.parse()
+
+        elif isinstance(o, MCEvent):
+            self.current_mc_event = o.parse()
+            self.current_mc_event_id = o.header.id
+
+        elif isinstance(o, iact.TelescopeData):
+            self.current_photoelectrons = parse_photoelectrons(o)
+
+        elif isinstance(o, MCPhotoelectronSum):
+            self.current_photoelectron_sum = o.parse()
+
+        elif isinstance(o, ArrayEvent):
+            self.array_event = parse_array_event(o, self.allowed_telescopes)
+
+        elif isinstance(o, CameraMonitoring):
+            self.camera_monitorings[o.telescope_id].update(o.parse())
+
+        elif isinstance(o, LaserCalibration):
+            self.laser_calibrations[o.telescope_id].update(o.parse())
+
+        elif isinstance(o, Histograms):
+            self.histograms = o.parse()
+
+        else:
+            return o
 
     def iter_array_events(self):
-        self._next_header_pos = self._first_event_byte
-
-        current_mc_shower = None
-        current_mc_event = None
-        current_mc_event_id = None
-
-        # check if some showers or events were already read in __init__
-        if len(self.init_mc_showers) > 0:
-            current_mc_shower = self.init_mc_showers[-1]
-
-        if len(self.init_mc_events) > 0:
-            current_mc_event_id, current_mc_event, _ = self.init_mc_events[-1]
-
-        current_photoelectron_sum = None
-        current_photoelectrons = {}
-        camera_monitorings = defaultdict(dict)
-        laser_calibrations = defaultdict(dict)
-
-        try:
-            o = next(self)
-        except StopIteration:
-            return
-
         while True:
-            if isinstance(o, MCShower):
-                current_mc_shower = o.parse()
-
-            elif isinstance(o, MCEvent):
-                current_mc_event = o.parse()
-                current_mc_event_id = o.header.id
-
-            elif isinstance(o, iact.TelescopeData):
-                current_photoelectrons = parse_photoelectrons(o)
-
-            elif isinstance(o, MCPhotoelectronSum):
-                current_photoelectron_sum = o.parse()
-
-            elif isinstance(o, ArrayEvent):
-                array_event = parse_array_event(o, self.allowed_telescopes)
-
-                # with allowed_telescopes set, it might happen there
-                # are no telescopes left
-                if self.allowed_telescopes and len(array_event['telescope_events']) == 0:
-                    try:
-                        o = next(self)
-                    except StopIteration:
-                        return
-                    continue
-
-                event_data = {
-                    'event_id': current_mc_event_id,
-                    'mc_shower': current_mc_shower,
-                    'mc_event': current_mc_event,
-                    'telescope_events': array_event['telescope_events'],
-                    'tracking_positions': array_event['tracking_positions'],
-                    'trigger_information': array_event['trigger_information'],
-                    'photoelectron_sums': current_photoelectron_sum,
-                    'photoelectrons': current_photoelectrons,
-                }
-                event_data['camera_monitorings'] = {
-                    telescope_id: copy(camera_monitorings[telescope_id])
-                    for telescope_id in array_event['telescope_events'].keys()
-                }
-                event_data['laser_calibrations'] = {
-                    telescope_id: copy(laser_calibrations[telescope_id])
-                    for telescope_id in array_event['telescope_events'].keys()
-                }
-                yield event_data
-
-            elif isinstance(o, CameraMonitoring):
-                camera_monitorings[o.telescope_id].update(o.parse())
-
-            elif isinstance(o, LaserCalibration):
-                laser_calibrations[o.telescope_id].update(o.parse())
-
-            elif isinstance(o, Histograms):
-                self.histograms = o.parse()
-                break
-
             try:
-                o = next(self)
+                next_event = self.try_build_event()
             except StopIteration:
-                return
+                break
+            if next_event is not None:
+                yield next_event
 
+    def try_build_event(self):
+        '''check if all necessary info for an event was found,
+        then make an event and invalidate old data
+        '''
+        o = self.next_low_level()
+
+        if all((
+            self.current_mc_shower,
+            self.current_mc_event,
+            self.array_event['telescope_events'],
+            self.array_event['tracking_positions'],
+            self.array_event['trigger_information'],
+            # self.current_photoelectron_sum,
+            # self.current_photoelectrons,
+        )):
+            event_data = {
+                'event_id': self.current_mc_event_id,
+                'mc_shower': self.current_mc_shower,
+                'mc_event': self.current_mc_event,
+                'telescope_events': self.array_event['telescope_events'],
+                'tracking_positions': self.array_event['tracking_positions'],
+                'trigger_information': self.array_event['trigger_information'],
+                'photoelectron_sums': self.current_photoelectron_sum,
+                'photoelectrons': self.current_photoelectrons,
+            }
+            event_data['camera_monitorings'] = {
+                telescope_id: copy(self.camera_monitorings[telescope_id])
+                for telescope_id in self.array_event['telescope_events'].keys()
+            }
+            event_data['laser_calibrations'] = {
+                telescope_id: copy(self.laser_calibrations[telescope_id])
+                for telescope_id in self.array_event['telescope_events'].keys()
+            }
+
+            self.current_mc_shower = None
+            self.current_mc_event = None
+            self.array_event['telescope_events'] = None
+            self.array_event['tracking_positions'] = None
+            self.array_event['trigger_information'] = None
+            self.current_photoelectron_sum = None
+            self.current_photoelectrons = None
+
+            return event_data
 
 def parse_array_event(array_event, allowed_telescopes=None):
     '''structure of event:
