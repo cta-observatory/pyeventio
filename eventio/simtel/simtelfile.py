@@ -83,6 +83,8 @@ class SimTelFile(EventIOFile):
         while self.current_mc_shower is None:
             self.next_low_level()
 
+        self._first_event_byte = self.tell()
+
     def __iter__(self):
         return self.iter_array_events()
 
@@ -146,6 +148,7 @@ class SimTelFile(EventIOFile):
             )
 
     def iter_mc_events(self):
+        self._next_header_pos = self._first_event_byte
         while True:
             try:
                 next_event = self.try_build_mc_event()
@@ -166,6 +169,7 @@ class SimTelFile(EventIOFile):
             return event_data
 
     def iter_array_events(self):
+        self._next_header_pos = self._first_event_byte
         while True:
             try:
                 next_event = self.try_build_event()
