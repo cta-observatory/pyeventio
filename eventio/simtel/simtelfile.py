@@ -140,6 +140,26 @@ class SimTelFile(EventIOFile):
                 'at the moment: {}'.format(o)
             )
 
+    def iter_mc_events(self):
+        while True:
+            try:
+                next_event = self.try_build_mc_event()
+            except StopIteration:
+                break
+            if next_event is not None:
+                yield next_event
+
+    def try_build_mc_event(self):
+        self.next_low_level()
+        if self.current_mc_event:
+            event_data = {
+                'event_id': self.current_mc_event_id,
+                'mc_shower': self.current_mc_shower,
+                'mc_event': self.current_mc_event,
+            }
+            self.current_mc_event = None
+            return event_data
+
     def iter_array_events(self):
         while True:
             try:
