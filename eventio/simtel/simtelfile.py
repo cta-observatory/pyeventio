@@ -78,6 +78,12 @@ class SimTelFile(EventIOFile):
         self.current_photoelectrons = None
         self.current_array_event = None
 
+        # read the header:
+        # assumption: the header is done when
+        # self.current_mc_shower is not None anymore
+        while self.current_mc_shower is None:
+            self.next_low_level()
+
     def __iter__(self):
         return self.iter_array_events()
 
@@ -190,9 +196,12 @@ class SimTelFile(EventIOFile):
                 'telescope_events': self.current_array_event['telescope_events'],
                 'tracking_positions': self.current_array_event['tracking_positions'],
                 'trigger_information': self.current_array_event['trigger_information'],
-                'photoelectron_sums': self.current_photoelectron_sum,
-                'photoelectrons': self.current_photoelectrons,
             }
+            if self.current_photoelectron_sum:
+                event_data['photoelectron_sums'] = self.current_photoelectron_sum
+            if self.current_photoelectrons:
+                event_data['photoelectrons'] = self.current_photoelectrons
+
             event_data['camera_monitorings'] = {
                 telescope_id: copy(self.camera_monitorings[telescope_id])
                 for telescope_id in self.current_array_event['telescope_events'].keys()
