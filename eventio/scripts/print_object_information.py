@@ -74,6 +74,7 @@ def main():
                 t, v, c, sizes[t,v]/1204**2, q,
             ))
         print('-' * 60)
+        print('total size in MB: {:.2f}'.format(sum(sizes.values()) / 1024**2))
 
 
 if __name__ == '__main__':
