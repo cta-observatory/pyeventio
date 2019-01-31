@@ -75,7 +75,7 @@ class SimTelFile(EventIOFile):
         self.current_mc_shower = None
         self.current_mc_event = None
         self.current_photoelectron_sum = None
-        self.current_photoelectrons = None
+        self.current_photoelectrons = {}
         self.current_array_event = None
 
         # read the header:
@@ -196,11 +196,9 @@ class SimTelFile(EventIOFile):
                 'telescope_events': self.current_array_event['telescope_events'],
                 'tracking_positions': self.current_array_event['tracking_positions'],
                 'trigger_information': self.current_array_event['trigger_information'],
+                'photoelectron_sums': self.current_photoelectron_sum,
+                'photoelectrons': self.current_photoelectrons,
             }
-            if self.current_photoelectron_sum:
-                event_data['photoelectron_sums'] = self.current_photoelectron_sum
-            if self.current_photoelectrons:
-                event_data['photoelectrons'] = self.current_photoelectrons
 
             event_data['camera_monitorings'] = {
                 telescope_id: copy(self.camera_monitorings[telescope_id])
