@@ -1,6 +1,6 @@
 from eventio import EventIOFile
 from argparse import ArgumentParser
-from collections import Counter
+from collections import Counter, defaultdict
 import json
 import warnings
 from eventio.simtel import TrackingPosition, TelescopeEvent
@@ -29,6 +29,25 @@ def count_versions(f):
     return c
 
 
+def sum_up_size(f, sizes=defaultdict(int)):
+    try:
+        for o in f:
+            if o.header.only_subobjects:
+                sum_up_size(o, sizes)
+            else:
+                if isinstance(o, TrackingPosition):
+                    eventio_type = 2100
+                elif isinstance(o, TelescopeEvent):
+                    eventio_type = 2200
+                else:
+                    eventio_type = o.header.type
+
+                sizes[eventio_type, o.header.version] += o.header.length
+    except EOFError:
+        warnings.warn("File seems to be truncated")
+    return sizes
+
+
 parser = ArgumentParser()
 parser.add_argument('inputfile')
 parser.add_argument('--json', help='print json', action='store_true')
@@ -39,6 +58,7 @@ def main():
 
     with EventIOFile(args.inputfile) as f:
         counter = count_versions(f)
+        sizes = sum_up_size(f)
 
     if args.json:
         object_info = [
@@ -47,13 +67,14 @@ def main():
         ]
         print(json.dumps(object_info, indent=2))
     else:
-        print(' Type | Version | #Objects | eventio-class')
+        print(' Type | Version | #Objects |size in MB| eventio-class')
         print('-' * 60)
         for (t, v, q), c in sorted(list(counter.items())):
-            print('{: 5d} | {: 7d} | {: 8d} | {}'.format(
-                t, v, c, q,
+            print('{: 5d} | {: 7d} | {: 8d} | {: 8.2f} | {}'.format(
+                t, v, c, sizes[t,v]/1204**2, q,
             ))
         print('-' * 60)
+        print('total size in MB: {:.2f}'.format(sum(sizes.values()) / 1024**2))
 
 
 if __name__ == '__main__':
