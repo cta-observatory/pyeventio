@@ -72,11 +72,11 @@ class SimTelFile(EventIOFile):
         self.telescope_descriptions = defaultdict(dict)
         self.camera_monitorings = defaultdict(dict)
         self.laser_calibrations = defaultdict(dict)
-        self.current_photoelectrons = None
-        self.current_mc_event = None
         self.current_mc_shower = None
+        self.current_mc_event = None
         self.current_photoelectron_sum = None
-        self.array_event = defaultdict(int)
+        self.current_photoelectrons = None
+        self.current_array_event = None
 
     def __iter__(self):
         return self.iter_array_events()
@@ -121,7 +121,10 @@ class SimTelFile(EventIOFile):
             self.current_photoelectron_sum = o.parse()
 
         elif isinstance(o, ArrayEvent):
-            self.array_event = parse_array_event(o, self.allowed_telescopes)
+            self.current_array_event = parse_array_event(
+                o,
+                self.allowed_telescopes
+            )
 
         elif isinstance(o, CameraMonitoring):
             self.camera_monitorings[o.telescope_id].update(o.parse())
@@ -131,9 +134,11 @@ class SimTelFile(EventIOFile):
 
         elif isinstance(o, Histograms):
             self.histograms = o.parse()
-
         else:
-            return o
+            raise Exception(
+                'object type encountered, which is no handled'
+                'at the moment: {}'.format(o)
+            )
 
     def iter_array_events(self):
         while True:
@@ -148,45 +153,39 @@ class SimTelFile(EventIOFile):
         '''check if all necessary info for an event was found,
         then make an event and invalidate old data
         '''
-        o = self.next_low_level()
+        self.next_low_level()
 
-        if all((
-            self.current_mc_shower,
-            self.current_mc_event,
-            self.array_event['telescope_events'],
-            self.array_event['tracking_positions'],
-            self.array_event['trigger_information'],
-            # self.current_photoelectron_sum,
-            # self.current_photoelectrons,
-        )):
+        if self.current_array_event:
+            if (
+                self.allowed_telescopes
+                and not self.current_array_event['telescope_events']
+            ):
+                self.current_array_event = None
+                return None
+
             event_data = {
                 'event_id': self.current_mc_event_id,
                 'mc_shower': self.current_mc_shower,
                 'mc_event': self.current_mc_event,
-                'telescope_events': self.array_event['telescope_events'],
-                'tracking_positions': self.array_event['tracking_positions'],
-                'trigger_information': self.array_event['trigger_information'],
+                'telescope_events': self.current_array_event['telescope_events'],
+                'tracking_positions': self.current_array_event['tracking_positions'],
+                'trigger_information': self.current_array_event['trigger_information'],
                 'photoelectron_sums': self.current_photoelectron_sum,
                 'photoelectrons': self.current_photoelectrons,
             }
             event_data['camera_monitorings'] = {
                 telescope_id: copy(self.camera_monitorings[telescope_id])
-                for telescope_id in self.array_event['telescope_events'].keys()
+                for telescope_id in self.current_array_event['telescope_events'].keys()
             }
             event_data['laser_calibrations'] = {
                 telescope_id: copy(self.laser_calibrations[telescope_id])
-                for telescope_id in self.array_event['telescope_events'].keys()
+                for telescope_id in self.current_array_event['telescope_events'].keys()
             }
 
-            self.current_mc_shower = None
-            self.current_mc_event = None
-            self.array_event['telescope_events'] = None
-            self.array_event['tracking_positions'] = None
-            self.array_event['trigger_information'] = None
-            self.current_photoelectron_sum = None
-            self.current_photoelectrons = None
+            self.current_array_event = None
 
             return event_data
+
 
 def parse_array_event(array_event, allowed_telescopes=None):
     '''structure of event:
