@@ -84,7 +84,6 @@ class SimTelFile(EventIOFile):
             self.next_low_level()
 
     def __iter__(self):
-        self.__init__(self.path, self.allowed_telescopes)
         return self.iter_array_events()
 
     def next_low_level(self):
