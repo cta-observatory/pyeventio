@@ -109,7 +109,6 @@ class SimTelFile(EventIOFile):
             self.mc_run_headers.append(o.parse())
         elif isinstance(o, iact.InputCard):
             self.corsika_inputcards.append(o.parse())
-            # o = next(self)
         elif isinstance(o, telescope_descriptions_types):
             key = camel_to_snake(o.__class__.__name__)
             self.telescope_descriptions[o.telescope_id][key] = o.parse()
