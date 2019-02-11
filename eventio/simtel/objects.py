@@ -1531,7 +1531,7 @@ class FSPhot(EventIOObject):
     eventio_type = 2031
 
 
-class PixelTriggerTimes(TelescopeEvent):
+class PixelTriggerTimes(TelescopeObject):
     eventio_type = 2032
 
 
