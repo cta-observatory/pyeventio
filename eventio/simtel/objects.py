@@ -1480,8 +1480,8 @@ class PixelList(EventIOObject):
 
     def __init__(self, header, filehandle):
         super().__init__(header, filehandle)
-        self.telescope_id = self.header.id // 1000000
-        self.code = self.telescope_id % 1000000
+        self.telescope_id = self.header.id % 1000000
+        self.code = self.header.id // 1000000
 
     def __repr__(self):
         return '{}[{}](telescope_id={}, code={})'.format(
