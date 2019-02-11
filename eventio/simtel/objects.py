@@ -909,15 +909,17 @@ class ADCSamples(EventIOObject):
 class ImageParameters(EventIOObject):
     eventio_type = 2014
 
-    def __repr__(self):
-        telescope_id = (
+    def __init__(self, header, filehandle):
+        super().__init__(header, filehandle)
+        self.telescope_id = (
             (self.header.id & 0xff) | (self.header.id & 0x3f000000) >> 16
         )
 
+    def __repr__(self):
         return '{}[{}](telescope_id={})'.format(
             self.__class__.__name__,
             self.header.type,
-            telescope_id,
+            self.telescope_id,
         )
 
     def parse(self):
@@ -1047,17 +1049,10 @@ class StereoReconstruction(EventIOObject):
         return shower
 
 
-class PixelTiming(EventIOObject):
+class PixelTiming(TelescopeObject):
     eventio_type = 2016
     from ..var_int import simtel_pixel_timing_parse_list_type_1 as _parse_list_type_1
     from ..var_int import simtel_pixel_timing_parse_list_type_2 as _parse_list_type_2
-
-    def __repr__(self):
-        return '{}[{}](telescope_id={})'.format(
-            self.__class__.__name__,
-            self.header.type,
-            self.header.id,
-        )
 
     def parse(self):
         assert_exact_version(self, supported_version=1)
@@ -1487,8 +1482,8 @@ class PixelList(EventIOObject):
 
     def __init__(self, header, filehandle):
         super().__init__(header, filehandle)
-        self.telescope_id = self.header.id // 1000000
-        self.code = self.telescope_id % 1000000
+        self.telescope_id = self.header.id % 1000000
+        self.code = self.header.id // 1000000
 
     def __repr__(self):
         return '{}[{}](telescope_id={}, code={})'.format(
@@ -1538,7 +1533,7 @@ class FSPhot(EventIOObject):
     eventio_type = 2031
 
 
-class PixelTriggerTimes(TelescopeEvent):
+class PixelTriggerTimes(TelescopeObject):
     eventio_type = 2032
 
 
