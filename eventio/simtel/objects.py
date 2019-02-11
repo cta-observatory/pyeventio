@@ -1047,17 +1047,10 @@ class StereoReconstruction(EventIOObject):
         return shower
 
 
-class PixelTiming(EventIOObject):
+class PixelTiming(TelescopeObject):
     eventio_type = 2016
     from ..var_int import simtel_pixel_timing_parse_list_type_1 as _parse_list_type_1
     from ..var_int import simtel_pixel_timing_parse_list_type_2 as _parse_list_type_2
-
-    def __repr__(self):
-        return '{}[{}](telescope_id={})'.format(
-            self.__class__.__name__,
-            self.header.type,
-            self.header.id,
-        )
 
     def parse(self):
         assert_exact_version(self, supported_version=1)
