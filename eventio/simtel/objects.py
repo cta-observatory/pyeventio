@@ -909,15 +909,17 @@ class ADCSamples(EventIOObject):
 class ImageParameters(EventIOObject):
     eventio_type = 2014
 
-    def __repr__(self):
-        telescope_id = (
+    def __init__(self, header, filehandle):
+        super().__init__(header, filehandle)
+        self.telescope_id = (
             (self.header.id & 0xff) | (self.header.id & 0x3f000000) >> 16
         )
 
+    def __repr__(self):
         return '{}[{}](telescope_id={})'.format(
             self.__class__.__name__,
             self.header.type,
-            telescope_id,
+            self.telescope_id,
         )
 
     def parse(self):
