@@ -945,7 +945,6 @@ class ADCSums(EventIOObject):
             except ValueError:
                 return raw['adc_sums']
 
-
         raise NotImplementedError(
             'Currently no support for data_red_mode {} or zero_sup_mode{}'.format(
                 raw['data_red_mode'], raw['zero_sup_mode'],
@@ -969,34 +968,40 @@ class ADCSamples(EventIOObject):
 
     def parse(self):
         assert_exact_version(self, supported_version=3)
-        unsupported = (
-            self._zero_sup_mode != 0
-            or self._data_red_mode != 0
-            or self._list_known
+
+        if (
+            self._data_red_mode == 0 and
+            not self._list_known
+        ):
+            self.seek(0)
+            byte_stream = BytesIO(self.read())
+
+            args = {
+                'byte_stream': byte_stream,
+                'n_pixels': read_int(byte_stream),
+                'n_gains': read_short(byte_stream),
+                'n_samples': read_short(byte_stream),
+            }
+            if self._zero_sup_mode:
+                result = self._parse_in_zero_suppressed_mode(**args)
+            else:
+                result = self._parse_in_not_zero_suppressed_mode(**args)
+
+            try:
+                result = np.squeeze(result, axis=-1)
+            except ValueError:
+                pass
+
+            return result
+
+        raise NotImplementedError(
+            (
+                'Currently no support for '
+                'data_red_mode {} and zero_sup_mode {}'
+            ).format(
+                self._data_red_mode, self._zero_sup_mode,
+            )
         )
-        if unsupported:
-            raise NotImplementedError
-
-        self.seek(0)
-        byte_stream = BytesIO(self.read())
-
-        args = {
-            'byte_stream': byte_stream,
-            'n_pixels': read_int(byte_stream),
-            'n_gains': read_short(byte_stream),
-            'n_samples': read_short(byte_stream),
-        }
-        if self._zero_sup_mode:
-            result = self._parse_in_zero_suppressed_mode(**args)
-        else:
-            result = self._parse_in_not_zero_suppressed_mode(**args)
-
-        try:
-            result = np.squeeze(result, axis=-1)
-        except ValueError:
-            pass
-
-        return result
 
     def _parse_in_zero_suppressed_mode(
         self,
@@ -1025,13 +1030,20 @@ class ADCSamples(EventIOObject):
         n_pixels_signal = sum(p[1] - p[0] for p in pixel_ranges)
         data = read_remaining_with_check(byte_stream, self.header.length)
         adc_samples_signal, bytes_read = unsigned_varint_arrays_differential(
-            data, n_arrays=n_gains * n_pixels_signal, n_elements=n_samples,
+            data,
+            n_arrays=n_gains * n_pixels_signal,
+            n_elements=n_samples,
         )
+        adc_samples_signal = adc_samples_signal.reshape(
+            n_gains, n_pixels_signal, n_samples
+        ).astype('u2')
 
         for i_gain in range(n_gains):
             for pixel_range in pixel_ranges:
                 for i_array, i_pix in enumerate(range(*pixel_range)):
-                    adc_samples[i_gain, i_pix, :] = adc_samples_signal[i_gain, i_array]
+                    adc_samples[i_gain, i_pix, :] = (
+                        adc_samples_signal[i_gain, i_array]
+                    )
         return adc_samples
 
     def _parse_in_not_zero_suppressed_mode(
