@@ -1,5 +1,9 @@
 language: python
 
+env:
+  secure: "SEjvGQfn1UaG/S3Ev1yrT6/vk0BIvfauRW1PCboypXYym0nd/X8T9xyQJ3OoJp7Ddc59Hb9W+s6vT3khe+D94sYbLlKCoFy9uslHTemWWE9o67zkX0IPfAt2ylyvMdpBqUg9YcsHZLGXSUWdhWglCuJ2ANBDuw26QDoNBe24npl5DLBugbhCxKIcTqurjfRl1VlQUuPnvIjtfmgxuMK71Qz0r7aTIHo4oloL8NHSSR1WBom3glFRoNOzYgUMoktJve1upCQ39kqvjVbi8zmW8GTcSIyDUIXsYQE6v+zM1WKsinfjrZ6DXPQOGyX9ps6EWWhXyihYHCxRjJo7x1vNbYXTatEkvYc3TjnUTdWXj8jTd/dKpNLIxbocBteVTuR1E3h8pJr2uE+MnhQt/+FL0Mx6iQ2W5VuEojetqnqA09K1LCkqYJo3q783ciV1t3WbnjFuMpVjctyQfkcLkVRwXX1B44/E1/FmsOqiayuOrlTz5CYIZ+UhrZptm8WGbOvpsiFzXwaPJcipo95DZZa0ysVOVzbXLriNbX4xQXp+6m5gAl1YnycP0b8m/7w3g46Y8KuGC7Q4Tt2xK0FlOWZDM1Oo3XssVTazwElKAd7Ct+FcdtH/4F5R4ppfVBI/9pOKt4108S0zM37eaOBkAelqWeftpiSj2xbwHUXjlbHw7QA="
+  secure: "eYMeBPCgpu5ykMLqNcJgPKro2+Vfl4DAguZxkjCYbEgOkUYXFE4wgmCflGyAt86aJDQTHQvjF/TbI2O9J++VxJZoU7s4LXwwHa00a5iU+IKbpkeUPqirhlAPjFND14IzhJZNFz5il4TXnCBbnck135aUds/sKV7m4dv8D9lBt6T9sTEXvIKjPifRWXYO7M8CYnRity1ggKO9zRB9wQ13hxh2xSCYw5wdnD0Wexxr7BfuDEcEc3HKeBnVt9kcqdr5+INcRPMmztFpaObWgTa4J8pZBBdyT6HBp3T8MuBLjjbNTjS6asAb1eFuxK3dVuc35R8wJpo17cpqeJfc5NzG9NqIeDv5mAtzYTcu6FwUa2tWvbr20CzVyFXXVZdNbxuh8+Ns85aYMGc5IgRps8k2UT+M2diTGqZ2IlEgS5BJFa9vDlu0g8/wGOvTmRcbnMFElMRVuU7TMRaD5MvGBqvcnsV3rvH0sthhLMhDb9oNq+H9s2pg8/y9hZOy8WcFwNsrbApvgyKw0ijthRN9bBY9T/54zGjq7kKTozi+pTQLUUdIsxTqCr2X/FxcsfYtnFMF/3FOalAQbtMhUdHlkGNv3OKZPlfn874MNjOlcUaUTsK5ccRFaY9lBOXdQ5+We/ia+tiTDln5yrIn+YHU2K/iJH69fBffQFfYgKwr0Ip77R0="
+
 matrix:
   include:
     - os: linux
@@ -30,6 +34,11 @@ install:
 
 before_script:
   - pip install --upgrade pytest>=3.0.0
+  - mkdir test_files
+  - export TEST_FILE_DIR=`pwd -P`
+  - echo $TEST_FILE_DIR
+  - wget --user=$DOWNLOAD_USER --password=$DOWNLOAD_PASSWORD https://www.mpi-hd.mpg.de/personalhomes/bernlohr/cta-raw/Prod-3/data-demo2/Paranal/Sector/Gamma-clean-1/gamma_20deg_180deg_run1187___cta-prod3-demo_desert-2150m-Paranal-demo2sect_cone10.simtel-clean3.gz
+  - cd ..
 
 script:
   - python setup.py test
