@@ -55,7 +55,7 @@ class RunHeader(EventIOObject):
         if n != 273:
             raise WrongSize('Expected 273 floats, but found {}'.format(n))
 
-        return parse_run_header(stream.read())
+        return parse_run_header(stream.read())[0]
 
 
 class TelescopeDefinition(EventIOObject):
@@ -120,7 +120,7 @@ class EventHeader(EventIOObject):
             raise WrongSize(
                 'Expected 273 floats, but found {}'.format(n))
 
-        return parse_event_header(data[4:])
+        return parse_event_header(data[4:])[0]
 
 
 class ArrayOffsets(EventIOObject):
@@ -155,17 +155,14 @@ class ArrayOffsets(EventIOObject):
             data,
             dtype=np.float32,
             count=self.n_arrays * n_columns,
-        ).reshape(n_columns, self.n_arrays)
+        )
+
+        dtypes = [('x', 'f4'), ('y', 'f4')]
 
         if n_columns == 3:
-            weights = positions[3, :]
-        else:
-            weights = np.ones(self.n_arrays, dtype=np.float32)
+            dtypes.append(('weight', 'f4'))
 
-        return np.core.records.fromarrays(
-            [positions[0, :], positions[1, :], weights],
-            names=['x', 'y', 'weight'],
-        )
+        return positions.view(dtypes)
 
 
 class TelescopeData(EventIOObject):

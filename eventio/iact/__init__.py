@@ -149,13 +149,18 @@ class IACTFile(EventIOFile):
                         n_photons[data.telescope] = data.n_photons
                         n_bunches[data.telescope] = data.n_bunches
 
+                if len(array_offsets.dtype) == 3:
+                    weight = array_offsets[reuse]['y']
+                else:
+                    weight = 1.0
+
                 yield Event(
                     header=header,
                     photon_bunches=photon_bunches,
                     time_offset=time_offset,
-                    x_offset=array_offsets[reuse]['x'],
-                    y_offset=array_offsets[reuse]['y'],
-                    weight=array_offsets[reuse]['weight'],
+                    impact_x=-array_offsets[reuse]['x'],
+                    impact_y=-array_offsets[reuse]['y'],
+                    reuse_weight=weight,
                     event_number=header['event_number'],
                     reuse=reuse + 1,
                     n_photons=n_photons,
@@ -176,7 +181,8 @@ EventTuple = namedtuple(
     'EventTuple',
     [
         'header', 'photon_bunches',
-        'time_offset', 'x_offset', 'y_offset', 'weight',
+        'time_offset', 'impact_x', 'impact_y',
+        'reuse_weight',
         'event_number', 'reuse',
         'n_photons', 'n_bunches',
         'longitudinal',
