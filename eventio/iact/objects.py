@@ -195,6 +195,8 @@ class Photons(EventIOObject):
     def __init__(self, header, filehandle):
         super().__init__(header, filehandle)
         self.compact = bool(self.header.version // 1000 == 1)
+        self.array_id = self.header.id // 1000
+        self.telescope_id = self.header.id % 1000
 
         (
             self.array,
@@ -204,9 +206,10 @@ class Photons(EventIOObject):
         ) = read_from(self, 'hhfi')
 
     def __repr__(self):
-        return '{}(length={}, n_bunches={})'.format(
+        return '{}(array_id={}, telescope_id={}, n_bunches={})'.format(
             self.__class__.__name__,
-            self.header.length,
+            self.array_id,
+            self.telescope_id,
             self.n_bunches,
         )
 
