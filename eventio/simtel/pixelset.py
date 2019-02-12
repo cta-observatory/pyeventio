@@ -7,25 +7,25 @@ dt1 = np.dtype([
     ('setup_id', 'i4'),
     ('trigger_mode', 'i4'),
     ('min_pixel_mult', 'i4'),
-    ('num_pixels', 'i4'),
+    ('n_pixels', 'i4'),
 ])
 
 
 @lru_cache()
-def build_dt2(num_pixels):
+def build_dt2(n_pixels):
     return np.dtype([
-        ('pixel_HV_DAC', 'i4', (num_pixels,)),
-        ('num_drawers', 'i4'),
+        ('pixel_HV_DAC', 'i4', (n_pixels,)),
+        ('n_drawers', 'i4'),
     ])
 
 
 @lru_cache()
-def build_dt3(version, num_drawers):
+def build_dt3(version, n_drawers):
     dt = [
-        ('threshold_DAC', 'i4', (num_drawers,)),
-        ('num_drawers', 'i4'),
-        ('ADC_start', 'i2', (num_drawers,)),
-        ('ADC_count', 'i2', (num_drawers,)),
+        ('threshold_DAC', 'i4', (n_drawers,)),
+        ('n_drawers', 'i4'),
+        ('ADC_start', 'i2', (n_drawers,)),
+        ('ADC_count', 'i2', (n_drawers,)),
     ]
 
     if version >= 1:
@@ -37,10 +37,10 @@ def build_dt3(version, num_drawers):
     return np.dtype(dt)
 
 
-# nrefshape = tools.get_scount(data)
-# lrefshape = tools.get_scount(data)
-def build_dt4(nrefshape, lrefshape):
+# nref_shape = tools.get_scount(data)
+# lref_shape = tools.get_scount(data)
+def build_dt4(n_ref_shape, l_ref_shape):
     return np.dtype([
         ('ref_step', 'f4'),
-        ('refshape', 'f2', (nrefshape, lrefshape)),
+        ('ref_shape', 'f2', (n_ref_shape, l_ref_shape)),
     ])
