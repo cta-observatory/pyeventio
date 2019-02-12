@@ -829,12 +829,10 @@ class ADCSums(EventIOObject):
             except ValueError:
                 return raw['adc_sums']
 
-
         if raw['data_red_mode'] == 0 and raw['zero_sup_mode'] == 1:
             ns, ks = make_ks_n_ns(n_pixels)
             adc_sums = np.zeros((n_gains, n_pixels), dtype='f8')
             raw['adc_sums'] = adc_sums
-
 
             data = read_remaining_with_check(byte_stream, self.header.length)
             pos = 0
@@ -935,7 +933,10 @@ class ADCSums(EventIOObject):
                 return raw['adc_sums']
 
         raise NotImplementedError(
-            'Currently no support for data_red_mode {} or zero_sup_mode{}'.format(
+            (
+                'Currently no support for '
+                'data_red_mode {} or zero_sup_mode{}'
+            ).format(
                 raw['data_red_mode'], raw['zero_sup_mode'],
             )
         )
@@ -1000,7 +1001,7 @@ class ADCSamples(EventIOObject):
         n_samples,
     ):
         adc_samples = np.ones(
-            (num_gains, num_pixels, num_samples),
+            (n_gains, n_pixels, n_samples),
             dtype='f4'
         ) * np.nan
 
