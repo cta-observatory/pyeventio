@@ -1010,19 +1010,29 @@ class ADCSamples(EventIOObject):
         n_pixels,
         n_samples,
     ):
+        adc_samples = np.ones(
+            (num_gains, num_pixels, num_samples),
+            dtype='f4'
+        ) * np.nan
+
         list_size = read_utf8_like_signed_int(byte_stream)
         pixel_ranges = []
         for _ in range(list_size):
             start_pixel_id = read_utf8_like_signed_int(byte_stream)
             if start_pixel_id < 0:
                 pixel_ranges.append(
-                    (-start_pixel_id - 1, -start_pixel_id - 1)
+                    (
+                        -start_pixel_id - 1,
+                        -start_pixel_id
+                    )
                 )
             else:
                 pixel_ranges.append(
-                    (start_pixel_id, read_utf8_like_signed_int(byte_stream))
+                    (
+                        start_pixel_id,
+                        read_utf8_like_signed_int(byte_stream) + 1
+                    )
                 )
-
         adc_samples = np.zeros(
             (n_gains, n_pixels, n_samples),
             dtype='u2'
@@ -1039,11 +1049,13 @@ class ADCSamples(EventIOObject):
         ).astype('u2')
 
         for i_gain in range(n_gains):
+            i_array = 0
             for pixel_range in pixel_ranges:
-                for i_array, i_pix in enumerate(range(*pixel_range)):
+                for i_pix in range(*pixel_range):
                     adc_samples[i_gain, i_pix, :] = (
                         adc_samples_signal[i_gain, i_array]
                     )
+                    i_array += 1
         return adc_samples
 
     def _parse_in_not_zero_suppressed_mode(
