@@ -279,7 +279,7 @@ class CameraOrganization(TelescopeObject):
             dtype=[
                 ('type', 'uint8'),
                 ('threshold', 'float32'),
-                ('pix_threshold', 'float32')
+                ('pixel_threshold', 'float32')
             ],
             count=n_sectors,
             offset=pos,
@@ -1451,16 +1451,16 @@ class MCPhotoelectronSum(EventIOObject):
         # I don't see how we can speed this up easily since the length
         # of this thing is not known upfront.
 
-        # pix_pe: a list (running over telescope_id)
+        # pixel_pe: a list (running over telescope_id)
         #         of 2-tuples: (pixel_id, pe)
-        pix_pe = []
+        pixel_pe = []
         for n_pe, n_pixels in zip(n_pe, n_pixels):
             if n_pe <= 0 or n_pixels <= 0:
                 continue
             non_empty = read_short(byte_stream)
             pixel_id = read_array(byte_stream, 'i2', non_empty)
             pe = read_array(byte_stream, 'i4', non_empty)
-            pix_pe.append(pixel_id, pe)
+            pixel_pe.append(pixel_id, pe)
 
         photons = read_array(byte_stream, 'f4', n_tel)
         photons_atm = read_array(byte_stream, 'f4', n_tel)
@@ -1474,7 +1474,7 @@ class MCPhotoelectronSum(EventIOObject):
             'n_tel': n_tel,
             'n_pe': n_pe,
             'n_pixels': n_pixels,
-            'pix_pe': pix_pe,
+            'pixel_pe': pixel_pe,
             'photons': photons,
             'photons_atm': photons_atm,
             'photons_atm_3_6': photons_atm_3_6,
