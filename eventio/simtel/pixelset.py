@@ -7,25 +7,25 @@ dt1 = np.dtype([
     ('setup_id', 'i4'),
     ('trigger_mode', 'i4'),
     ('min_pixel_mult', 'i4'),
-    ('num_pixels', 'i4'),
+    ('n_pixels', 'i4'),
 ])
 
 
 @lru_cache()
-def build_dt2(num_pixels):
+def build_dt2(n_pixels):
     return np.dtype([
-        ('pixel_HV_DAC', 'i4', (num_pixels,)),
-        ('num_drawers', 'i4'),
+        ('pixel_HV_DAC', 'i4', (n_pixels,)),
+        ('n_drawers', 'i4'),
     ])
 
 
 @lru_cache()
-def build_dt3(version, num_drawers):
+def build_dt3(version, n_drawers):
     dt = [
-        ('threshold_DAC', 'i4', (num_drawers,)),
-        ('num_drawers', 'i4'),
-        ('ADC_start', 'i2', (num_drawers,)),
-        ('ADC_count', 'i2', (num_drawers,)),
+        ('threshold_DAC', 'i4', (n_drawers,)),
+        ('n_drawers', 'i4'),
+        ('ADC_start', 'i2', (n_drawers,)),
+        ('ADC_count', 'i2', (n_drawers,)),
     ]
 
     if version >= 1:

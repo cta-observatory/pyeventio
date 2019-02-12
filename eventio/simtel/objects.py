@@ -136,8 +136,8 @@ class MCRunHeader(EventIOObject):
             'detector_prog_vers': read_int(byte_stream),
             'detector_prog_start': read_int(byte_stream),
             'obsheight': read_float(byte_stream),
-            'num_showers': read_int(byte_stream),
-            'num_use': read_int(byte_stream),
+            'n_showers': read_int(byte_stream),
+            'n_use': read_int(byte_stream),
             'core_pos_mode': read_int(byte_stream),
             'core_range': read_array(byte_stream, 'f4', 2),
             'alt_range': read_array(byte_stream, 'f4', 2),
@@ -251,26 +251,26 @@ class CameraOrganization(TelescopeObject):
     def parse_v1(self):
         self.seek(0)
         byte_stream = BytesIO(self.read())
-        num_pixels = read_int(byte_stream)
-        num_drawers = read_int(byte_stream)
-        num_gains = read_int(byte_stream)
-        num_sectors = read_int(byte_stream)
+        n_pixels = read_int(byte_stream)
+        n_drawers = read_int(byte_stream)
+        n_gains = read_int(byte_stream)
+        n_sectors = read_int(byte_stream)
 
-        drawer = read_array(byte_stream, 'i2', num_pixels)
+        drawer = read_array(byte_stream, 'i2', n_pixels)
         card = read_array(
-            byte_stream, 'i2', num_pixels * num_gains
-        ).reshape(num_pixels, num_gains)
+            byte_stream, 'i2', n_pixels * n_gains
+        ).reshape(n_pixels, n_gains)
         chip = read_array(
-            byte_stream, 'i2', num_pixels * num_gains
-        ).reshape(num_pixels, num_gains)
+            byte_stream, 'i2', n_pixels * n_gains
+        ).reshape(n_pixels, n_gains)
         channel = read_array(
-            byte_stream, 'i2', num_pixels * num_gains
-        ).reshape(num_pixels, num_gains)
+            byte_stream, 'i2', n_pixels * n_gains
+        ).reshape(n_pixels, n_gains)
 
         data = read_remaining_with_check(byte_stream, self.header.length)
         pos = 0
         sectors, bytes_read = CameraOrganization.read_sector_information_v1(
-            data, num_pixels
+            data, n_pixels
         )
         pos += bytes_read
 
@@ -281,13 +281,16 @@ class CameraOrganization(TelescopeObject):
                 ('thresh', 'float32'),
                 ('pix_thresh', 'float32')
             ],
-            count=num_sectors,
+            count=n_sectors,
             offset=pos,
         )
 
         return {
             'telescope_id': self.telescope_id,
-            'num_drawers': num_drawers,
+            'n_pixels': n_pixels,
+            'n_drawers': n_drawers,
+            'n_gains': n_gains,
+            'n_sectors': n_sectors,
             'drawer': drawer,
             'card': card,
             'chip': chip,
@@ -301,37 +304,37 @@ class CameraOrganization(TelescopeObject):
     def parse_v2(self):
         self.seek(0)
         byte_stream = BytesIO(self.read())
-        num_pixels = read_int(byte_stream)
-        num_drawers = read_int(byte_stream)
-        num_gains = read_int(byte_stream)
-        num_sectors = read_int(byte_stream)
+        n_pixels = read_int(byte_stream)
+        n_drawers = read_int(byte_stream)
+        n_gains = read_int(byte_stream)
+        n_sectors = read_int(byte_stream)
 
         data = read_remaining_with_check(byte_stream, self.header.length)
         pos = 0
 
-        drawer, length = varint_array(data, num_pixels, offset=pos)
+        drawer, length = varint_array(data, n_pixels, offset=pos)
         pos += length
 
         card, length = varint_array(
-            data, num_pixels * num_gains, offset=pos
+            data, n_pixels * n_gains, offset=pos
         )
-        card.shape = (num_pixels, num_gains)
+        card.shape = (n_pixels, n_gains)
         pos += length
 
         chip, length = varint_array(
-            data, num_pixels * num_gains, offset=pos
+            data, n_pixels * n_gains, offset=pos
         )
-        chip.shape = (num_pixels, num_gains)
+        chip.shape = (n_pixels, n_gains)
         pos += length
 
         channel, length = varint_array(
-            data, num_pixels * num_gains, offset=pos
+            data, n_pixels * n_gains, offset=pos
         )
-        channel.shape = (num_pixels, num_gains)
+        channel.shape = (n_pixels, n_gains)
         pos += length
 
         sectors, bytes_read = CameraOrganization.read_sector_information_v2(
-            data, num_pixels, offset=pos,
+            data, n_pixels, offset=pos,
         )
         pos += bytes_read
 
@@ -342,13 +345,13 @@ class CameraOrganization(TelescopeObject):
                 ('thresh', 'float32'),
                 ('pix_thresh', 'float32')
             ],
-            count=num_sectors,
+            count=n_sectors,
             offset=pos,
         )
 
         return {
             'telescope_id': self.telescope_id,
-            'num_drawers': num_drawers,
+            'n_drawers': n_drawers,
             'drawer': drawer,
             'card': card,
             'chip': chip,
@@ -371,11 +374,11 @@ class PixelSettings(TelescopeObject):
 
         p1 = read_array(byte_stream, dtype=PixelSettings.dt1, count=1)[0]
 
-        dt2 = PixelSettings.build_dt2(num_pixels=p1['num_pixels'])
+        dt2 = PixelSettings.build_dt2(n_pixels=p1['n_pixels'])
         p2 = read_array(byte_stream, dtype=dt2, count=1)[0]
 
         dt3 = PixelSettings.build_dt3(
-            self.header.version, num_drawers=p2['num_drawers']
+            self.header.version, n_drawers=p2['n_drawers']
         )
         p3 = read_array(byte_stream, dtype=dt3, count=1)[0]
 
@@ -404,20 +407,20 @@ class DisabledPixels(EventIOObject):
         self.seek(0)
         byte_stream = BytesIO(self.read())
 
-        num_trig_disabled = read_int(byte_stream)
+        n_trig_disabled = read_int(byte_stream)
         trigger_disabled = read_array(
             byte_stream,
-            count=num_trig_disabled,
+            count=n_trig_disabled,
             dtype='i4'
         )
-        num_HV_disabled = read_int(byte_stream)
-        HV_disabled = read_array(byte_stream, count=num_trig_disabled, dtype='i4')
+        n_HV_disabled = read_int(byte_stream)
+        HV_disabled = read_array(byte_stream, count=n_trig_disabled, dtype='i4')
 
         return {
             'telescope_id': self.telescope_id,
-            'num_trig_disabled': num_trig_disabled,
+            'n_trig_disabled': n_trig_disabled,
             'trigger_disabled': trigger_disabled,
-            'num_HV_disabled': num_HV_disabled,
+            'n_HV_disabled': n_HV_disabled,
             'HV_disabled': HV_disabled,
         }
 
@@ -440,8 +443,8 @@ class CameraSoftwareSettings(EventIOObject):
         dyn_HV_threshold = read_int(byte_stream)
         data_red_mode = read_int(byte_stream)
         zero_sup_mode = read_int(byte_stream)
-        zero_sup_num_thr = read_int(byte_stream)
-        zero_sup_thresholds = read_array(byte_stream, 'i4', zero_sup_num_thr)
+        zero_sup_n_thr = read_int(byte_stream)
+        zero_sup_thresholds = read_array(byte_stream, 'i4', zero_sup_n_thr)
         unbiased_scale = read_int(byte_stream)
         dyn_ped_mode = read_int(byte_stream)
         dyn_ped_events = read_int(byte_stream)
@@ -459,7 +462,7 @@ class CameraSoftwareSettings(EventIOObject):
             'dyn_HV_threshold': dyn_HV_threshold,
             'data_red_mode': data_red_mode,
             'zero_sup_mode': zero_sup_mode,
-            'zero_sup_num_thr': zero_sup_num_thr,
+            'zero_sup_n_thr': zero_sup_n_thr,
             'zero_sup_thresholds': zero_sup_thresholds,
             'unbiased_scale': unbiased_scale,
             'dyn_ped_mode': dyn_ped_mode,
@@ -481,13 +484,13 @@ class PointingCorrection(TelescopeObject):
         byte_stream = BytesIO(self.read())
 
         function_type = read_int(byte_stream)
-        num_param = read_int(byte_stream)
-        pointing_param = read_array(byte_stream, 'f4', num_param)
+        n_param = read_int(byte_stream)
+        pointing_param = read_array(byte_stream, 'f4', n_param)
 
         return {
             'telescope_id': self.telescope_id,
             'function_type': function_type,
-            'num_param': num_param,
+            'n_param': n_param,
             'pointing_param': pointing_param,
         }
 
@@ -719,38 +722,38 @@ class TelescopeEventHeader(TelescopeObject):
         data = read_remaining_with_check(byte_stream, self.header.length)
         if t & 0x100:
             if self.header.version <= 1:
-                num_list_trgsect, = struct.unpack('<h', data[pos:pos + 2])
+                n_list_trgsect, = struct.unpack('<h', data[pos:pos + 2])
                 pos += 2
                 event_head['list_trgsect'] = np.frombuffer(
-                    data, dtype='<i2', count=num_list_trgsect, offset=pos,
+                    data, dtype='<i2', count=n_list_trgsect, offset=pos,
                 )
-                pos += num_list_trgsect * 2
+                pos += n_list_trgsect * 2
             else:
-                num_list_trgsect, length = varint(data, offset=pos)
+                n_list_trgsect, length = varint(data, offset=pos)
                 pos += length
                 event_head['list_trgsect'], length = varint_array(
-                    data, n_elements=num_list_trgsect, offset=pos,
+                    data, n_elements=n_list_trgsect, offset=pos,
                 )
                 pos += length
             if self.header.version >= 1 and (t & 0x400):
                 event_head['time_trgsect'] = np.frombuffer(
-                    data, dtype='<f4', count=num_list_trgsect, offset=pos
+                    data, dtype='<f4', count=n_list_trgsect, offset=pos
                 )
-                pos += 4 * num_list_trgsect
+                pos += 4 * n_list_trgsect
 
         if t & 0x200:
             if self.header.version <= 1:
-                event_head['num_phys_addr'] = struct.unpack('<h', data[pos:pos + 2])
+                event_head['n_phys_addr'] = struct.unpack('<h', data[pos:pos + 2])
                 pos += 2
                 event_head['phys_addr'] = np.frombuffer(
-                    data, dtype='<i2', count=event_head['num_phys_addr'], offset=pos
+                    data, dtype='<i2', count=event_head['n_phys_addr'], offset=pos
                 )
-                pos += 2 * event_head['num_phys_addr']
+                pos += 2 * event_head['n_phys_addr']
             else:
-                event_head['num_phys_addr'], length = varint(data, offset=pos)
+                event_head['n_phys_addr'], length = varint(data, offset=pos)
                 pos += length
                 event_head['phys_addr'], length = varint_array(
-                    data, n_elements=event_head['num_phys_addr'], offset=pos
+                    data, n_elements=event_head['n_phys_addr'], offset=pos
                 )
                 pos += length
 
@@ -836,9 +839,9 @@ class ADCSamples(EventIOObject):
 
         args = {
             'byte_stream': byte_stream,
-            'num_pixels': read_int(byte_stream),
-            'num_gains': read_short(byte_stream),
-            'num_samples': read_short(byte_stream),
+            'n_pixels': read_int(byte_stream),
+            'n_gains': read_short(byte_stream),
+            'n_samples': read_short(byte_stream),
         }
         if self._zero_sup_mode:
             result = self._parse_in_zero_suppressed_mode(**args)
@@ -855,9 +858,9 @@ class ADCSamples(EventIOObject):
     def _parse_in_zero_suppressed_mode(
         self,
         byte_stream,
-        num_gains,
-        num_pixels,
-        num_samples,
+        n_gains,
+        n_pixels,
+        n_samples,
     ):
         list_size = read_utf8_like_signed_int(byte_stream)
         pixel_ranges = []
@@ -873,16 +876,16 @@ class ADCSamples(EventIOObject):
                 )
 
         adc_samples = np.zeros(
-            (num_gains, num_pixels, num_samples),
+            (n_gains, n_pixels, n_samples),
             dtype='u2'
         )
         n_pixels_signal = sum(p[1] - p[0] for p in pixel_ranges)
         data = read_remaining_with_check(byte_stream, self.header.length)
         adc_samples_signal, bytes_read = unsigned_varint_arrays_differential(
-            data, n_arrays=num_gains * n_pixels_signal, n_elements=num_samples,
+            data, n_arrays=n_gains * n_pixels_signal, n_elements=n_samples,
         )
 
-        for i_gain in range(num_gains):
+        for i_gain in range(n_gains):
             for pixel_range in pixel_ranges:
                 for i_array, i_pix in enumerate(range(*pixel_range)):
                     adc_samples[i_gain, i_pix, :] = adc_samples_signal[i_gain, i_array]
@@ -891,18 +894,18 @@ class ADCSamples(EventIOObject):
     def _parse_in_not_zero_suppressed_mode(
         self,
         byte_stream,
-        num_gains,
-        num_pixels,
-        num_samples,
+        n_gains,
+        n_pixels,
+        n_samples,
     ):
 
         data = read_remaining_with_check(byte_stream, self.header.length)
         adc_samples, bytes_read = unsigned_varint_arrays_differential(
-            data, n_arrays=num_gains * num_pixels, n_elements=num_samples,
+            data, n_arrays=n_gains * n_pixels, n_elements=n_samples,
         )
 
         return adc_samples.reshape(
-            num_gains, num_pixels, num_samples
+            n_gains, n_pixels, n_samples
         ).astype('u2')
 
 
@@ -936,13 +939,13 @@ class ImageParameters(EventIOObject):
         )
         tel_image['cut_id'] = (flags & 0xff000) >> 12
         tel_image['pixels'] = read_short(byte_stream)
-        tel_image['num_sat'] = read_short(byte_stream)
+        tel_image['n_sat'] = read_short(byte_stream)
 
         # from version 6 on
         # pixels = read_utf8_like_signed_int(self)  # from version 6 on
-        # num_sat = read_utf8_like_signed_int(self)
+        # n_sat = read_utf8_like_signed_int(self)
 
-        if tel_image['num_sat'] > 0:
+        if tel_image['n_sat'] > 0:
             tel_image['clip_amp'] = read_float(byte_stream)
 
         tel_image['amplitude'] = read_float(byte_stream)
@@ -951,7 +954,7 @@ class ImageParameters(EventIOObject):
         tel_image['phi'] = read_float(byte_stream)
         tel_image['l'] = read_float(byte_stream)
         tel_image['w'] = read_float(byte_stream)
-        tel_image['num_conc'] = read_short(byte_stream)
+        tel_image['n_conc'] = read_short(byte_stream)
         tel_image['concentration'] = read_float(byte_stream)
 
         if flags & 0x100:
@@ -969,11 +972,11 @@ class ImageParameters(EventIOObject):
 
         if flags & 0x400:
             # from v6 on this is crazy int
-            num_hot = read_short(byte_stream)
-            tel_image['num_hot'] = num_hot
-            tel_image['hot_amp'] = read_array(byte_stream, 'f4', num_hot)
+            n_hot = read_short(byte_stream)
+            tel_image['n_hot'] = n_hot
+            tel_image['hot_amp'] = read_array(byte_stream, 'f4', n_hot)
             # from v6 on this is array of crazy int
-            tel_image['hot_pixel'] = read_array(byte_stream, 'i2', num_hot)
+            tel_image['hot_pixel'] = read_array(byte_stream, 'i2', n_hot)
 
         if flags & 0x800:
             tel_image['tm_slope'] = read_float(byte_stream)
@@ -1003,9 +1006,9 @@ class StereoReconstruction(EventIOObject):
         shower = {}
         result_bits = self.header.id
         shower['result_bits'] = result_bits
-        shower['num_trg'] = read_short(byte_stream)
-        shower['num_read'] = read_short(byte_stream)
-        shower['num_img'] = read_short(byte_stream)
+        shower['n_trg'] = read_short(byte_stream)
+        shower['n_read'] = read_short(byte_stream)
+        shower['n_img'] = read_short(byte_stream)
         shower['img_pattern'] = read_int(byte_stream)
 
         if result_bits & 0x01:
@@ -1060,8 +1063,8 @@ class PixelTiming(TelescopeObject):
         byte_stream = BytesIO(self.read())
 
         pixel_timing = {}
-        pixel_timing['num_pixels'] = read_short(byte_stream)
-        pixel_timing['num_gains'] = read_short(byte_stream)
+        pixel_timing['n_pixels'] = read_short(byte_stream)
+        pixel_timing['n_gains'] = read_short(byte_stream)
         pixel_timing['before_peak'] = read_short(byte_stream)
         pixel_timing['after_peak'] = read_short(byte_stream)
 
@@ -1078,13 +1081,13 @@ class PixelTiming(TelescopeObject):
         )
         pixel_timing['threshold'] = read_short(byte_stream)
         pixel_timing['glob_only_selected'] = pixel_timing['threshold'] < 0
-        pixel_timing['num_types'] = read_short(byte_stream)
+        pixel_timing['n_types'] = read_short(byte_stream)
 
         pixel_timing['time_type'] = read_array(
-            byte_stream, 'i2', count=pixel_timing['num_types']
+            byte_stream, 'i2', count=pixel_timing['n_types']
         )
         pixel_timing['time_level'] = read_array(
-            byte_stream, 'f4', count=pixel_timing['num_types']
+            byte_stream, 'f4', count=pixel_timing['n_types']
         )
 
         pixel_timing['granularity'] = read_float(byte_stream)
@@ -1095,9 +1098,9 @@ class PixelTiming(TelescopeObject):
             result, bytes_read = PixelTiming._parse_list_type_1(
                 data,
                 pixel_list=pixel_timing['pixel_list'],
-                num_gains=pixel_timing['num_gains'],
-                num_pixels=pixel_timing['num_pixels'],
-                num_types=pixel_timing['num_types'],
+                n_gains=pixel_timing['n_gains'],
+                n_pixels=pixel_timing['n_pixels'],
+                n_types=pixel_timing['n_types'],
                 with_sum=pixel_timing['with_sum'],
                 glob_only_selected=pixel_timing['glob_only_selected'],
                 granularity=pixel_timing['granularity'],
@@ -1106,9 +1109,9 @@ class PixelTiming(TelescopeObject):
             result, bytes_read = PixelTiming._parse_list_type_2(
                 data,
                 pixel_list=pixel_timing['pixel_list'].reshape(-1, 2),
-                num_gains=pixel_timing['num_gains'],
-                num_pixels=pixel_timing['num_pixels'],
-                num_types=pixel_timing['num_types'],
+                n_gains=pixel_timing['n_gains'],
+                n_pixels=pixel_timing['n_pixels'],
+                n_types=pixel_timing['n_types'],
                 with_sum=pixel_timing['with_sum'],
                 glob_only_selected=pixel_timing['glob_only_selected'],
                 granularity=pixel_timing['granularity'],
@@ -1161,10 +1164,10 @@ class MCShower(EventIOObject):
         for i in range(mc['n_profiles']):
             p = {}
             p['id'] = read_int(byte_stream)
-            p['num_steps'] = read_int(byte_stream)
+            p['n_steps'] = read_int(byte_stream)
             p['start'] = read_float(byte_stream)
             p['end'] = read_float(byte_stream)
-            p['content'] = read_array(byte_stream, dtype='<f4', count=p['num_steps'])
+            p['content'] = read_array(byte_stream, dtype='<f4', count=p['n_steps'])
             mc['profiles'].append(p)
 
         if self.header.version >= 2:
@@ -1264,10 +1267,10 @@ class CameraMonitoring(EventIOObject):
         }
         part_parser_args = {
             'byte_stream': byte_stream,
-            'num_sectors': ns,
-            'num_gains': ng,
-            'num_pixels': np,
-            'num_drawers': nd,
+            'n_sectors': ns,
+            'n_gains': ng,
+            'n_pixels': np,
+            'n_drawers': nd,
         }
         result.update(part_parser_args)
 
@@ -1300,70 +1303,70 @@ class CameraMonitoring(EventIOObject):
         }
 
     def _counts_and_rates_changed__what_and_0x02(
-        self, byte_stream, num_sectors, **kwargs
+        self, byte_stream, n_sectors, **kwargs
     ):
         return {
             'trig_time': read_time(byte_stream),
             'coinc_count': read_int(byte_stream),
             'event_count': read_int(byte_stream),
             'trigger_rate': read_float(byte_stream),
-            'sector_rate': read_array(byte_stream, 'f4', num_sectors),
+            'sector_rate': read_array(byte_stream, 'f4', n_sectors),
             'event_rate': read_float(byte_stream),
             'data_rate': read_float(byte_stream),
             'mean_significant': read_float(byte_stream),
         }
 
     def _pedestal_and_noice_changed__what_and_0x04(
-        self, byte_stream, num_gains, num_pixels, **kwargs
+        self, byte_stream, n_gains, n_pixels, **kwargs
     ):
         return {
             'ped_noise_time': read_time(byte_stream),
-            'num_ped_slices': read_short(byte_stream),
+            'n_ped_slices': read_short(byte_stream),
             'pedestal': read_array(
-                byte_stream, 'f4', num_gains * num_pixels
-            ).reshape((num_gains, num_pixels)),
+                byte_stream, 'f4', n_gains * n_pixels
+            ).reshape((n_gains, n_pixels)),
             'noise': read_array(
-                byte_stream, 'f4', num_gains * num_pixels
-            ).reshape((num_gains, num_pixels)),
+                byte_stream, 'f4', n_gains * n_pixels
+            ).reshape((n_gains, n_pixels)),
         }
 
     def _HV_and_temp_changed__what_and_0x08(
-        self, byte_stream, num_pixels, num_drawers, **kwargs
+        self, byte_stream, n_pixels, n_drawers, **kwargs
     ):
         hv_temp_time = read_time(byte_stream)
-        num_drawer_temp = read_short(byte_stream)
-        num_camera_temp = read_short(byte_stream)
+        n_drawer_temp = read_short(byte_stream)
+        n_camera_temp = read_short(byte_stream)
         return {
             'hv_temp_time': hv_temp_time,
-            'num_drawer_temp': num_drawer_temp,
-            'num_camera_temp': num_camera_temp,
-            'hv_v_mon': read_array(byte_stream, 'i2', num_pixels),
-            'hv_i_mon': read_array(byte_stream, 'i2', num_pixels),
-            'hv_stat': read_array(byte_stream, 'B', num_pixels),
+            'n_drawer_temp': n_drawer_temp,
+            'n_camera_temp': n_camera_temp,
+            'hv_v_mon': read_array(byte_stream, 'i2', n_pixels),
+            'hv_i_mon': read_array(byte_stream, 'i2', n_pixels),
+            'hv_stat': read_array(byte_stream, 'B', n_pixels),
             'drawer_temp': read_array(
-                byte_stream, 'i2', num_drawers * num_drawer_temp
-            ).reshape((num_drawers, num_drawer_temp)),
-            'camera_temp': read_array(byte_stream, 'i2', num_camera_temp),
+                byte_stream, 'i2', n_drawers * n_drawer_temp
+            ).reshape((n_drawers, n_drawer_temp)),
+            'camera_temp': read_array(byte_stream, 'i2', n_camera_temp),
         }
 
     def _pixel_scalers_DC_i_changed__what_and_0x10(
-        self, byte_stream, num_pixels, **kwargs
+        self, byte_stream, n_pixels, **kwargs
     ):
         return {
             'dc_rate_time': read_time(byte_stream),
-            'current': read_array(byte_stream, 'u2', num_pixels),
-            'scaler': read_array(byte_stream, 'u2', num_pixels),
+            'current': read_array(byte_stream, 'u2', n_pixels),
+            'scaler': read_array(byte_stream, 'u2', n_pixels),
         }
 
     def _HV_thresholds_changed__what_and_0x20(
-        self, byte_stream, num_pixels, num_drawers, **kwargs
+        self, byte_stream, n_pixels, n_drawers, **kwargs
     ):
         return {
             'hv_thr_time': read_time(byte_stream),
-            'hv_dac': read_array(byte_stream, 'u2', num_pixels),
-            'thresh_dac': read_array(byte_stream, 'u2', num_drawers),
-            'hv_set': read_array(byte_stream, 'B', num_pixels),
-            'trig_set': read_array(byte_stream, 'B', num_pixels),
+            'hv_dac': read_array(byte_stream, 'u2', n_pixels),
+            'thresh_dac': read_array(byte_stream, 'u2', n_drawers),
+            'hv_set': read_array(byte_stream, 'B', n_pixels),
+            'trig_set': read_array(byte_stream, 'B', n_pixels),
         }
 
     def _DAQ_config_changed__what_and_0x40(
@@ -1387,20 +1390,20 @@ class LaserCalibration(TelescopeObject):
         self.seek(0)
         byte_stream = BytesIO(self.read())
 
-        num_pixels = read_short(byte_stream)
-        num_gains = read_short(byte_stream)
+        n_pixels = read_short(byte_stream)
+        n_gains = read_short(byte_stream)
         lascal_id = read_int(byte_stream)
         calib = read_array(
-            byte_stream, 'f4', num_gains * num_pixels
-        ).reshape(num_gains, num_pixels)
+            byte_stream, 'f4', n_gains * n_pixels
+        ).reshape(n_gains, n_pixels)
 
-        tmp_ = read_array(byte_stream, 'f4', num_gains * 2).reshape(num_gains, 2)
+        tmp_ = read_array(byte_stream, 'f4', n_gains * 2).reshape(n_gains, 2)
         max_int_frac = tmp_[:, 0]
         max_pixtm_frac = tmp_[:, 1]
 
         tm_calib = read_array(
-            byte_stream, 'f4', num_gains * num_pixels
-        ).reshape(num_gains, num_pixels)
+            byte_stream, 'f4', n_gains * n_pixels
+        ).reshape(n_gains, n_pixels)
 
         return {
             'telescope_id': self.telescope_id,
@@ -1437,9 +1440,9 @@ class MCPhotoelectronSum(EventIOObject):
 
         event = self.header.id
         shower_num = read_int(byte_stream)
-        num_tel = read_int(byte_stream)
-        num_pe = read_array(byte_stream, 'i4', num_tel)
-        num_pixels = read_array(byte_stream, 'i4', num_tel)
+        n_tel = read_int(byte_stream)
+        n_pe = read_array(byte_stream, 'i4', n_tel)
+        n_pixels = read_array(byte_stream, 'i4', n_tel)
 
         # NOTE:
         # I don't see how we can speed this up easily since the length
@@ -1448,7 +1451,7 @@ class MCPhotoelectronSum(EventIOObject):
         # pix_pe: a list (running over telescope_id)
         #         of 2-tuples: (pixel_id, pe)
         pix_pe = []
-        for n_pe, n_pixels in zip(num_pe, num_pixels):
+        for n_pe, n_pixels in zip(n_pe, n_pixels):
             if n_pe <= 0 or n_pixels <= 0:
                 continue
             non_empty = read_short(byte_stream)
@@ -1456,18 +1459,18 @@ class MCPhotoelectronSum(EventIOObject):
             pe = read_array(byte_stream, 'i4', non_empty)
             pix_pe.append(pixel_id, pe)
 
-        photons = read_array(byte_stream, 'f4', num_tel)
-        photons_atm = read_array(byte_stream, 'f4', num_tel)
-        photons_atm_3_6 = read_array(byte_stream, 'f4', num_tel)
-        photons_atm_qe = read_array(byte_stream, 'f4', num_tel)
-        photons_atm_400 = read_array(byte_stream, 'f4', num_tel)
+        photons = read_array(byte_stream, 'f4', n_tel)
+        photons_atm = read_array(byte_stream, 'f4', n_tel)
+        photons_atm_3_6 = read_array(byte_stream, 'f4', n_tel)
+        photons_atm_qe = read_array(byte_stream, 'f4', n_tel)
+        photons_atm_400 = read_array(byte_stream, 'f4', n_tel)
 
         return {
             'event': event,
             'shower_num': shower_num,
-            'num_tel': num_tel,
-            'num_pe': num_pe,
-            'num_pixels': num_pixels,
+            'n_tel': n_tel,
+            'n_pe': n_pe,
+            'n_pixels': n_pixels,
             'pix_pe': pix_pe,
             'photons': photons,
             'photons_atm': photons_atm,
