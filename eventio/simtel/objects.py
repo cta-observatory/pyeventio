@@ -278,8 +278,8 @@ class CameraOrganization(TelescopeObject):
             data,
             dtype=[
                 ('type', 'uint8'),
-                ('thresh', 'float32'),
-                ('pix_thresh', 'float32')
+                ('threshold', 'float32'),
+                ('pix_threshold', 'float32')
             ],
             count=n_sectors,
             offset=pos,
@@ -297,8 +297,8 @@ class CameraOrganization(TelescopeObject):
             'channel': channel,
             'sectors': sectors,
             'sector_type': sector_data['type'],
-            'sector_threshold': sector_data['thresh'],
-            'sector_pixthresh': sector_data['pix_thresh'],
+            'sector_threshold': sector_data['threshold'],
+            'sector_pixel_threshold': sector_data['pixel_threshold'],
         }
 
     def parse_v2(self):
@@ -342,8 +342,8 @@ class CameraOrganization(TelescopeObject):
             data,
             dtype=[
                 ('type', 'uint8'),
-                ('thresh', 'float32'),
-                ('pix_thresh', 'float32')
+                ('threshold', 'float32'),
+                ('pixel_threshold', 'float32')
             ],
             count=n_sectors,
             offset=pos,
@@ -351,15 +351,18 @@ class CameraOrganization(TelescopeObject):
 
         return {
             'telescope_id': self.telescope_id,
+            'n_pixels': n_pixels,
             'n_drawers': n_drawers,
+            'n_gains': n_gains,
+            'n_sectors': n_sectors,
             'drawer': drawer,
             'card': card,
             'chip': chip,
             'channel': channel,
             'sectors': sectors,
             'sector_type': sector_data['type'],
-            'sector_threshold': sector_data['thresh'],
-            'sector_pixthresh': sector_data['pix_thresh'],
+            'sector_threshold': sector_data['threshold'],
+            'sector_pixel_threshold': sector_data['pixel_threshold'],
         }
 
 
@@ -384,10 +387,10 @@ class PixelSettings(TelescopeObject):
 
         parts = [p1, p2, p3]
         if self.header.version >= 2:
-            nrefshape = read_utf8_like_signed_int(byte_stream)
-            lrefshape = read_utf8_like_signed_int(byte_stream)
+            n_ref_shape = read_utf8_like_signed_int(byte_stream)
+            l_ref_shape = read_utf8_like_signed_int(byte_stream)
 
-            dt4 = PixelSettings.build_dt4(nrefshape, lrefshape)
+            dt4 = PixelSettings.build_dt4(n_ref_shape, l_ref_shape)
             parts.append(read_array(byte_stream, dtype=dt4, count=1)[0])
 
         D = merge_structured_arrays_into_dict(parts)

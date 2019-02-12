@@ -37,10 +37,10 @@ def build_dt3(version, n_drawers):
     return np.dtype(dt)
 
 
-# nrefshape = tools.get_scount(data)
-# lrefshape = tools.get_scount(data)
-def build_dt4(nrefshape, lrefshape):
+# nref_shape = tools.get_scount(data)
+# lref_shape = tools.get_scount(data)
+def build_dt4(n_ref_shape, l_ref_shape):
     return np.dtype([
         ('ref_step', 'f4'),
-        ('refshape', 'f2', (nrefshape, lrefshape)),
+        ('ref_shape', 'f2', (n_ref_shape, l_ref_shape)),
     ])
