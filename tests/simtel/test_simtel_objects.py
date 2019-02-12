@@ -167,7 +167,7 @@ def test_2004_3_objects():
         for i, o in enumerate(yield_n_and_assert(f, PixelSettings, n=3)):
             assert o.telescope_id == i + 1
             pixelset = parse_and_assert_consumption(o, limit=1)
-            assert pixelset['num_pixels'] == 1855
+            assert pixelset['n_pixels'] == 1855
 
 
 def test_2005_3_objects():
@@ -178,8 +178,8 @@ def test_2005_3_objects():
             pixel_disable = parse_and_assert_consumption(o, limit=0)
 
             assert pixel_disable['telescope_id'] == i + 1
-            assert pixel_disable['num_trig_disabled'] == 0
-            assert pixel_disable['num_HV_disabled'] == 0
+            assert pixel_disable['n_trig_disabled'] == 0
+            assert pixel_disable['n_HV_disabled'] == 0
             assert len(pixel_disable['trigger_disabled']) == 0
             assert len(pixel_disable['HV_disabled']) == 0
 
@@ -198,7 +198,7 @@ def test_2006_3_objects():
             assert d['dyn_HV_threshold'] == 0
             assert d['data_red_mode'] == 0
             assert d['zero_sup_mode'] == 0
-            assert d['zero_sup_num_thr'] == 0
+            assert d['zero_sup_n_thr'] == 0
             assert len(d['zero_sup_thresholds']) == 0
             assert d['unbiased_scale'] == 0
             assert d['dyn_ped_mode'] == 0
@@ -219,7 +219,7 @@ def test_2007_3_objects():
 
             assert d['telescope_id'] == i + 1
             assert d['function_type'] == 0
-            assert d['num_param'] == 0
+            assert d['n_param'] == 0
             assert len(d['pointing_param']) == 0
 
 
@@ -400,9 +400,9 @@ def test_2015_3_objects():
             '''
             {
                 'result_bits': 5,
-                'num_trg': 2,
-                'num_read': 2,
-                'num_img': 2,
+                'n_trg': 2,
+                'n_read': 2,
+                'n_img': 2,
                 'img_pattern': 268435472,
                 'Az': 6.265805721282959,
                 'Alt': 1.2318674325942993,
@@ -487,13 +487,13 @@ def test_2022_3_objects():
                 'event_rate': 700.0,
                 'data_rate': 1.2999999523162842,
                 'mean_significant': 0.0,
-                'num_ped_slices': 30,
+                'n_ped_slices': 30,
                 'pedestal': array([[2979.467 , 3009.359 , 3010.3691,
                 ..., 2990.7085, 2929.3687, 2981.3044]], dtype=float32),
                 'noise': array([[5.477226, 5.477226, 5.477226,
                 ..., 5.477226, 5.477226, 5.477226]], dtype=float32),
-                'num_drawer_temp': 0,
-                'num_camera_temp': 0,
+                'n_drawer_temp': 0,
+                'n_camera_temp': 0,
                 'hv_v_mon': array(
                     [836, 814, 823, ..., 893, 858, 847], dtype=int16),
                 'hv_i_mon': array(
