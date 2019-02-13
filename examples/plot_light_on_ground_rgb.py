@@ -29,7 +29,6 @@ def main():
 
     photons = event.photon_bunches[0]
     emitter = event.emitter[0]
-    masses = np.sort(np.unique(emitter['mass']))
 
     fig, ax = plt.subplots(1, 1, figsize=(8, 8))
 
