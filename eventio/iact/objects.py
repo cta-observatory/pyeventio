@@ -187,7 +187,7 @@ class Photons(EventIOObject):
     for a single telescope
     '''
     eventio_type = 1205
-    columns = ('x', 'y', 'cx', 'cy', 'time', 'zem', 'photons', 'lambda')
+    columns = ('x', 'y', 'cx', 'cy', 'time', 'zem', 'photons', 'wavelength')
 
     def __init__(self, header, filehandle):
         super().__init__(header, filehandle)
@@ -222,7 +222,7 @@ class Photons(EventIOObject):
             cy:        cosine of incident angle in y direction
             time:      time since first interaction in ns
             zem:       Emission height in cm above sea level
-            lambda:    wavelength in nm
+            wavelength:    wavelength in nm
             scattered: indicates if the photon was scattered in the atmosphere
         '''
 
@@ -255,10 +255,11 @@ class Photons(EventIOObject):
             # if compact, cosines are scaled by a factor of 30000
             bunches['cx'] /= 30000
             bunches['cy'] /= 30000
-            #   bernloehr clips in his implementation of the reader.
-            #   I am not sure I really want that.
-            # bunches['cx'] = bunches['cx'].clip(a_min=-1., a_max=1.)
-            # bunches['cy'] = bunches['cy'].clip(a_min=-1., a_max=1.)
+            # bernloehr clips in his implementation of the reader.
+            # we do so here as well. As cx and cy are cosines of angles,
+            # values with abs > 1 are not allowed.
+            bunches['cx'] = bunches['cx'].clip(min=-1., max=1.)
+            bunches['cy'] = bunches['cy'].clip(min=-1., max=1.)
 
             bunches['time'] *= 0.1  # in nanoseconds since first interaction.
             bunches['zem'] = np.power(10., bunches['zem'] * 0.001)
@@ -266,12 +267,12 @@ class Photons(EventIOObject):
 
         bunches = append_fields(
             bunches,
-            data=bunches['lambda'] < 0,
+            data=bunches['wavelength'] < 0,
             dtypes=bool,
             names='scattered',
             usemask=False,
         )
-        bunches['lambda'] = np.abs(bunches['lambda'])
+        bunches['wavelength'] = np.abs(bunches['wavelength'])
 
         return bunches
 

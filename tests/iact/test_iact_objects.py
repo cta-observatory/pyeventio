@@ -98,7 +98,7 @@ def test_event_has_382_bunches():
 def test_bunches():
     from eventio.iact import TelescopeData
 
-    columns = ('x', 'y', 'cx', 'cy', 'time', 'zem', 'photons', 'lambda', 'scattered')
+    columns = ('x', 'y', 'cx', 'cy', 'time', 'zem', 'photons', 'wavelength', 'scattered')
     with eventio.EventIOFile(testfile) as f:
         # first telescope data  object should be the 6th object in the file
         for i in range(6):
