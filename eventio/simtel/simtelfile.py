@@ -306,6 +306,6 @@ def parse_telescope_event(telescope_event):
             event['image_parameters'] = o.parse()
 
         elif isinstance(o, PixelList):
-            event['pixel_lists'][o.telescope_id] = o.parse()
+            event['pixel_lists'][o.code] = o.parse()
 
     return event
