@@ -188,6 +188,15 @@ class Photons(EventIOObject):
     '''
     eventio_type = 1205
     columns = ('x', 'y', 'cx', 'cy', 'time', 'zem', 'photons', 'wavelength')
+    particle_columns = ('x', 'y', 'cx', 'cy', 'time', 'momentum', 'weight', 'particle_id')
+    emitter_columns = (
+        'x', 'y', 'mass', 'charge', 'time', 'emission_time', 'energy', 'wavelength'
+    )
+
+    compact_dtype = np.dtype([(c, 'int16') for c in columns])
+    long_dtype = np.dtype([(c, 'float32') for c in columns])
+    particle_dtype = np.dtype([(c, 'float32') for c in particle_columns])
+    emitter_dtype = np.dtype([(c, 'float32') for c in emitter_columns])
 
     def __init__(self, header, filehandle):
         super().__init__(header, filehandle)
@@ -203,6 +212,11 @@ class Photons(EventIOObject):
         ) = read_from(self, 'hhfi')
 
     def __repr__(self):
+        # IACTEXT writes particles at obslevel into photon bunch
+        # objects with ids set to 999
+        if self.array_id == 999 and self.telescope_id == 999:
+            return 'ObservationLevelParticles(n_particles={})'.format(self.n_bunches)
+
         return '{}(array_id={}, telescope_id={}, n_bunches={})'.format(
             self.__class__.__name__,
             self.array_id,
@@ -225,30 +239,40 @@ class Photons(EventIOObject):
             wavelength:    wavelength in nm
             scattered: indicates if the photon was scattered in the atmosphere
         '''
+        data = self.parse_data()
+        # normal photon bunch
+        if not (self.array_id == 999 and self.telescope_id == 999):
+            emitter_mask = data['wavelength'] == np.float32(9999)
+            if np.any(emitter_mask):
+                photons = data[~emitter_mask]
+                emitter = data[emitter_mask].view(self.emitter_dtype)
+            else:
+                photons = data
+                emitter = None
 
+            return photons, emitter
+
+        # particles at obslevel
+        return data.view(self.particle_dtype)
+
+    def parse_data(self):
         if self.compact:
-            dtype = np.dtype('int16')
+            dtype = self.compact_dtype
         else:
-            dtype = np.dtype('float32')
+            dtype = self.long_dtype
 
         if self.n_bunches == 0:
-            return np.array([], dtype=[(col, dtype) for col in self.columns])
+            return np.array([], dtype=dtype)
 
         self.seek(12)
-        block = np.frombuffer(
-            self.read(self.n_bunches * len(self.columns) * dtype.itemsize),
+        bunches = np.frombuffer(
+            self.read(self.n_bunches * dtype.itemsize),
             dtype=dtype,
-            count=self.n_bunches * len(self.columns)
-        )
-        block = block.reshape(self.n_bunches, len(self.columns))
-
-        bunches = np.core.records.fromrecords(
-            block,
-            names=self.columns,
+            count=self.n_bunches
         )
 
         if self.compact:
-            bunches = bunches.astype([(c, 'float32') for c in self.columns])
+            bunches = bunches.astype(self.long_dtype)
             bunches['x'] *= 0.1  # now in cm
             bunches['y'] *= 0.1  # now in cm
 
@@ -264,15 +288,6 @@ class Photons(EventIOObject):
             bunches['time'] *= 0.1  # in nanoseconds since first interaction.
             bunches['zem'] = np.power(10., bunches['zem'] * 0.001)
             bunches['photons'] *= 0.01
-
-        bunches = append_fields(
-            bunches,
-            data=bunches['wavelength'] < 0,
-            dtypes=bool,
-            names='scattered',
-            usemask=False,
-        )
-        bunches['wavelength'] = np.abs(bunches['wavelength'])
 
         return bunches
 

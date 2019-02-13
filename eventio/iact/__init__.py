@@ -93,7 +93,6 @@ class IACTFile(EventIOFile):
 
         telescope_object = next(self)
         check_type(telescope_object, TelescopeDefinition)
-
         self.n_telescopes = telescope_object.n_telescopes
         self.telescope_positions = telescope_object.parse()
         self._first_event_byte = self.tell()
@@ -128,12 +127,22 @@ class IACTFile(EventIOFile):
             array_offsets = reuse_object.parse()
             time_offset = reuse_object.time_offset
 
+            longitudinal = None
+            particles = None
+
             obj = next(self)
-            if isinstance(obj, Longitudinal):
-                longitudinal = obj.parse()
+
+            while not isinstance(obj, TelescopeData):
+                if isinstance(obj, Longitudinal):
+                    longitudinal = obj.parse()
+
+                if isinstance(obj, Photons):
+                    if obj.array_id != 999 or obj.telescope_id != 999:
+                        raise ValueError('Unexpected Photon Block')
+
+                    particles = obj.parse()
+
                 obj = next(self)
-            else:
-                longitudinal = None
 
             for reuse in range(n_reuses):
 
@@ -141,11 +150,14 @@ class IACTFile(EventIOFile):
                 telescope_data_obj = obj
 
                 photon_bunches = {}
+                emitter_bunches = {}
                 n_photons = {}
                 n_bunches = {}
                 for data in telescope_data_obj:
                     if isinstance(data, Photons):
-                        photon_bunches[data.telescope] = data.parse()
+                        photons, emitter = data.parse()
+                        photon_bunches[data.telescope] = photons
+                        emitter_bunches[data.telescope] = emitter
                         n_photons[data.telescope] = data.n_photons
                         n_bunches[data.telescope] = data.n_bunches
 
@@ -166,6 +178,8 @@ class IACTFile(EventIOFile):
                     n_photons=n_photons,
                     n_bunches=n_bunches,
                     longitudinal=longitudinal,
+                    particles=particles,
+                    emitter=emitter_bunches,
                 )
 
                 obj = next(self)
@@ -185,7 +199,8 @@ EventTuple = namedtuple(
         'reuse_weight',
         'event_number', 'reuse',
         'n_photons', 'n_bunches',
-        'longitudinal',
+        'longitudinal', 'particles',
+        'emitter',
     ]
 )
 
