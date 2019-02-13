@@ -150,7 +150,7 @@ class IACTFile(EventIOFile):
                         n_bunches[data.telescope] = data.n_bunches
 
                 if len(array_offsets.dtype) == 3:
-                    weight = array_offsets[reuse]['y']
+                    weight = array_offsets[reuse]['weight']
                 else:
                     weight = 1.0
 
