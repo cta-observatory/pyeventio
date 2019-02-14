@@ -11,7 +11,14 @@ TEST_FILE_PATH_NORMAL = path.join(
     environ['TEST_FILE_DIR'], 'test.simtel_10MB_part.gz'
 )
 
+def is_testfile_missing():
+    return (
+        not path.exists(TEST_FILE_PATH)
+        or not path.exists(TEST_FILE_PATH_NORMAL)
+    )
 
+
+@pytest.mark.skipif(is_testfile_missing(), reason="testfile_missing")
 def test_adc_sums():
     pyhessio = pytest.importorskip("pyhessio")
     with pyhessio.open_hessio(TEST_FILE_PATH) as hessio_file:
@@ -27,6 +34,7 @@ def test_adc_sums():
                 assert np.array_equal(HE_adc_sum, EE_adc_sum)
 
 
+@pytest.mark.skipif(is_testfile_missing(), reason="testfile_missing")
 def test_adc_samples():
     seen_at_least_one_event = False
     # testing on 10MB_part, so expecting EOF Error here
