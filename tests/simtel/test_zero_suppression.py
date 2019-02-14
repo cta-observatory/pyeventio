@@ -4,12 +4,13 @@ import numpy as np
 from eventio import SimTelFile
 
 TEST_FILE_PATH = path.join(
-    environ['TEST_FILE_DIR'], 'test.simtel-clean3.gz'
+    environ.get('TEST_FILE_DIR', ''), 'test.simtel-clean3.gz'
 )
 
 TEST_FILE_PATH_NORMAL = path.join(
-    environ['TEST_FILE_DIR'], 'test.simtel_10MB_part.gz'
+    environ.get('TEST_FILE_DIR', ''), 'test.simtel_10MB_part.gz'
 )
+
 
 def is_testfile_missing():
     return (
