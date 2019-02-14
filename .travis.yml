@@ -1,7 +1,7 @@
 language: python
 
 env:
-  secure: "bZ2ZXgn/A6tKirqOizMce+uQtzAHm/hvgschm6xDGKBzsYCZpcirZPvYhKLPuO60VHrnJL4z12V3slzObWTXePJr/DfTWO/eT/KXcSGnhtFG3T6ySbrNkb1H2mYdzRPtlIV8duZmeHk4rVIGAWGm3RWCZiJ9XoIb1sLotinrTrXERLEVhofxYwiPfRouE0qqmKFQnGd7nt1p9q3F0axdjY/qeuWaO8n809T8/JdcxMHBUf6Yf7F2iK4QFSqfQ/74vsZ/+c12xpL2XABXCkVph3t0PIJpr6EjsXvtoU0mYtL3DBlG1h0zfMyGIkIerAWT8zdf83iAoOXBTSlxyguLG/+lKbZusC//JfiTDd92kGzGFe9eR7Q+oAdd0+heueweVGXRwxX+c5JVb0YtQ0pOfpsI8NG6OaAK8HWWZDutcjZ3nPmeP5Ruuo3Ek/cH+JNqFnidPgh3RiCWsS/K9Qr5UELPzS3ublSXwUvPFzKVoQHHNP7QVZUC6nLp3jl/7n4+0e8SSGE96bBIVltKM4JMO4actouYf3AEo/B8VDRJNFo8NLNwV91igFIHIoEKjmHvOkGN6/NBcTT/afZ5bdFMT4vBOsvv7+vG7rSMAeJSQK7fOSgNJdfaoO9kmfA9TYj4XEa7jjeRCujtEhMPdPxf+kwVkkZr3s9lfB9bDdUwCwI="
+  secure: "Q4Au2/8QmW1x5KQme6WPXz0uLJHrYuQR/MhjgU2k74tfcaObOl/frE3hyrCBoMHMS6mAwjPmkCNO1YsuiFs2SU0ruFRKEJnc6fNyl1+w+GBFOPRC7BrmZtcbrpDtK50F9Fy0KQze0C6Rxkf/Db+wVsCCUI0nqN8zqJLKHjD6xJcpV+u7wqaJdzpvPRpXifOWu6j4EoqW1KxP5Kmm4tgYKSdF9wxMPBM7B7BeCO4jmyqV93DB3l47NrLdhJIcj3/cjYoVcu+tcsQrLcFqw8AjaDDOeNca3bpddUZnPs38h56dLes2wjuFbJwauTIhAWiYeWQlaq6y20KHN9Dz3iW+8GgrDXPIF+59TuUOL5PkSY1PuzRYP9g4YpvXAbVGxtSC6/3m3ViLDbD7Q0i2kbcPBlL/iOgnuzvwauJyWbuP+6dKEwcU1EuFX9wRoS1ZubBEYgZXNoqDwNIWshDZjmOTzkSIJaN4M7JEtt8IKez9TOdbvGWB/tizEGaar1t+NnPwYlgwezfX217h79UKmn0/MH2+/tgqwadJ/xO7EfyZEckvT5WdS6cNlPGhby9HoIg4uO/NU3YH9WTEs7jltJ61LZJIrR4wpODnudFcm1aFFRkVxl5iUzeXYlo3kNATOymfrHXnxYRloZ2ZM7jltJSppEU1zux0pgjdHwTE0QBKEXk="
 
 matrix:
   include:
@@ -33,13 +33,7 @@ install:
 
 before_script:
   - pip install --upgrade pytest>=3.0.0
-  - mkdir test_files
-  - cd test_files
-  - export TEST_FILE_DIR=`pwd -P`
-  - echo $TEST_FILE_DIR
-  - curl -O -u $DOWNLOAD_USER:$DOWNLOAD_PASSWORD https://www.mpi-hd.mpg.de/personalhomes/bernlohr/cta-raw/Prod-3/data-demo2/Paranal/Sector/Gamma-clean-1/gamma_20deg_180deg_run1187___cta-prod3-demo_desert-2150m-Paranal-demo2sect_cone10.simtel-clean3.gz
-  - curl -O -u $DOWNLOAD_USER:$DOWNLOAD_PASSWORD https://www.mpi-hd.mpg.de/personalhomes/bernlohr/cta-raw/Prod-3/data-demo2/Paranal/Sector/Gamma-clean-1/gamma_20deg_180deg_run1187___cta-prod3-demo_desert-2150m-Paranal-demo2sect_cone10.simtel.gz
-  - cd ..
+  - source ./download_test_files
 
 script:
   - python setup.py test

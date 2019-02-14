@@ -4,19 +4,11 @@ import numpy as np
 from eventio import SimTelFile
 
 TEST_FILE_PATH = path.join(
-    environ['TEST_FILE_DIR'],
-    (
-        'gamma_20deg_180deg_run1187___cta-prod3-demo_desert-2150m-Paranal'
-        '-demo2sect_cone10.simtel-clean3.gz'
-    )
+    environ['TEST_FILE_DIR'], 'test.simtel-clean3.gz'
 )
 
 TEST_FILE_PATH_NORMAL = path.join(
-    environ['TEST_FILE_DIR'],
-    (
-        'gamma_20deg_180deg_run1187___cta-prod3-demo_desert-2150m-Paranal'
-        '-demo2sect_cone10.simtel.gz'
-    )
+    environ['TEST_FILE_DIR'], 'test.simtel_10MB_part.gz'
 )
 
 
@@ -36,21 +28,26 @@ def test_adc_sums():
 
 
 def test_adc_samples():
+    seen_at_least_one_event = False
+    # testing on 10MB_part, so expecting EOF Error here
+    with pytest.raises(EOFError):
+        for z, e in zip(
+            SimTelFile(TEST_FILE_PATH),
+            SimTelFile(TEST_FILE_PATH_NORMAL)
+        ):
+            for tel_id in e['telescope_events']:
+                try:
+                    zas = z['telescope_events'][tel_id]['adc_samples']
+                    eas = e['telescope_events'][tel_id]['adc_samples']
+                    survivors = (zas != 0).all(axis=-1)
+                    assert survivors.sum() > 0
+                    assert np.array_equal(zas[survivors], eas[survivors])
+                    seen_at_least_one_event = True
+                except KeyError as exc:
+                    print(
+                        'event:', e['event_id'],
+                        'tel:', tel_id,
+                        'KeyError:', exc
+                    )
 
-    for z, e in zip(
-        SimTelFile(TEST_FILE_PATH),
-        SimTelFile(TEST_FILE_PATH_NORMAL)
-    ):
-        for tel_id in e['telescope_events']:
-            try:
-                zas = z['telescope_events'][tel_id]['adc_samples']
-                eas = e['telescope_events'][tel_id]['adc_samples']
-                survivors = (zas != 0).all(axis=-1)
-                assert survivors.sum() > 0
-                assert np.array_equal(zas[survivors], eas[survivors])
-            except KeyError as exc:
-                print(
-                    'event:', e['event_id'],
-                    'tel:', tel_id,
-                    'KeyError:', exc
-                )
+    assert seen_at_least_one_event
