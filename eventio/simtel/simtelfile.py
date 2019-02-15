@@ -96,6 +96,7 @@ class SimTelFile(EventIOFile):
         # any of the objeccts in check is not None anymore
         check = []
         while not any(o for o in check):
+            self.next_low_level()
             check = [
                 self.current_mc_shower,
                 self.current_array_event,
@@ -103,7 +104,6 @@ class SimTelFile(EventIOFile):
                 self.laser_calibrations,
                 self.camera_monitorings,
             ]
-            self.next_low_level()
 
         self._first_event_byte = self.tell()
 
