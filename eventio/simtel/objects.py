@@ -1542,6 +1542,21 @@ class FSPhot(EventIOObject):
 class PixelTriggerTimes(TelescopeObject):
     eventio_type = 2032
 
+    def parse(self):
+        assert_exact_version(self, supported_version=0)
+        byte_stream = BytesIO(self.read())
+
+        trigger_times = {}
+        trigger_times['time_step'] = read_float(byte_stream)
+        n_times = read_utf8_like_signed_int(byte_stream)
+        trigger_times['n_times'] = n_times
+
+        data = byte_stream.read()
+        trigger_times['pixel_ids'], length = varint_array(data, n_times, offset=0)
+        trigger_times['trigger_times'], length = varint_array(data, n_times, offset=length)
+
+        return trigger_times
+
 
 def merge_structured_arrays_into_dict(arrays):
     result = dict()
