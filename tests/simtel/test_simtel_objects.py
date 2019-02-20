@@ -638,6 +638,13 @@ def test_2031():
     assert False
 
 
-@pytest.mark.xfail
 def test_2032():
-    assert False
+    from eventio.simtel.objects import PixelTriggerTimes
+
+    with EventIOFile(prod4b_astri_file) as f:
+        for i, o in enumerate(yield_n_and_assert(f, PixelTriggerTimes, n=3)):
+            d = parse_and_assert_consumption(o, limit=2)
+            print(d)
+            assert 'n_times' in d
+            assert 'pixel_ids' in d
+            assert 'trigger_times' in d

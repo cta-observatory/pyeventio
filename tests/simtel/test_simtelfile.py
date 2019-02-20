@@ -4,6 +4,7 @@ from eventio.simtel import SimTelFile
 prod2_path = 'tests/resources/gamma_test.simtel.gz'
 prod3_path = 'tests/resources/gamma_test_large_truncated.simtel.gz'
 prod4_path = 'tests/resources/gamma_20deg_0deg_run102___cta-prod4-sst-1m_desert-2150m-Paranal-sst-1m.simtel.gz'
+prod4_astri_path = 'tests/resources/gamma_20deg_0deg_run103___cta-prod4-sst-astri_desert-2150m-Paranal-sst-astri.simtel.gz'
 
 # using a zstd file ensures SimTelFile is not seeking back, when reading
 # a file
@@ -145,6 +146,14 @@ def test_allowed_tels():
             pass
 
     assert n_read == 3
+
+
+def test_pixel_trigger_times():
+    # astri files must have trigger times
+    with SimTelFile(prod4_astri_path) as f:
+        for counter, event in enumerate(f, start=1):
+            for telescope_event in event['telescope_events'].values():
+                assert 'pixel_trigger_times' in telescope_event
 
 
 def test_calibration_events():

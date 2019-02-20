@@ -19,7 +19,6 @@ from .objects import (
     CameraOrganization,
     CameraSettings,
     CameraSoftwareSettings,
-    TriggerInformation,
     DisabledPixels,
     DriveSettings,
     History,
@@ -32,11 +31,13 @@ from .objects import (
     PixelList,
     PixelSettings,
     PixelTiming,
+    PixelTriggerTimes,
     PointingCorrection,
     RunHeader,
     TelescopeEvent,
     TelescopeEventHeader,
     TrackingPosition,
+    TriggerInformation,
 )
 
 
@@ -360,5 +361,8 @@ def parse_telescope_event(telescope_event):
 
         elif isinstance(o, PixelList):
             event['pixel_lists'][o.code] = o.parse()
+
+        elif isinstance(o, PixelTriggerTimes):
+            event['pixel_trigger_times'] = o.parse()
 
     return event
