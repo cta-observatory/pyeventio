@@ -55,7 +55,7 @@ class RunHeader(EventIOObject):
         if n != 273:
             raise WrongSize('Expected 273 floats, but found {}'.format(n))
 
-        return parse_run_header(stream.read())
+        return parse_run_header(stream.read())[0]
 
 
 class TelescopeDefinition(EventIOObject):
@@ -120,7 +120,7 @@ class EventHeader(EventIOObject):
             raise WrongSize(
                 'Expected 273 floats, but found {}'.format(n))
 
-        return parse_event_header(data[4:])
+        return parse_event_header(data[4:])[0]
 
 
 class ArrayOffsets(EventIOObject):
@@ -155,17 +155,14 @@ class ArrayOffsets(EventIOObject):
             data,
             dtype=np.float32,
             count=self.n_arrays * n_columns,
-        ).reshape(n_columns, self.n_arrays)
+        )
+
+        dtypes = [('x', 'f4'), ('y', 'f4')]
 
         if n_columns == 3:
-            weights = positions[3, :]
-        else:
-            weights = np.ones(self.n_arrays, dtype=np.float32)
+            dtypes.append(('weight', 'f4'))
 
-        return np.core.records.fromarrays(
-            [positions[0, :], positions[1, :], weights],
-            names=['x', 'y', 'weight'],
-        )
+        return positions.view(dtypes)
 
 
 class TelescopeData(EventIOObject):
@@ -190,7 +187,16 @@ class Photons(EventIOObject):
     for a single telescope
     '''
     eventio_type = 1205
-    columns = ('x', 'y', 'cx', 'cy', 'time', 'zem', 'photons', 'lambda')
+    columns = ('x', 'y', 'cx', 'cy', 'time', 'zem', 'photons', 'wavelength')
+    particle_columns = ('x', 'y', 'cx', 'cy', 'time', 'momentum', 'weight', 'particle_id')
+    emitter_columns = (
+        'x', 'y', 'mass', 'charge', 'time', 'emission_time', 'energy', 'wavelength'
+    )
+
+    compact_dtype = np.dtype([(c, 'int16') for c in columns])
+    long_dtype = np.dtype([(c, 'float32') for c in columns])
+    particle_dtype = np.dtype([(c, 'float32') for c in particle_columns])
+    emitter_dtype = np.dtype([(c, 'float32') for c in emitter_columns])
 
     def __init__(self, header, filehandle):
         super().__init__(header, filehandle)
@@ -206,6 +212,11 @@ class Photons(EventIOObject):
         ) = read_from(self, 'hhfi')
 
     def __repr__(self):
+        # IACTEXT writes particles at obslevel into photon bunch
+        # objects with ids set to 999
+        if self.array_id == 999 and self.telescope_id == 999:
+            return 'ObservationLevelParticles(n_particles={})'.format(self.n_bunches)
+
         return '{}(array_id={}, telescope_id={}, n_bunches={})'.format(
             self.__class__.__name__,
             self.array_id,
@@ -225,56 +236,58 @@ class Photons(EventIOObject):
             cy:        cosine of incident angle in y direction
             time:      time since first interaction in ns
             zem:       Emission height in cm above sea level
-            lambda:    wavelength in nm
+            wavelength:    wavelength in nm
             scattered: indicates if the photon was scattered in the atmosphere
         '''
+        data = self.parse_data()
+        # normal photon bunch
+        if not (self.array_id == 999 and self.telescope_id == 999):
+            emitter_mask = data['wavelength'] == np.float32(9999)
+            if np.any(emitter_mask):
+                photons = data[~emitter_mask]
+                emitter = data[emitter_mask].view(self.emitter_dtype)
+            else:
+                photons = data
+                emitter = None
 
+            return photons, emitter
+
+        # particles at obslevel
+        return data.view(self.particle_dtype)
+
+    def parse_data(self):
         if self.compact:
-            dtype = np.dtype('int16')
+            dtype = self.compact_dtype
         else:
-            dtype = np.dtype('float32')
+            dtype = self.long_dtype
 
         if self.n_bunches == 0:
-            return np.array([], dtype=[(col, dtype) for col in self.columns])
+            return np.array([], dtype=dtype)
 
         self.seek(12)
-        block = np.frombuffer(
-            self.read(self.n_bunches * len(self.columns) * dtype.itemsize),
+        bunches = np.frombuffer(
+            self.read(self.n_bunches * dtype.itemsize),
             dtype=dtype,
-            count=self.n_bunches * len(self.columns)
-        )
-        block = block.reshape(self.n_bunches, len(self.columns))
-
-        bunches = np.core.records.fromrecords(
-            block,
-            names=self.columns,
+            count=self.n_bunches
         )
 
         if self.compact:
-            bunches = bunches.astype([(c, 'float32') for c in self.columns])
+            bunches = bunches.astype(self.long_dtype)
             bunches['x'] *= 0.1  # now in cm
             bunches['y'] *= 0.1  # now in cm
 
             # if compact, cosines are scaled by a factor of 30000
             bunches['cx'] /= 30000
             bunches['cy'] /= 30000
-            #   bernloehr clips in his implementation of the reader.
-            #   I am not sure I really want that.
-            # bunches['cx'] = bunches['cx'].clip(a_min=-1., a_max=1.)
-            # bunches['cy'] = bunches['cy'].clip(a_min=-1., a_max=1.)
+            # bernloehr clips in his implementation of the reader.
+            # we do so here as well. As cx and cy are cosines of angles,
+            # values with abs > 1 are not allowed.
+            bunches['cx'] = bunches['cx'].clip(min=-1., max=1.)
+            bunches['cy'] = bunches['cy'].clip(min=-1., max=1.)
 
             bunches['time'] *= 0.1  # in nanoseconds since first interaction.
             bunches['zem'] = np.power(10., bunches['zem'] * 0.001)
             bunches['photons'] *= 0.01
-
-        bunches = append_fields(
-            bunches,
-            data=bunches['lambda'] < 0,
-            dtypes=bool,
-            names='scattered',
-            usemask=False,
-        )
-        bunches['lambda'] = np.abs(bunches['lambda'])
 
         return bunches
 

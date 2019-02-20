@@ -1,9 +1,11 @@
 import eventio
-
+import numpy as np
 from pytest import approx
 
 testfile = 'tests/resources/one_shower.dat'
 prod4_simtel = 'tests/resources/gamma_20deg_0deg_run103___cta-prod4-sst-astri_desert-2150m-Paranal-sst-astri.simtel.gz'
+
+test_emitter_file = 'tests/resources/proton_500GeV_iactext.eventio.gz'
 
 
 def test_photo_electrons():
@@ -98,7 +100,7 @@ def test_event_has_382_bunches():
 def test_bunches():
     from eventio.iact import TelescopeData
 
-    columns = ('x', 'y', 'cx', 'cy', 'time', 'zem', 'photons', 'lambda', 'scattered')
+    columns = ('x', 'y', 'cx', 'cy', 'time', 'zem', 'photons', 'wavelength')
     with eventio.EventIOFile(testfile) as f:
         # first telescope data  object should be the 6th object in the file
         for i in range(6):
@@ -106,6 +108,31 @@ def test_bunches():
 
         assert isinstance(obj, TelescopeData)
         photons = next(obj)
-        bunches = photons.parse()
+        bunches, emitter = photons.parse()
 
         assert bunches.dtype.names == columns
+        assert emitter is None
+
+
+def test_emitter_bunches():
+    from eventio.iact import TelescopeData
+
+    columns = ('x', 'y', 'cx', 'cy', 'time', 'zem', 'photons', 'wavelength')
+    with eventio.EventIOFile(test_emitter_file) as f:
+        # first telescope data  object should be the 6th object in the file
+        for i in range(7):
+            obj = next(f)
+
+        assert isinstance(obj, TelescopeData)
+        photons = next(obj)
+        bunches, emitter = photons.parse()
+
+        assert bunches.dtype.names == columns
+        assert len(emitter) == len(bunches)
+        assert np.all(emitter['wavelength'] == np.float32(9999))
+
+        # lightest particle should be an electron
+        assert np.isclose(np.unique(emitter['mass'])[0], 0.000511, rtol=0.1)
+
+        # second lightest particle should be a muon 
+        assert np.isclose(np.unique(emitter['mass'])[1], 0.105, rtol=0.1)

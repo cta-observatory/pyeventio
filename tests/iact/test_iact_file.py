@@ -104,14 +104,14 @@ def test_bunches():
     with eventio.IACTFile(testfile) as f:
 
         event = next(iter(f))
-        columns = ('x', 'y', 'cx', 'cy', 'time', 'zem', 'photons', 'lambda', 'scattered')
+        columns = ('x', 'y', 'cx', 'cy', 'time', 'zem', 'photons', 'wavelength')
 
         assert event.photon_bunches[0].shape == (382, )
         assert event.photon_bunches[0].dtype.names == columns
 
 
 def test_bunches_2():
-    columns = ('x', 'y', 'cx', 'cy', 'time', 'zem', 'photons', 'lambda', 'scattered')
+    columns = ('x', 'y', 'cx', 'cy', 'time', 'zem', 'photons', 'wavelength')
 
     with eventio.IACTFile(testfile_two_telescopes) as f:
         for event in f:
