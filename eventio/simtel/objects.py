@@ -764,8 +764,31 @@ class TelescopeEventHeader(TelescopeObject):
         return event_head
 
 
+def number_of_bits_in(n):
+    m = 0
+    for i in range(16):
+        if n & (1 << i):
+            m += 1
+    return m
+
+
+def make_ks_n_ns(n_pixels):
+    N, mod = divmod(n_pixels, 16)
+    if mod == 0:
+        ns = np.ones(N, dtype='u4') * 16
+    else:
+        ns = np.ones(N + 1, dtype='u4') * 16
+        ns[-1] = mod
+    assert np.sum(ns) == n_pixels
+
+    ks = np.cumsum(ns).astype('u4')
+    return ns, ks
+
+
 class ADCSums(EventIOObject):
     eventio_type = 2012
+    LO_GAIN = 1
+    HI_GAIN = 0
 
     def __init__(self, header, filehandle):
         super().__init__(header, filehandle)
@@ -794,23 +817,129 @@ class ADCSums(EventIOObject):
         n_pixels = read_int(byte_stream)
         n_gains = read_short(byte_stream)
 
-        if raw['data_red_mode'] != 0 or raw['zero_sup_mode'] != 0:
-            raise NotImplementedError(
-                'Currently no support for data_red_mode {} or zero_sup_mode{}'.format(
-                    raw['data_red_mode'], raw['zero_sup_mode'],
-                )
+        if raw['data_red_mode'] == 0 and raw['zero_sup_mode'] == 0:
+            raw['adc_sums'] = []
+            data = read_remaining_with_check(byte_stream, self.header.length)
+            raw['adc_sums'], bytes_read = unsigned_varint_arrays_differential(
+                data, n_arrays=n_gains, n_elements=n_pixels
             )
 
-        raw['adc_sums'] = []
-        data = read_remaining_with_check(byte_stream, self.header.length)
-        raw['adc_sums'], bytes_read = unsigned_varint_arrays_differential(
-            data, n_arrays=n_gains, n_elements=n_pixels
-        )
+            try:
+                return np.squeeze(raw['adc_sums'], axis=-1)
+            except ValueError:
+                return raw['adc_sums']
 
-        try:
-            return np.squeeze(raw['adc_sums'], axis=-1)
-        except ValueError:
-            return raw['adc_sums']
+        if raw['data_red_mode'] == 0 and raw['zero_sup_mode'] == 1:
+            ns, ks = make_ks_n_ns(n_pixels)
+            adc_sums = np.zeros((n_gains, n_pixels), dtype='f8')
+            raw['adc_sums'] = adc_sums
+
+            data = read_remaining_with_check(byte_stream, self.header.length)
+            pos = 0
+            for n, k in zip(ns, ks):
+                zbits, = struct.unpack('<h', data[pos:pos + 2])
+                pos += 2
+                m = number_of_bits_in(zbits)
+                mlg = m
+                mhg16 = m
+                bytes_read = 0
+                lgval = None
+                if n_gains == 2:
+                    # get_vector_of_uint32_scount_differential(lgval,mlg,iobuf);
+                    lgval, bytes_read = unsigned_varint_arrays_differential(
+                        data[pos:], n_arrays=1, n_elements=mlg
+                    )
+                    lgval = lgval[0]
+                    pos += bytes_read
+
+                # get_vector_of_uint32_scount_differential(hgval,mhg16,iobuf);
+                hgval, bytes_read = unsigned_varint_arrays_differential(
+                    data[pos:], n_arrays=1, n_elements=mhg16
+                )
+                hgval = hgval[0]
+                pos += bytes_read
+
+                mlg, mhg16, m = 0, 0, 0
+                for j in range(n):
+                    if zbits & (1 << j):
+                        if lgval is not None:
+                            adc_sums[ADCSums.LO_GAIN, k - n + j] = lgval[mlg]
+                            mlg += 1
+                        adc_sums[ADCSums.HI_GAIN, k - n + j] = hgval[mhg16]
+                        mhg16 += 1
+
+            try:
+                return np.squeeze(raw['adc_sums'], axis=-1)
+            except ValueError:
+                return raw['adc_sums']
+
+        if raw['data_red_mode'] == 0 and raw['zero_sup_mode'] == 2:
+            adc_sums = np.zeros((n_gains, n_pixels), dtype='f8')
+            raw['adc_sums'] = adc_sums
+
+            list_size = read_short(byte_stream)
+            adc_list_l = read_array(byte_stream, 'u2', list_size)
+
+            without_lg = (adc_list_l & 0x2000) != 0
+            reduced_width = (adc_list_l & 0x4000) != 0
+
+            mlg = mhg16 = mhg8 = 0
+            for wlg, rw in zip(without_lg, reduced_width):
+                if rw:
+                    mhg8 += 1
+                elif n_gains < 2 or wlg:
+                    mhg16 += 1
+                else:
+                    mlg += 1
+                    mhg16 += 1
+
+            adc_list = adc_list_l & 0x1fff   # strip off these marker bits
+
+            data = read_remaining_with_check(byte_stream, self.header.length)
+            pos = 0
+
+            if n_gains >= 2:
+                lg, bytes_read = unsigned_varint_arrays_differential(
+                    data[pos:], n_arrays=1, n_elements=mlg
+                )
+                lg = lg[0]
+                pos += bytes_read
+
+            hg, bytes_read = unsigned_varint_arrays_differential(
+                data[pos:], n_arrays=1, n_elements=mhg16
+            )
+            hg = hg[0]
+            pos += bytes_read
+
+            if mhg8 > 0:
+                hg8 = np.frombuffer(data[pos:pos + mhg8], 'u1', count=mhg8)
+                pos += mhg8
+
+            mlg = mhg16 = mhg8 = 0
+            for i, adc_id in enumerate(adc_list):
+                if reduced_width[i]:
+                    adc_sums[ADCSums.HI_GAIN, adc_id] = hg8[mhg8]
+                    mhg8 += 1
+                else:
+                    adc_sums[ADCSums.HI_GAIN, adc_id] = hg[mhg16]
+                    mhg16 += 1
+                if not without_lg[i] and n_gains > 1:
+                    adc_sums[ADCSums.LO_GAIN, adc_id] = lg[mlg]
+                    mlg += 1
+
+            try:
+                return np.squeeze(raw['adc_sums'], axis=-1)
+            except ValueError:
+                return raw['adc_sums']
+
+        raise NotImplementedError(
+            (
+                'Currently no support for '
+                'data_red_mode {} or zero_sup_mode{}'
+            ).format(
+                raw['data_red_mode'], raw['zero_sup_mode'],
+            )
+        )
 
 
 class ADCSamples(EventIOObject):
@@ -829,34 +958,40 @@ class ADCSamples(EventIOObject):
 
     def parse(self):
         assert_exact_version(self, supported_version=3)
-        unsupported = (
-            self._zero_sup_mode != 0
-            or self._data_red_mode != 0
-            or self._list_known
+
+        if (
+            self._data_red_mode == 0 and
+            not self._list_known
+        ):
+            self.seek(0)
+            byte_stream = BytesIO(self.read())
+
+            args = {
+                'byte_stream': byte_stream,
+                'n_pixels': read_int(byte_stream),
+                'n_gains': read_short(byte_stream),
+                'n_samples': read_short(byte_stream),
+            }
+            if self._zero_sup_mode:
+                result = self._parse_in_zero_suppressed_mode(**args)
+            else:
+                result = self._parse_in_not_zero_suppressed_mode(**args)
+
+            try:
+                result = np.squeeze(result, axis=-1)
+            except ValueError:
+                pass
+
+            return result
+
+        raise NotImplementedError(
+            (
+                'Currently no support for '
+                'data_red_mode {} and zero_sup_mode {}'
+            ).format(
+                self._data_red_mode, self._zero_sup_mode,
+            )
         )
-        if unsupported:
-            raise NotImplementedError
-
-        self.seek(0)
-        byte_stream = BytesIO(self.read())
-
-        args = {
-            'byte_stream': byte_stream,
-            'n_pixels': read_int(byte_stream),
-            'n_gains': read_short(byte_stream),
-            'n_samples': read_short(byte_stream),
-        }
-        if self._zero_sup_mode:
-            result = self._parse_in_zero_suppressed_mode(**args)
-        else:
-            result = self._parse_in_not_zero_suppressed_mode(**args)
-
-        try:
-            result = np.squeeze(result, axis=-1)
-        except ValueError:
-            pass
-
-        return result
 
     def _parse_in_zero_suppressed_mode(
         self,
@@ -865,19 +1000,29 @@ class ADCSamples(EventIOObject):
         n_pixels,
         n_samples,
     ):
+        adc_samples = np.ones(
+            (n_gains, n_pixels, n_samples),
+            dtype='f4'
+        ) * np.nan
+
         list_size = read_utf8_like_signed_int(byte_stream)
         pixel_ranges = []
         for _ in range(list_size):
             start_pixel_id = read_utf8_like_signed_int(byte_stream)
             if start_pixel_id < 0:
                 pixel_ranges.append(
-                    (-start_pixel_id - 1, -start_pixel_id - 1)
+                    (
+                        -start_pixel_id - 1,
+                        -start_pixel_id
+                    )
                 )
             else:
                 pixel_ranges.append(
-                    (start_pixel_id, read_utf8_like_signed_int(byte_stream))
+                    (
+                        start_pixel_id,
+                        read_utf8_like_signed_int(byte_stream) + 1
+                    )
                 )
-
         adc_samples = np.zeros(
             (n_gains, n_pixels, n_samples),
             dtype='u2'
@@ -885,13 +1030,22 @@ class ADCSamples(EventIOObject):
         n_pixels_signal = sum(p[1] - p[0] for p in pixel_ranges)
         data = read_remaining_with_check(byte_stream, self.header.length)
         adc_samples_signal, bytes_read = unsigned_varint_arrays_differential(
-            data, n_arrays=n_gains * n_pixels_signal, n_elements=n_samples,
+            data,
+            n_arrays=n_gains * n_pixels_signal,
+            n_elements=n_samples,
         )
+        adc_samples_signal = adc_samples_signal.reshape(
+            n_gains, n_pixels_signal, n_samples
+        ).astype('u2')
 
         for i_gain in range(n_gains):
+            i_array = 0
             for pixel_range in pixel_ranges:
-                for i_array, i_pix in enumerate(range(*pixel_range)):
-                    adc_samples[i_gain, i_pix, :] = adc_samples_signal[i_gain, i_array]
+                for i_pix in range(*pixel_range):
+                    adc_samples[i_gain, i_pix, :] = (
+                        adc_samples_signal[i_gain, i_array]
+                    )
+                    i_array += 1
         return adc_samples
 
     def _parse_in_not_zero_suppressed_mode(
