@@ -93,7 +93,7 @@ class SimTelFile(EventIOFile):
 
         # read the header:
         # assumption: the header is done when
-        # any of the objeccts in check is not None anymore
+        # any of the objects in check is not None anymore
         check = []
         while not any(o for o in check):
             self.next_low_level()
