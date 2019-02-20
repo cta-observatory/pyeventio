@@ -417,8 +417,16 @@ def test_2016():
     from eventio.simtel.objects import PixelTiming
 
     with EventIOFile(prod4b_sst1m_file) as f:
-        for obj in yield_n_and_assert(f, PixelTiming, n=3):
-            parse_and_assert_consumption(obj, limit=3)
+        for obj in yield_n_and_assert(f, PixelTiming, n=15):
+            timing = parse_and_assert_consumption(obj, limit=3)
+
+            time = timing['time'][:, 0]
+            pixels = timing['pixel_list']
+
+            if timing['list_type'] == 1:
+                mask = np.isfinite(time)
+                assert mask.sum() == len(timing['pixel_list'])
+                assert not np.any(np.isnan(time[pixels]))
 
 
 @pytest.mark.xfail

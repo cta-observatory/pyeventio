@@ -1232,10 +1232,14 @@ class PixelTiming(TelescopeObject):
 
         list_type = read_short(byte_stream)
         assert list_type in (1, 2), "list_type has to be 1 or 2"
+        pixel_timing['list_type'] = list_type
         list_size = read_short(byte_stream)
         pixel_timing['pixel_list'] = read_array(
             byte_stream, dtype='i2', count=list_size * list_type
         )
+        if list_type == 2:
+            pixel_timing['pixel_list'].shape = (-1, 2)
+
         pixel_timing['threshold'] = read_short(byte_stream)
         pixel_timing['glob_only_selected'] = pixel_timing['threshold'] < 0
         pixel_timing['n_types'] = read_short(byte_stream)
@@ -1265,7 +1269,7 @@ class PixelTiming(TelescopeObject):
         else:
             result, bytes_read = PixelTiming._parse_list_type_2(
                 data,
-                pixel_list=pixel_timing['pixel_list'].reshape(-1, 2),
+                pixel_list=pixel_timing['pixel_list'],
                 n_gains=pixel_timing['n_gains'],
                 n_pixels=pixel_timing['n_pixels'],
                 n_types=pixel_timing['n_types'],

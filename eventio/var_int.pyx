@@ -330,20 +330,20 @@ def simtel_pixel_timing_parse_list_type_2(
     cdef int i_pix, i_type
     cdef unsigned long pos = 0
     cdef unsigned int length = 0
+    cdef INT16_t* short_ptr
 
-    cdef np.ndarray[float, ndim=2] timval = np.zeros((n_pixels, n_types), dtype=np.float32)
-    # The first timing element is always initialised to indicate unknown.
-    timval[:, 0] = -1
-
+    cdef np.ndarray[float, ndim=2] timval = np.full((n_pixels, n_types), np.nan, dtype=np.float32)
     cdef np.ndarray[INT32_t, ndim=2] pulse_sum_loc = np.zeros((n_gains, n_pixels), dtype=INT32)
     cdef np.ndarray[INT32_t, ndim=2] pulse_sum_glob = np.zeros((n_gains, n_pixels), dtype=INT32)
 
     for list_index in range(pixel_list.shape[0]):
         start = pixel_list[list_index][0]
         stop = pixel_list[list_index][1]
+
         for i_pix in range(start, stop + 1):
             for i_type in range(n_types):
-                timval[i_pix, i_type] = granularity # * read_short(self)
+                short_ptr = <INT16_t*> &data[pos]
+                timval[i_pix, i_type] = granularity * short_ptr[0]
                 pos += 2
 
             if with_sum:
@@ -363,7 +363,7 @@ def simtel_pixel_timing_parse_list_type_2(
                 pos += length
 
     return {
-        'timval': timval,
+        'time': timval,
         'pulse_sum_glob': pulse_sum_glob,
         'pulse_sum_loc': pulse_sum_loc,
     }, pos
@@ -454,24 +454,19 @@ cpdef simtel_pixel_timing_parse_list_type_1(
     cdef long pixel_list_length = pixel_list.shape[0]
     cdef int i, i_gain, i_type, i_pix
     cdef unsigned int length = 0
-    cdef np.ndarray[INT64_t, ndim=1] result
+    cdef INT16_t* short_ptr
 
-    cdef np.ndarray[float, ndim=2] timval = np.zeros((n_pixels, n_types), dtype=np.float32)
-    # The first timing element is always initialised to indicate unknown.
-    for i in range(n_pixels):
-        timval[i, 0] = -1
-
+    cdef np.ndarray[float, ndim=2] timval = np.full((n_pixels, n_types), np.nan, dtype=np.float32)
     cdef np.ndarray[INT32_t, ndim=2] pulse_sum_loc = np.zeros((n_gains, n_pixels), dtype=INT32)
     cdef np.ndarray[INT32_t, ndim=2] pulse_sum_glob = np.zeros((n_gains, n_pixels), dtype=INT32)
 
-    cdef short* short_ptr
 
     cdef unsigned long pos = 0
     for i in range(pixel_list_length):
         i_pix = pixel_list[i]
         for i_type in range(n_types):
-            short_ptr = <short*> &(data[pos])
-            timval[i_pix, i_type] = granularity * (short_ptr[0])
+            short_ptr = <INT16_t*> &(data[pos])
+            timval[i_pix, i_type] = granularity * short_ptr[0]
             pos += 2
 
         if with_sum:
@@ -493,7 +488,7 @@ cpdef simtel_pixel_timing_parse_list_type_1(
                 pos += length
 
     return {
-        'timval': timval,
+        'time': timval,
         'pulse_sum_glob': pulse_sum_glob,
         'pulse_sum_loc': pulse_sum_loc,
     }, pos
