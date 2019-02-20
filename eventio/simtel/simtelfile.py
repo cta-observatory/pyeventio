@@ -14,6 +14,7 @@ from .objects import (
     ADCSamples,
     ADCSums,
     ArrayEvent,
+    CalibrationEvent,
     CameraMonitoring,
     CameraOrganization,
     CameraSettings,
@@ -40,6 +41,17 @@ from .objects import (
 )
 
 
+telescope_descriptions_types = (
+    CameraSettings,
+    CameraOrganization,
+    PixelSettings,
+    DisabledPixels,
+    CameraSoftwareSettings,
+    DriveSettings,
+    PointingCorrection,
+)
+
+
 log = logging.getLogger(__name__)
 
 
@@ -57,7 +69,7 @@ class NoTrackingPositions(Exception):
 
 
 class SimTelFile(EventIOFile):
-    def __init__(self, path, allowed_telescopes=None):
+    def __init__(self, path, allowed_telescopes=None, skip_calibration=False):
         super().__init__(path)
 
         self.path = path
@@ -77,12 +89,22 @@ class SimTelFile(EventIOFile):
         self.current_photoelectron_sum = None
         self.current_photoelectrons = {}
         self.current_array_event = None
+        self.current_calibration_event = None
+        self.skip_calibration = skip_calibration
 
         # read the header:
         # assumption: the header is done when
-        # self.current_mc_shower is not None anymore
-        while self.current_mc_shower is None:
+        # any of the objects in check is not None anymore
+        check = []
+        while not any(o for o in check):
             self.next_low_level()
+            check = [
+                self.current_mc_shower,
+                self.current_array_event,
+                self.current_calibration_event,
+                self.laser_calibrations,
+                self.camera_monitorings,
+            ]
 
         self._first_event_byte = self.tell()
 
@@ -90,26 +112,21 @@ class SimTelFile(EventIOFile):
         return self.iter_array_events()
 
     def next_low_level(self):
-        telescope_descriptions_types = (
-            CameraSettings,
-            CameraOrganization,
-            PixelSettings,
-            DisabledPixels,
-            CameraSoftwareSettings,
-            DriveSettings,
-            PointingCorrection,
-        )
         o = next(self)
 
         if isinstance(o, History):
             self.history.append(o)
+
         elif isinstance(o, RunHeader):
             self.header = o.parse()
             self.n_telescopes = self.header['n_telescopes']
+
         elif isinstance(o, MCRunHeader):
             self.mc_run_headers.append(o.parse())
+
         elif isinstance(o, iact.InputCard):
             self.corsika_inputcards.append(o.parse())
+
         elif isinstance(o, telescope_descriptions_types):
             key = camel_to_snake(o.__class__.__name__)
             self.telescope_descriptions[o.telescope_id][key] = o.parse()
@@ -132,7 +149,12 @@ class SimTelFile(EventIOFile):
                 o,
                 self.allowed_telescopes
             )
-
+        elif isinstance(o, CalibrationEvent):
+            if not self.skip_calibration:
+                self.current_calibration_event = parse_array_event(
+                    next(o),
+                    self.allowed_telescopes,
+                )
         elif isinstance(o, CameraMonitoring):
             self.camera_monitorings[o.telescope_id].update(o.parse())
 
@@ -158,7 +180,6 @@ class SimTelFile(EventIOFile):
                 yield next_event
 
     def try_build_mc_event(self):
-        self.next_low_level()
         if self.current_mc_event:
             event_data = {
                 'event_id': self.current_mc_event_id,
@@ -167,6 +188,7 @@ class SimTelFile(EventIOFile):
             }
             self.current_mc_event = None
             return event_data
+        self.next_low_level()
 
     def iter_array_events(self):
         self._next_header_pos = self._first_event_byte
@@ -182,7 +204,6 @@ class SimTelFile(EventIOFile):
         '''check if all necessary info for an event was found,
         then make an event and invalidate old data
         '''
-        self.next_low_level()
 
         if self.current_array_event:
             if (
@@ -193,6 +214,7 @@ class SimTelFile(EventIOFile):
                 return None
 
             event_data = {
+                'type': 'data',
                 'event_id': self.current_mc_event_id,
                 'mc_shower': self.current_mc_shower,
                 'mc_event': self.current_mc_event,
@@ -215,6 +237,37 @@ class SimTelFile(EventIOFile):
             self.current_array_event = None
 
             return event_data
+
+        elif self.current_calibration_event:
+            event = self.current_calibration_event
+            if (
+                self.allowed_telescopes
+                and not self.current_array_event['telescope_events']
+            ):
+                self.current_calibration_event = None
+                return None
+
+            event_data = {
+                'type': 'calibration',
+                'telescope_events': event['telescope_events'],
+                'tracking_positions': event['tracking_positions'],
+                'trigger_information': event['trigger_information'],
+            }
+
+            event_data['camera_monitorings'] = {
+                telescope_id: copy(self.camera_monitorings[telescope_id])
+                for telescope_id in event.keys()
+            }
+            event_data['laser_calibrations'] = {
+                telescope_id: copy(self.laser_calibrations[telescope_id])
+                for telescope_id in event.keys()
+            }
+
+            self.current_calibration_event = None
+
+            return event_data
+
+        self.next_low_level()
 
 
 def parse_array_event(array_event, allowed_telescopes=None):

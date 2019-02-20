@@ -11,6 +11,7 @@ prod2_file = 'tests/resources/gamma_test.simtel.gz'
 camorgan_v2_file = 'tests/resources/test_camorganv2.simtel.gz'
 prod4b_sst1m_file = 'tests/resources/gamma_20deg_0deg_run102___cta-prod4-sst-1m_desert-2150m-Paranal-sst-1m.simtel.gz'
 prod4b_astri_file = 'tests/resources/gamma_20deg_0deg_run103___cta-prod4-sst-astri_desert-2150m-Paranal-sst-astri.simtel.gz'
+calib_path = 'tests/resources/calib_events.simtel.gz'
 
 
 test_files = [
@@ -603,9 +604,15 @@ def test_2027_3_objects():
     '''
 
 
-@pytest.mark.xfail
 def test_2028():
-    assert False
+    from eventio.simtel.objects import CalibrationEvent, ArrayEvent
+
+    with EventIOFile(calib_path) as f:
+        n_events = 0
+        for event in yield_toplevel_of_type(f, CalibrationEvent):
+            assert isinstance(next(event), ArrayEvent)
+            n_events += 1
+        assert n_events > 0
 
 
 @pytest.mark.xfail

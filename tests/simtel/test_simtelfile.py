@@ -9,6 +9,7 @@ prod4_astri_path = 'tests/resources/gamma_20deg_0deg_run103___cta-prod4-sst-astr
 # using a zstd file ensures SimTelFile is not seeking back, when reading
 # a file
 prod4_zst_path = 'tests/resources/gamma_20deg_0deg_run102___cta-prod4-sst-1m_desert-2150m-Paranal-sst-1m.simtel.zst'
+calib_path = 'tests/resources/calib_events.simtel.gz'
 
 
 test_paths = [prod2_path, prod3_path, prod4_path]
@@ -56,8 +57,8 @@ def test_show_event_is_not_empty_and_has_some_members_for_sure():
                 'profiles'
             }
 
-            print(event.keys())
             assert event.keys() == {
+                'type',
                 'event_id',
                 'mc_shower',
                 'mc_event',
@@ -124,12 +125,9 @@ def test_iterate_complete_file_zst():
 
 def test_iterate_mc_events():
     expected = 200
-    try:
-        with SimTelFile(prod4_path) as f:
-            for counter, event in enumerate(f.iter_mc_events(), start=1):
-                pass
-    except (EOFError, IndexError):  # truncated files might raise these...
-        pass
+    with SimTelFile(prod4_path) as f:
+        for counter, event in enumerate(f.iter_mc_events(), start=1):
+            pass
     assert counter == expected
 
 
@@ -156,3 +154,21 @@ def test_pixel_trigger_times():
         for counter, event in enumerate(f, start=1):
             for telescope_event in event['telescope_events'].values():
                 assert 'pixel_trigger_times' in telescope_event
+
+
+def test_calibration_events():
+    with SimTelFile(calib_path) as f:
+        i = 0
+        for event in f:
+            assert event['type'] == 'calibration'
+            i += 1
+        assert i >= 1
+
+
+def test_skip_calibration_events():
+    with SimTelFile(calib_path, skip_calibration=True) as f:
+        i = 0
+        for event in f:
+            if event['type'] == 'calibration':
+                i += 1
+        assert i == 0

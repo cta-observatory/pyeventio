@@ -1524,6 +1524,15 @@ class PixelList(EventIOObject):
 class CalibrationEvent(EventIOObject):
     eventio_type = 2028
 
+    def __init__(self, header, filehandle):
+        super().__init__(header, filehandle)
+        self.type = self.header.id
+
+    def __repr__(self):
+        return '{}[{}](type={})'.format(
+            self.__class__.__name__, self.eventio_type, self.type
+        )
+
 
 class AuxiliaryDigitalTraces(EventIOObject):
     eventio_type = 2029
