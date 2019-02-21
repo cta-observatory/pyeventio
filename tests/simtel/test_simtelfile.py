@@ -161,6 +161,10 @@ def test_calibration_events():
         i = 0
         for event in f:
             assert event['type'] == 'calibration'
+
+            for t in event['telescope_events'].keys():
+                assert t in event['laser_calibrations']
+                assert t in event['camera_monitorings']
             i += 1
         assert i >= 1
 
