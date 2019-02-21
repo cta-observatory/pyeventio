@@ -256,11 +256,11 @@ class SimTelFile(EventIOFile):
 
             event_data['camera_monitorings'] = {
                 telescope_id: copy(self.camera_monitorings[telescope_id])
-                for telescope_id in event.keys()
+                for telescope_id in event['telescope_events'].keys()
             }
             event_data['laser_calibrations'] = {
                 telescope_id: copy(self.laser_calibrations[telescope_id])
-                for telescope_id in event.keys()
+                for telescope_id in event['telescope_events'].keys()
             }
 
             self.current_calibration_event = None
