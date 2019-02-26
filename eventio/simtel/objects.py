@@ -1602,7 +1602,7 @@ class MCPhotoelectronSum(EventIOObject):
         event = self.header.id
         shower_num = read_int(byte_stream)
         n_tel = read_int(byte_stream)
-        n_pe = read_array(byte_stream, 'i4', n_tel)
+        n_pes = read_array(byte_stream, 'i4', n_tel)
         n_pixels = read_array(byte_stream, 'i4', n_tel)
 
         # NOTE:
@@ -1612,13 +1612,13 @@ class MCPhotoelectronSum(EventIOObject):
         # pixel_pe: a list (running over telescope_id)
         #         of 2-tuples: (pixel_id, pe)
         pixel_pe = []
-        for n_pe, n_pixels in zip(n_pe, n_pixels):
-            if n_pe <= 0 or n_pixels <= 0:
-                continue
+        mask = (n_pixels > 0) & (n_pes > 0)
+
+        for n_pe, n_pixels in zip(n_pes[mask], n_pixels[mask]):
             non_empty = read_short(byte_stream)
             pixel_id = read_array(byte_stream, 'i2', non_empty)
             pe = read_array(byte_stream, 'i4', non_empty)
-            pixel_pe.append(pixel_id, pe)
+            pixel_pe.append((pixel_id, pe))
 
         photons = read_array(byte_stream, 'f4', n_tel)
         photons_atm = read_array(byte_stream, 'f4', n_tel)
@@ -1630,7 +1630,7 @@ class MCPhotoelectronSum(EventIOObject):
             'event': event,
             'shower_num': shower_num,
             'n_tel': n_tel,
-            'n_pe': n_pe,
+            'n_pe': n_pes,
             'n_pixels': n_pixels,
             'pixel_pe': pixel_pe,
             'photons': photons,
