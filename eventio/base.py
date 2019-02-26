@@ -231,7 +231,10 @@ class EventIOObject:
         header = read_next_header_sublevel(
             self, parent_address=self.address
         )
-        self._next_header_pos = self.tell() + header.length
+        self._next_header_pos += header.length + constants.OBJECT_HEADER_SIZE
+        if header.extended:
+            self._next_header_pos += constants.EXTENSION_SIZE
+
         return KNOWN_OBJECTS.get(header.type, EventIOObject)(
             header, filehandle=self._filehandle
         )
