@@ -240,18 +240,18 @@ class EventIOObject:
         address = self.address
         if whence == 0:
             assert offset >= 0
-            self._filehandle.seek(address + offset, whence)
+            new_pos = self._filehandle.seek(address + offset, whence)
         elif whence == 1:
-            self._filehandle.seek(offset, whence)
+            new_pos = self._filehandle.seek(offset, whence)
         elif whence == 2:
             if offset > self.length:
                 offset = self.length
-            self._position = self._filehandle.seek(address + self.length - offset, 0)
+            new_pos = self._filehandle.seek(address + self.length - offset, 0)
         else:
             raise ValueError(
                 'invalid whence ({}, should be 0, 1 or 2)'.format(whence)
             )
-        return self.tell()
+        return new_pos - address
 
     def tell(self):
         return self._filehandle.tell() - self.address
