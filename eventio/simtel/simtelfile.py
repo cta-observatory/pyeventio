@@ -73,7 +73,10 @@ class SimTelFile(EventIOFile):
         super().__init__(path)
 
         self.path = path
-        self.allowed_telescopes = allowed_telescopes
+        self.allowed_telescopes = None
+        if allowed_telescopes:
+            self.allowed_telescopes = set(allowed_telescopes)
+
         self.histograms = None
 
         self.history = []
@@ -193,18 +196,20 @@ class SimTelFile(EventIOFile):
     def iter_array_events(self):
         self._next_header_pos = self._first_event_byte
         while True:
-            try:
-                next_event = self.try_build_event()
-            except StopIteration:
-                break
+
+            next_event = self.try_build_event()
             if next_event is not None:
                 yield next_event
+
+            try:
+                self.next_low_level()
+            except StopIteration:
+                break
 
     def try_build_event(self):
         '''check if all necessary info for an event was found,
         then make an event and invalidate old data
         '''
-
         if self.current_array_event:
             if (
                 self.allowed_telescopes
@@ -267,8 +272,6 @@ class SimTelFile(EventIOFile):
 
             return event_data
 
-        self.next_low_level()
-
 
 def parse_array_event(array_event, allowed_telescopes=None):
     '''structure of event:
@@ -301,6 +304,10 @@ def parse_array_event(array_event, allowed_telescopes=None):
         if i == 0:
             check_type(o, TriggerInformation)
             trigger_information = o.parse()
+            telescopes = set(trigger_information['telescopes_with_data'])
+
+            if allowed_telescopes and len(telescopes & allowed_telescopes) == 0:
+                break
 
         elif isinstance(o, TelescopeEvent):
             if allowed_telescopes is None or o.telescope_id in allowed_telescopes:
