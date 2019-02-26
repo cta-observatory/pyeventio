@@ -52,10 +52,7 @@ class EventIOFile:
     def __next__(self):
         self._filehandle.seek(self._next_header_pos)
         header = read_next_header_toplevel(self)
-
-        self._next_header_pos += header.length + constants.TOPLEVEL_HEADER_SIZE
-        if header.extended:
-            self._next_header_pos += constants.EXTENSION_SIZE
+        self._next_header_pos += header.total_size
 
         return KNOWN_OBJECTS.get(header.type, EventIOObject)(
             header,
@@ -108,10 +105,10 @@ def read_next_header_toplevel(byte_stream):
             'Big endian byte order is not supported by this reader'
         )
 
-    return read_next_header_sublevel(byte_stream)
+    return read_next_header_sublevel(byte_stream, toplevel=True)
 
 
-def read_next_header_sublevel(byte_stream, parent_address=0):
+def read_next_header_sublevel(byte_stream, parent_address=0, toplevel=False):
     '''Read the next sublevel header object from the file
     Assumes position of `byte_stream` is at the beginning of a new header.
 
@@ -129,7 +126,7 @@ def read_next_header_sublevel(byte_stream, parent_address=0):
         zero_ok=False,
     )
 
-    header = parse_header_bytes(header_bytes)
+    header = parse_header_bytes(header_bytes, toplevel=toplevel)
     header.endianness = '<'
 
     if header.extended:
@@ -139,9 +136,10 @@ def read_next_header_sublevel(byte_stream, parent_address=0):
             constants.EXTENSION_SIZE,
             zero_ok=True
         )
-        header.length += parse_extension_field(extension_field)
+        ext = parse_extension_field(extension_field)
+        header.content_size += ext
 
-    header.address = parent_address + byte_stream.tell()
+    header.content_address = parent_address + byte_stream.tell()
 
     return header
 
@@ -186,8 +184,8 @@ class EventIOObject:
 
         self._filehandle = filehandle
         self.header = header
-        self.address = self.header.address
-        self.length = self.header.length
+        self.address = self.header.content_address
+        self.size = self.header.content_size
         self.only_subobjects = self.header.only_subobjects
         self._next_header_pos = 0
 
@@ -203,8 +201,8 @@ class EventIOObject:
         pos = self.tell()
 
         # read all remaining bytes.
-        if size == -1 or size > self.length - pos:
-            size = self.length - pos
+        if size == -1 or size > self.size - pos:
+            size = self.size - pos
 
         data = self._filehandle.read(size)
 
@@ -224,16 +222,14 @@ class EventIOObject:
                 'Only EventIOObjects that contain just subobjects are iterable'
             )
 
-        if self._next_header_pos >= self.header.length:
+        if self._next_header_pos >= self.size:
             raise StopIteration
 
         self.seek(self._next_header_pos)
         header = read_next_header_sublevel(
             self, parent_address=self.address
         )
-        self._next_header_pos += header.length + constants.OBJECT_HEADER_SIZE
-        if header.extended:
-            self._next_header_pos += constants.EXTENSION_SIZE
+        self._next_header_pos += header.total_size
 
         return KNOWN_OBJECTS.get(header.type, EventIOObject)(
             header, filehandle=self._filehandle
@@ -247,9 +243,9 @@ class EventIOObject:
         elif whence == 1:
             new_pos = self._filehandle.seek(offset, whence)
         elif whence == 2:
-            if offset > self.length:
-                offset = self.length
-            new_pos = self._filehandle.seek(address + self.length - offset, 0)
+            if offset > self.size:
+                offset = self.size
+            new_pos = self._filehandle.seek(address + self.size - offset, 0)
         else:
             raise ValueError(
                 'invalid whence ({}, should be 0, 1 or 2)'.format(whence)
@@ -263,9 +259,9 @@ class EventIOObject:
         return '{}[{}](size={}, only_subobjects={}, address={})'.format(
             self.__class__.__name__,
             self.header.type,
-            self.header.length,
+            self.header.content_size,
             self.header.only_subobjects,
-            self.header.address
+            self.header.content_address
         )
 
 
