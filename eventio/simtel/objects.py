@@ -2,7 +2,7 @@
 import numpy as np
 from io import BytesIO
 import struct
-from ..base import EventIOObject, read_next_header_sublevel
+from ..base import EventIOObject, read_header
 from ..tools import (
     read_short,
     read_int,
@@ -1332,7 +1332,7 @@ class MCShower(EventIOObject):
             mc['profiles'].append(p)
 
         if self.header.version >= 2:
-            h = read_next_header_sublevel(self)
+            h = read_header(self, offset=self._filehandle.tell(), toplevel=False)
             assert h.type == 1215
             mc['mc_extra_params'] = MCExtraParams(h, self).parse()
         return mc

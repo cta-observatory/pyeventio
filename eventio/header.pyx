@@ -27,7 +27,6 @@ cdef unsigned int EXTENSION_N_BITS = 12
 cdef unsigned int EXTENSION_POS = 0
 
 cdef class ObjectHeader:
-    cdef public str endianness
     cdef readonly unsigned long id
     cdef readonly unsigned int type
     cdef readonly unsigned int version
@@ -45,7 +44,6 @@ cdef class ObjectHeader:
     def __repr__(self):
         return (
             'Header[{}]('.format(self.type)
-            + 'endianness={}, '.format(self.endianness)
             + 'version={}, '.format(self.version)
             + 'id={}, '.format(self.id)
             + 'user={}, '.format(self.user)

@@ -1,7 +1,6 @@
 ''' Methods to read in and parse the IACT EventIO object types '''
 import struct
 import numpy as np
-from numpy.lib.recfunctions import append_fields
 from io import BytesIO
 from corsikaio.subblocks import (
     parse_run_header,
@@ -17,7 +16,6 @@ from ..tools import (
 from ..base import EventIOObject
 from ..exceptions import WrongSize
 from ..version_handling import assert_version_in
-
 
 
 __all__ = [

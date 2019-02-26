@@ -51,7 +51,12 @@ class EventIOFile:
 
     def __next__(self):
         self._filehandle.seek(self._next_header_pos)
-        header = read_next_header_toplevel(self, self._next_header_pos)
+        read_sync_marker(self)
+        header = read_header(
+            self,
+            toplevel=True,
+            offset=self._next_header_pos,
+        )
         self._next_header_pos += header.total_size
 
         return KNOWN_OBJECTS.get(header.type, EventIOObject)(
@@ -89,11 +94,13 @@ def check_size_or_raise(data, expected_length, zero_ok=True):
         raise EOFError('File seems to be truncated')
 
 
-def read_next_header_toplevel(byte_stream, offset):
-    '''Read the next toplevel header object from the file
-    Assumes position of `byte_stream` is at the beginning of a new header.
+def read_sync_marker(byte_stream):
+    '''
+    Read the sync marker from the filehandle.
+    Assumes position of `byte_stream` is at the beginning of a new toplevel header.
 
     Raises stop iteration if not enough data is available.
+    Raises NotImplementedError if BigEndian sync marker is encountered
     '''
     sync = byte_stream.read(constants.SYNC_MARKER_SIZE)
     check_size_or_raise(sync, constants.SYNC_MARKER_SIZE, zero_ok=True)
@@ -105,20 +112,10 @@ def read_next_header_toplevel(byte_stream, offset):
             'Big endian byte order is not supported by this reader'
         )
 
-    return read_next_header_sublevel(
-        byte_stream,
-        toplevel=True,
-        offset=offset,
-    )
 
-
-def read_next_header_sublevel(byte_stream, parent_address=0, offset=0, toplevel=False):
-    '''Read the next sublevel header object from the file
+def read_header(byte_stream, offset, toplevel=False):
+    '''Read the next header object from the file
     Assumes position of `byte_stream` is at the beginning of a new header.
-
-    endianness: char
-        '<' or '>' for little or big endiannes respectively.
-        Is either read from next header or already known.
 
     Raises stop iteration if not enough data is available.
     '''
@@ -131,7 +128,6 @@ def read_next_header_sublevel(byte_stream, parent_address=0, offset=0, toplevel=
     )
 
     header = parse_header_bytes(header_bytes, toplevel=toplevel)
-    header.endianness = '<'
 
     if header.extended:
         extension_field = byte_stream.read(constants.EXTENSION_SIZE)
@@ -143,7 +139,7 @@ def read_next_header_sublevel(byte_stream, parent_address=0, offset=0, toplevel=
         ext = parse_extension_field(extension_field)
         header.content_size += ext
 
-    header.content_address = parent_address + offset + header.header_size
+    header.content_address = offset + header.header_size
 
     return header
 
@@ -230,8 +226,10 @@ class EventIOObject:
             raise StopIteration
 
         self.seek(self._next_header_pos)
-        header = read_next_header_sublevel(
-            self, parent_address=self.address, offset=self._next_header_pos,
+        header = read_header(
+            self,
+            toplevel=False,
+            offset=self.address + self._next_header_pos,
         )
         self._next_header_pos += header.total_size
 
