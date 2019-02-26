@@ -52,7 +52,11 @@ class EventIOFile:
     def __next__(self):
         self._filehandle.seek(self._next_header_pos)
         header = read_next_header_toplevel(self)
-        self._next_header_pos = self._filehandle.tell() + header.length
+
+        self._next_header_pos += header.length + constants.TOPLEVEL_HEADER_SIZE
+        if header.extended:
+            self._next_header_pos += constants.EXTENSION_SIZE
+
         return KNOWN_OBJECTS.get(header.type, EventIOObject)(
             header,
             filehandle=self._filehandle,
