@@ -30,6 +30,7 @@ class EventIOFile:
         if is_gzip(path):
             log.info('Found gzipped file')
             self._filehandle = gzip.open(path, mode='rb')
+
         elif is_zstd(path):
             log.info('Found zstd compressed file')
             if not has_zstd:
@@ -39,6 +40,7 @@ class EventIOFile:
                 )
             cctx = zstd.ZstdDecompressor()
             self._filehandle = cctx.stream_reader(open(path, 'rb'))
+
         else:
             log.info('Found uncompressed file')
             self._filehandle = open(path, mode='rb')
@@ -188,6 +190,7 @@ class EventIOObject:
         self.size = self.header.content_size
         self.only_subobjects = self.header.only_subobjects
         self._next_header_pos = 0
+        self._pos = 0
 
     def read(self, size=-1):
         '''Read bytes from the payload of this object.
@@ -198,13 +201,13 @@ class EventIOObject:
             read `size` bytes from the payload of this object
             If size == -1 (default), read all remaining bytes.
         '''
-        pos = self.tell()
-
         # read all remaining bytes.
-        if size == -1 or size > self.size - pos:
-            size = self.size - pos
+        remaining = self.size - self._pos
+        if size == -1 or size > remaining:
+            size = remaining
 
         data = self._filehandle.read(size)
+        self._pos += len(data)
 
         return data
 
@@ -252,10 +255,11 @@ class EventIOObject:
             raise ValueError(
                 'invalid whence ({}, should be 0, 1 or 2)'.format(whence)
             )
-        return new_pos - address
+        self._pos = new_pos - address
+        return self._pos
 
     def tell(self):
-        return self._filehandle.tell() - self.address
+        return self._pos
 
     def __repr__(self):
         return '{}[{}](size={}, only_subobjects={}, address={})'.format(
