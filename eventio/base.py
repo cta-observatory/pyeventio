@@ -51,7 +51,7 @@ class EventIOFile:
 
     def __next__(self):
         self._filehandle.seek(self._next_header_pos)
-        header = read_next_header_toplevel(self)
+        header = read_next_header_toplevel(self, self._next_header_pos)
         self._next_header_pos += header.total_size
 
         return KNOWN_OBJECTS.get(header.type, EventIOObject)(
@@ -89,7 +89,7 @@ def check_size_or_raise(data, expected_length, zero_ok=True):
         raise EOFError('File seems to be truncated')
 
 
-def read_next_header_toplevel(byte_stream):
+def read_next_header_toplevel(byte_stream, offset):
     '''Read the next toplevel header object from the file
     Assumes position of `byte_stream` is at the beginning of a new header.
 
@@ -105,10 +105,14 @@ def read_next_header_toplevel(byte_stream):
             'Big endian byte order is not supported by this reader'
         )
 
-    return read_next_header_sublevel(byte_stream, toplevel=True)
+    return read_next_header_sublevel(
+        byte_stream,
+        toplevel=True,
+        offset=offset,
+    )
 
 
-def read_next_header_sublevel(byte_stream, parent_address=0, toplevel=False):
+def read_next_header_sublevel(byte_stream, parent_address=0, offset=0, toplevel=False):
     '''Read the next sublevel header object from the file
     Assumes position of `byte_stream` is at the beginning of a new header.
 
@@ -139,7 +143,7 @@ def read_next_header_sublevel(byte_stream, parent_address=0, toplevel=False):
         ext = parse_extension_field(extension_field)
         header.content_size += ext
 
-    header.content_address = parent_address + byte_stream.tell()
+    header.content_address = parent_address + offset + header.header_size
 
     return header
 
@@ -227,7 +231,7 @@ class EventIOObject:
 
         self.seek(self._next_header_pos)
         header = read_next_header_sublevel(
-            self, parent_address=self.address
+            self, parent_address=self.address, offset=self._next_header_pos,
         )
         self._next_header_pos += header.total_size
 
