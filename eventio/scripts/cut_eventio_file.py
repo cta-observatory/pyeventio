@@ -54,7 +54,7 @@ def main():
     with EventIOFile(args.inputfile) as f:
         last_o = None
         for o in f:
-            last_byte = o.header.address + o.header.length
+            last_byte = o.header.content_address + o.header.content_size
             if last_byte < max_size:
                 bytes_to_read = last_byte
                 last_o = o

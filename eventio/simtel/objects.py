@@ -2,7 +2,7 @@
 import numpy as np
 from io import BytesIO
 import struct
-from ..base import EventIOObject, read_next_header_sublevel
+from ..base import EventIOObject, read_header
 from ..tools import (
     read_short,
     read_int,
@@ -49,8 +49,8 @@ class TelescopeObject(EventIOObject):
             self.__class__.__name__,
             self.eventio_type,
             self.telescope_id,
-            self.header.length,
-            self.header.address,
+            self.header.content_size,
+            self.header.content_address,
         )
 
 
@@ -267,7 +267,7 @@ class CameraOrganization(TelescopeObject):
             byte_stream, 'i2', n_pixels * n_gains
         ).reshape(n_pixels, n_gains)
 
-        data = read_remaining_with_check(byte_stream, self.header.length)
+        data = read_remaining_with_check(byte_stream, self.header.content_size)
         pos = 0
         sectors, bytes_read = CameraOrganization.read_sector_information_v1(
             data, n_pixels
@@ -309,7 +309,7 @@ class CameraOrganization(TelescopeObject):
         n_gains = read_int(byte_stream)
         n_sectors = read_int(byte_stream)
 
-        data = read_remaining_with_check(byte_stream, self.header.length)
+        data = read_remaining_with_check(byte_stream, self.header.content_size)
         pos = 0
 
         drawer, length = varint_array(data, n_pixels, offset=pos)
@@ -676,8 +676,8 @@ class TelescopeEvent(EventIOObject):
             self.__class__.__name__,
             self.eventio_type,
             self.telescope_id,
-            self.header.length,
-            self.header.address,
+            self.header.content_size,
+            self.header.content_address,
         )
 
 
@@ -693,8 +693,8 @@ class ArrayEvent(EventIOObject):
             self.__class__.__name__,
             self.eventio_type,
             self.glob_count,
-            self.header.length,
-            self.header.address,
+            self.header.content_size,
+            self.header.content_address,
         )
 
 
@@ -722,7 +722,7 @@ class TelescopeEventHeader(TelescopeObject):
         event_head['trg_source'] = t & 0xff
 
         pos = 0
-        data = read_remaining_with_check(byte_stream, self.header.length)
+        data = read_remaining_with_check(byte_stream, self.header.content_size)
         if t & 0x100:
             if self.header.version <= 1:
                 n_list_trgsect, = struct.unpack('<h', data[pos:pos + 2])
@@ -819,7 +819,7 @@ class ADCSums(EventIOObject):
 
         if raw['data_red_mode'] == 0 and raw['zero_sup_mode'] == 0:
             raw['adc_sums'] = []
-            data = read_remaining_with_check(byte_stream, self.header.length)
+            data = read_remaining_with_check(byte_stream, self.header.content_size)
             raw['adc_sums'], bytes_read = unsigned_varint_arrays_differential(
                 data, n_arrays=n_gains, n_elements=n_pixels
             )
@@ -834,7 +834,7 @@ class ADCSums(EventIOObject):
             adc_sums = np.zeros((n_gains, n_pixels), dtype='f8')
             raw['adc_sums'] = adc_sums
 
-            data = read_remaining_with_check(byte_stream, self.header.length)
+            data = read_remaining_with_check(byte_stream, self.header.content_size)
             pos = 0
             for n, k in zip(ns, ks):
                 zbits, = struct.unpack('<h', data[pos:pos + 2])
@@ -895,7 +895,7 @@ class ADCSums(EventIOObject):
 
             adc_list = adc_list_l & 0x1fff   # strip off these marker bits
 
-            data = read_remaining_with_check(byte_stream, self.header.length)
+            data = read_remaining_with_check(byte_stream, self.header.content_size)
             pos = 0
 
             if n_gains >= 2:
@@ -1028,7 +1028,7 @@ class ADCSamples(EventIOObject):
             dtype='u2'
         )
         n_pixels_signal = sum(p[1] - p[0] for p in pixel_ranges)
-        data = read_remaining_with_check(byte_stream, self.header.length)
+        data = read_remaining_with_check(byte_stream, self.header.content_size)
         adc_samples_signal, bytes_read = unsigned_varint_arrays_differential(
             data,
             n_arrays=n_gains * n_pixels_signal,
@@ -1056,7 +1056,7 @@ class ADCSamples(EventIOObject):
         n_samples,
     ):
 
-        data = read_remaining_with_check(byte_stream, self.header.length)
+        data = read_remaining_with_check(byte_stream, self.header.content_size)
         adc_samples, bytes_read = unsigned_varint_arrays_differential(
             data, n_arrays=n_gains * n_pixels, n_elements=n_samples,
         )
@@ -1254,7 +1254,7 @@ class PixelTiming(TelescopeObject):
         pixel_timing['granularity'] = read_float(byte_stream)
         pixel_timing['peak_global'] = read_float(byte_stream)
 
-        data = read_remaining_with_check(byte_stream, self.header.length)
+        data = read_remaining_with_check(byte_stream, self.header.content_size)
         if list_type == 1:
             result, bytes_read = PixelTiming._parse_list_type_1(
                 data,
@@ -1332,7 +1332,7 @@ class MCShower(EventIOObject):
             mc['profiles'].append(p)
 
         if self.header.version >= 2:
-            h = read_next_header_sublevel(self)
+            h = read_header(self, offset=self._filehandle.tell(), toplevel=False)
             assert h.type == 1215
             mc['mc_extra_params'] = MCExtraParams(h, self).parse()
         return mc
@@ -1602,7 +1602,7 @@ class MCPhotoelectronSum(EventIOObject):
         event = self.header.id
         shower_num = read_int(byte_stream)
         n_tel = read_int(byte_stream)
-        n_pe = read_array(byte_stream, 'i4', n_tel)
+        n_pes = read_array(byte_stream, 'i4', n_tel)
         n_pixels = read_array(byte_stream, 'i4', n_tel)
 
         # NOTE:
@@ -1612,13 +1612,13 @@ class MCPhotoelectronSum(EventIOObject):
         # pixel_pe: a list (running over telescope_id)
         #         of 2-tuples: (pixel_id, pe)
         pixel_pe = []
-        for n_pe, n_pixels in zip(n_pe, n_pixels):
-            if n_pe <= 0 or n_pixels <= 0:
-                continue
+        mask = (n_pixels > 0) & (n_pes > 0)
+
+        for n_pe, n_pixels in zip(n_pes[mask], n_pixels[mask]):
             non_empty = read_short(byte_stream)
             pixel_id = read_array(byte_stream, 'i2', non_empty)
             pe = read_array(byte_stream, 'i4', non_empty)
-            pixel_pe.append(pixel_id, pe)
+            pixel_pe.append((pixel_id, pe))
 
         photons = read_array(byte_stream, 'f4', n_tel)
         photons_atm = read_array(byte_stream, 'f4', n_tel)
@@ -1630,7 +1630,7 @@ class MCPhotoelectronSum(EventIOObject):
             'event': event,
             'shower_num': shower_num,
             'n_tel': n_tel,
-            'n_pe': n_pe,
+            'n_pe': n_pes,
             'n_pixels': n_pixels,
             'pixel_pe': pixel_pe,
             'photons': photons,

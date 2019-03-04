@@ -20,4 +20,4 @@ def test_seek():
         obj.seek(0)
         pos = obj.seek(0, 2)
 
-        assert pos == obj.header.length
+        assert pos == obj.header.content_size

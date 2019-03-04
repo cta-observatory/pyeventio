@@ -53,16 +53,6 @@ def test_read_types():
     assert read_float(b) == 2.25
 
 
-def test_read_without_change():
-    from eventio.tools import read_from_without_position_change
-
-    b = BytesIO()
-    b.write(b'\xff\xf3')
-    b.seek(0)
-    assert read_from_without_position_change(b, 'H')[0] == 0xf3ff
-    assert b.tell() == 0
-
-
 def test_read_string():
     from eventio.tools import read_eventio_string
     s = b'Hello World'

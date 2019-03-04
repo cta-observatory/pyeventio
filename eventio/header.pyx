@@ -3,6 +3,7 @@ import cython
 
 cdef unsigned int OBJECT_HEADER_SIZE = 12
 cdef unsigned int EXTENSION_SIZE = 4
+cdef unsigned int SYNC_MARKER_SIZE = 4
 
 cdef unsigned int TYPE_N_BITS = 16
 cdef unsigned int TYPE_POS = 0
@@ -26,27 +27,31 @@ cdef unsigned int EXTENSION_N_BITS = 12
 cdef unsigned int EXTENSION_POS = 0
 
 cdef class ObjectHeader:
-    cdef public str endianness
+    cdef readonly unsigned long id
     cdef readonly unsigned int type
     cdef readonly unsigned int version
     cdef readonly bint user
     cdef readonly bint extended
     cdef readonly bint only_subobjects
-    cdef public unsigned long length
-    cdef readonly unsigned long id
-    cdef public unsigned long address
+    cdef readonly unsigned short header_size
+    cdef public unsigned long content_address
+    cdef public unsigned long content_size
+
+    @property
+    def total_size(self):
+        return self.content_size + self.header_size
 
     def __repr__(self):
         return (
             'Header[{}]('.format(self.type)
-            + 'endianness={}, '.format(self.endianness)
             + 'version={}, '.format(self.version)
             + 'id={}, '.format(self.id)
             + 'user={}, '.format(self.user)
             + 'extended={}, '.format(self.extended)
             + 'only_subobjects={}, '.format(self.only_subobjects)
-            + 'length={}, '.format(self.length)
-            + 'address={})'.format(self.address)
+            + 'header_size{}, '.format(self.header_size)
+            + 'content_size={}, '.format(self.content_size)
+            + 'content_address={})'.format(self.content_address)
         )
 
 
@@ -97,7 +102,7 @@ cdef unsigned long unpack_uint32(const unsigned char[:] data):
     )
 
 
-cpdef ObjectHeader parse_header_bytes(const unsigned char[:] header_bytes):
+cpdef ObjectHeader parse_header_bytes(const unsigned char[:] header_bytes, bint toplevel=0):
     cdef unsigned long type_int
     cdef unsigned long id_field
     cdef unsigned long length_field
@@ -126,6 +131,13 @@ cpdef ObjectHeader parse_header_bytes(const unsigned char[:] header_bytes):
     header.version = version
     header.id = id_field
     header.only_subobjects = only_subobjects
-    header.length = length
+    header.content_size = length
+    header.header_size = OBJECT_HEADER_SIZE
+
+    if toplevel:
+        header.header_size += SYNC_MARKER_SIZE
+
+    if header.extended:
+        header.header_size += EXTENSION_SIZE
 
     return header

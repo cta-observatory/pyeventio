@@ -62,14 +62,6 @@ def read_ints(f, n_ints):
     return read_from(f, '{:d}i'.format(n_ints))
 
 
-def read_from_without_position_change(f, fmt):
-    ''' Read struct format and return to old cursor position '''
-    position = f.tell()
-    result = read_from(f, fmt)
-    f.seek(position)
-    return result
-
-
 def read_time(f):
     '''Read a time as combination of seconds and nanoseconds'''
     sec, nano = read_from(f, '<ii')

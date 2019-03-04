@@ -1,23 +1,30 @@
 import cProfile
 import pstats
 from io import StringIO
-from eventio import EventIOFile
-from eventio.search_utils import yield_all_objects_depth_first
+from eventio import SimTelFile
 from argparse import ArgumentParser
 
 parser = ArgumentParser()
 parser.add_argument('inputfile')
 parser.add_argument('-s', '--sort', default='cumtime')
 parser.add_argument('-l', '--limit', default=50, type=int)
+parser.add_argument('-t', '--telescopes')
 args = parser.parse_args()
+
+
+if args.telescopes:
+    allowed_telescopes = set(map(int, args.telescopes.split(',')))
+    print(allowed_telescopes)
+else:
+    allowed_telescopes = None
 
 pr = cProfile.Profile()
 pr.enable()
 
-with EventIOFile(args.inputfile) as f:
-    for o, level in yield_all_objects_depth_first(f):
-        if hasattr(o, 'parse'):
-            o.parse()
+with SimTelFile(args.inputfile, allowed_telescopes=allowed_telescopes) as f:
+    for e in f:
+        # print(e['telescope_events'].keys())
+        pass
 
 pr.disable()
 s = StringIO()

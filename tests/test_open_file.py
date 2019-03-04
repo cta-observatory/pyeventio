@@ -1,6 +1,6 @@
 import eventio
 from os import path
-import pkg_resources
+from itertools import zip_longest
 
 
 def test_is_install_folder_a_directory():
@@ -18,6 +18,25 @@ def test_file_is_iterable():
     f = eventio.EventIOFile(testfile)
     for event in f:
         pass
+
+
+def test_file_has_objects_at_expected_position():
+    expected = [
+        (16, 1096),
+        (1128, 448),
+        (1592, 20),
+        (1628, 1096),
+        (2740, 16),
+        (2772, 6136),
+        (8924, 1096),
+        (10036, 16),
+    ]
+    testfile = 'tests/resources/one_shower.dat'
+    f = eventio.EventIOFile(testfile)
+
+    for o, (addr, size) in zip_longest(f, expected):
+        assert o.header.content_address == addr
+        assert o.header.content_size == size
 
 
 def test_file_has_correct_types():

@@ -30,6 +30,7 @@ class EventIOFile:
         if is_gzip(path):
             log.info('Found gzipped file')
             self._filehandle = gzip.open(path, mode='rb')
+
         elif is_zstd(path):
             log.info('Found zstd compressed file')
             if not has_zstd:
@@ -39,6 +40,7 @@ class EventIOFile:
                 )
             cctx = zstd.ZstdDecompressor()
             self._filehandle = cctx.stream_reader(open(path, 'rb'))
+
         else:
             log.info('Found uncompressed file')
             self._filehandle = open(path, mode='rb')
@@ -51,8 +53,14 @@ class EventIOFile:
 
     def __next__(self):
         self._filehandle.seek(self._next_header_pos)
-        header = read_next_header_toplevel(self)
-        self._next_header_pos = self._filehandle.tell() + header.length
+        read_sync_marker(self)
+        header = read_header(
+            self,
+            toplevel=True,
+            offset=self._next_header_pos,
+        )
+        self._next_header_pos += header.total_size
+
         return KNOWN_OBJECTS.get(header.type, EventIOObject)(
             header,
             filehandle=self._filehandle,
@@ -88,33 +96,31 @@ def check_size_or_raise(data, expected_length, zero_ok=True):
         raise EOFError('File seems to be truncated')
 
 
-def read_next_header_toplevel(byte_stream):
-    '''Read the next toplevel header object from the file
-    Assumes position of `byte_stream` is at the beginning of a new header.
+def read_sync_marker(byte_stream):
+    '''
+    Read the sync marker from the filehandle.
+    Assumes position of `byte_stream` is at the beginning of a new toplevel header.
 
     Raises stop iteration if not enough data is available.
+    Raises NotImplementedError if BigEndian sync marker is encountered
     '''
     sync = byte_stream.read(constants.SYNC_MARKER_SIZE)
-    check_size_or_raise(sync, constants.SYNC_MARKER_SIZE)
+    check_size_or_raise(sync, constants.SYNC_MARKER_SIZE, zero_ok=True)
+
     endianness = parse_sync_bytes(sync)
 
-    return read_next_header_sublevel(byte_stream, endianness)
-
-
-def read_next_header_sublevel(byte_stream, endianness, parent_address=0):
-    '''Read the next sublevel header object from the file
-    Assumes position of `byte_stream` is at the beginning of a new header.
-
-    endianness: char
-        '<' or '>' for little or big endiannes respectively.
-        Is either read from next header or already known.
-
-    Raises stop iteration if not enough data is available.
-    '''
     if endianness == '>':
         raise NotImplementedError(
             'Big endian byte order is not supported by this reader'
         )
+
+
+def read_header(byte_stream, offset, toplevel=False):
+    '''Read the next header object from the file
+    Assumes position of `byte_stream` is at the beginning of a new header.
+
+    Raises stop iteration if not enough data is available.
+    '''
 
     header_bytes = byte_stream.read(constants.OBJECT_HEADER_SIZE)
     check_size_or_raise(
@@ -123,8 +129,7 @@ def read_next_header_sublevel(byte_stream, endianness, parent_address=0):
         zero_ok=False,
     )
 
-    header = parse_header_bytes(header_bytes)
-    header.endianness = endianness
+    header = parse_header_bytes(header_bytes, toplevel=toplevel)
 
     if header.extended:
         extension_field = byte_stream.read(constants.EXTENSION_SIZE)
@@ -133,9 +138,10 @@ def read_next_header_sublevel(byte_stream, endianness, parent_address=0):
             constants.EXTENSION_SIZE,
             zero_ok=True
         )
-        header.length += parse_extension_field(extension_field)
+        ext = parse_extension_field(extension_field)
+        header.content_size += ext
 
-    header.address = parent_address + byte_stream.tell()
+    header.content_address = offset + header.header_size
 
     return header
 
@@ -180,10 +186,11 @@ class EventIOObject:
 
         self._filehandle = filehandle
         self.header = header
-        self.address = self.header.address
-        self.length = self.header.length
+        self.address = self.header.content_address
+        self.size = self.header.content_size
         self.only_subobjects = self.header.only_subobjects
         self._next_header_pos = 0
+        self._pos = 0
 
     def read(self, size=-1):
         '''Read bytes from the payload of this object.
@@ -194,13 +201,13 @@ class EventIOObject:
             read `size` bytes from the payload of this object
             If size == -1 (default), read all remaining bytes.
         '''
-        pos = self.tell()
-
         # read all remaining bytes.
-        if size == -1 or size > self.length - pos:
-            size = self.length - pos
+        remaining = self.size - self._pos
+        if size == -1 or size > remaining:
+            size = remaining
 
         data = self._filehandle.read(size)
+        self._pos += len(data)
 
         return data
 
@@ -218,14 +225,17 @@ class EventIOObject:
                 'Only EventIOObjects that contain just subobjects are iterable'
             )
 
-        if self._next_header_pos >= self.header.length:
+        if self._next_header_pos >= self.size:
             raise StopIteration
 
         self.seek(self._next_header_pos)
-        header = read_next_header_sublevel(
-            self, self.header.endianness, parent_address=self.address
+        header = read_header(
+            self,
+            toplevel=False,
+            offset=self.address + self._next_header_pos,
         )
-        self._next_header_pos = self.tell() + header.length
+        self._next_header_pos += header.total_size
+
         return KNOWN_OBJECTS.get(header.type, EventIOObject)(
             header, filehandle=self._filehandle
         )
@@ -234,29 +244,30 @@ class EventIOObject:
         address = self.address
         if whence == 0:
             assert offset >= 0
-            self._filehandle.seek(address + offset, whence)
+            new_pos = self._filehandle.seek(address + offset, whence)
         elif whence == 1:
-            self._filehandle.seek(offset, whence)
+            new_pos = self._filehandle.seek(offset, whence)
         elif whence == 2:
-            if offset > self.length:
-                offset = self.length
-            self._position = self._filehandle.seek(address + self.length - offset, 0)
+            if offset > self.size:
+                offset = self.size
+            new_pos = self._filehandle.seek(address + self.size - offset, 0)
         else:
             raise ValueError(
                 'invalid whence ({}, should be 0, 1 or 2)'.format(whence)
             )
-        return self.tell()
+        self._pos = new_pos - address
+        return self._pos
 
     def tell(self):
-        return self._filehandle.tell() - self.address
+        return self._pos
 
     def __repr__(self):
         return '{}[{}](size={}, only_subobjects={}, address={})'.format(
             self.__class__.__name__,
             self.header.type,
-            self.header.length,
+            self.header.content_size,
             self.header.only_subobjects,
-            self.header.address
+            self.header.content_address
         )
 
 
