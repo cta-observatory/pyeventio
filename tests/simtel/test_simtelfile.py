@@ -10,6 +10,7 @@ prod4_astri_path = 'tests/resources/gamma_20deg_0deg_run103___cta-prod4-sst-astr
 # a file
 prod4_zst_path = 'tests/resources/gamma_20deg_0deg_run102___cta-prod4-sst-1m_desert-2150m-Paranal-sst-1m.simtel.zst'
 calib_path = 'tests/resources/calib_events.simtel.gz'
+frankenstein_path = 'tests/resources/gamma_merged.simtel.gz'
 
 
 test_paths = [prod2_path, prod3_path, prod4_path]
@@ -176,3 +177,8 @@ def test_skip_calibration_events():
             if event['type'] == 'calibration':
                 i += 1
         assert i == 0
+
+
+def test_frankenstein():
+    with SimTelFile(frankenstein_path) as f:
+        assert len(f.telescope_descriptions) == f.n_telescopes

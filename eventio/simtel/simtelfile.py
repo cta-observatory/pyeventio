@@ -83,7 +83,7 @@ class SimTelFile(EventIOFile):
         self.mc_run_headers = []
         self.corsika_inputcards = []
         self.header = None
-        self.n_telescopes = 0
+        self.n_telescopes = None
         self.telescope_descriptions = defaultdict(dict)
         self.camera_monitorings = defaultdict(dict)
         self.laser_calibrations = defaultdict(dict)
@@ -98,9 +98,12 @@ class SimTelFile(EventIOFile):
         # read the header:
         # assumption: the header is done when
         # any of the objects in check is not None anymore
+        # and we found the telescope_descriptions of all telescopes
         check = []
-        while not any(o for o in check):
+        found_all_telescopes = False
+        while not (any(o for o in check) and found_all_telescopes):
             self.next_low_level()
+
             check = [
                 self.current_mc_shower,
                 self.current_array_event,
@@ -109,7 +112,13 @@ class SimTelFile(EventIOFile):
                 self.camera_monitorings,
             ]
 
-        self._first_event_byte = self.tell()
+            # check if we found all the descriptions of all telescopes
+            if self.n_telescopes is not None:
+                found = sum(
+                    len(t) == len(telescope_descriptions_types)
+                    for t in self.telescope_descriptions.values()
+                )
+                found_all_telescopes = found == self.n_telescopes
 
     def __iter__(self):
         return self.iter_array_events()
@@ -173,7 +182,6 @@ class SimTelFile(EventIOFile):
             )
 
     def iter_mc_events(self):
-        self._next_header_pos = self._first_event_byte
         while True:
             try:
                 next_event = self.try_build_mc_event()
@@ -194,7 +202,6 @@ class SimTelFile(EventIOFile):
         self.next_low_level()
 
     def iter_array_events(self):
-        self._next_header_pos = self._first_event_byte
         while True:
 
             next_event = self.try_build_event()
