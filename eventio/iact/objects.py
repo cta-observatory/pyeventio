@@ -9,13 +9,13 @@ from corsikaio.subblocks import (
     parse_event_end,
 )
 
-
 from ..tools import (
     read_short, read_int, read_float, read_from, read_eventio_string,
+    read_array,
 )
 from ..base import EventIOObject
 from ..exceptions import WrongSize
-from ..version_handling import assert_version_in
+from ..version_handling import assert_version_in, assert_max_version
 
 
 __all__ = [
@@ -123,6 +123,10 @@ class EventHeader(EventIOObject):
 
 class ArrayOffsets(EventIOObject):
     eventio_type = 1203
+    dtypes = {
+        0: [('x', 'f4'), ('y', 'f4')],
+        1: [('x', 'f4'), ('y', 'f4'), ('weight', 'f4')],
+    }
 
     def __init__(self, header, filehandle):
         super().__init__(header, filehandle)
@@ -139,28 +143,20 @@ class ArrayOffsets(EventIOObject):
         array position and contains one set of coordinates for each reuse.
         '''
         self.seek(8)
-        data = self.read()
+        assert_max_version(self, 1)
 
-        n_columns = len(data) / (self.n_arrays * 4)
-        assert n_columns.is_integer()
-        n_columns = int(n_columns)
-        if n_columns not in (2, 3):
-            # dneise: I think this cannot happen, but who knows.
-            msg = 'Number of offset columns should be in 2 or 3, found {}'
-            raise Exception(msg.format(n_columns))
-
-        positions = np.frombuffer(
-            data,
-            dtype=np.float32,
-            count=self.n_arrays * n_columns,
+        return read_array(
+            self,
+            dtype=self.dtypes[self.header.version],
+            count=self.n_arrays,
         )
 
-        dtypes = [('x', 'f4'), ('y', 'f4')]
-
-        if n_columns == 3:
-            dtypes.append(('weight', 'f4'))
-
-        return positions.view(dtypes)
+    def __repr__(self):
+        return '{}[{}](n_reuses={})'.format(
+            self.__class__.__name__,
+            self.header.type,
+            self.n_reuses,
+        )
 
 
 class TelescopeData(EventIOObject):
