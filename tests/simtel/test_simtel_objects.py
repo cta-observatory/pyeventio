@@ -61,8 +61,8 @@ def test_71_3_objects():
 
     with EventIOFile(prod2_file) as f:
         for i, o in enumerate(yield_n_and_assert(f, HistoryCommandLine, n=3)):
-            d = parse_and_assert_consumption(o, limit=3)
-            assert isinstance(d, bytes)
+            t, s = parse_and_assert_consumption(o, limit=3)
+            assert isinstance(s, bytes)
 
 
 def test_72_3_objects():
@@ -70,8 +70,8 @@ def test_72_3_objects():
 
     with EventIOFile(prod2_file) as f:
         for i, o in enumerate(yield_n_and_assert(f, HistoryConfig, n=3)):
-            d = parse_and_assert_consumption(o, limit=3)
-            assert isinstance(d, bytes)
+            t, s = parse_and_assert_consumption(o, limit=3)
+            assert isinstance(s, bytes)
 
 
 def test_2000_1_object():
