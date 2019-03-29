@@ -61,25 +61,19 @@ class History(EventIOObject):
 class HistoryCommandLine(EventIOObject):
     eventio_type = 71
 
-    def __init__(self, header, filehandle):
-        super().__init__(header, filehandle)
-        self.timestamp = read_int(self)
-
     def parse(self):
-        self.seek(4)  # skip the int, we already read in init
-        return read_eventio_string(self)
+        timestamp = read_int(self)
+        string = read_eventio_string(self)
+        return timestamp, string
 
 
 class HistoryConfig(EventIOObject):
     eventio_type = 72
 
-    def __init__(self, header, filehandle):
-        super().__init__(header, filehandle)
-        self.timestamp = read_int(self)
-
     def parse(self):
-        self.seek(4)  # skip the int, we already read in init
-        return read_eventio_string(self)
+        timestamp = read_int(self)
+        string = read_eventio_string(self)
+        return timestamp, string
 
 
 class RunHeader(EventIOObject):
