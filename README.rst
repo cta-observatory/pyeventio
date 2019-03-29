@@ -124,18 +124,26 @@ for larger files, you might want to pipe its output into e.g. ``less``:
 .. code:: shell
     
     $ eventio_print_structure eventio/resources/gamma_test.simtel.gz
-    History[70](size=11960, only_subobjects=True, first_byte=16)
-        HistoryCommandLine[71](size=668, only_subobjects=False, first_byte=12)
-        HistoryConfig[72](size=120, only_subobjects=False, first_byte=692)
-        HistoryConfig[72](size=172, only_subobjects=False, first_byte=824)
-        HistoryConfig[72](size=180, only_subobjects=False, first_byte=1008)
-        HistoryConfig[72](size=176, only_subobjects=False, first_byte=1200)
-        HistoryConfig[72](size=72, only_subobjects=False, first_byte=1388)
-        And 124 objects more of the same type
-        .
-        .
-        .
-
+    History[70]
+        HistoryCommandLine[71]
+        HistoryConfig[72]
+        HistoryConfig[72]
+        And 127 objects more of the same type
+    ...
+    RunHeader[2000](run_id=31964)
+    MCRunHeader[2001]
+    MCRunHeader[2001]
+    InputCard[1212]
+    InputCard[1212]
+    CameraSettings[2002](telescope_id=1)
+    CameraOrganization[2003](telescope_id=1)
+    PixelSettings[2004](telescope_id=1)
+    DisabledPixels[2005](telescope_id=1)
+    CameraSoftwareSettings[2006](telescope_id=1)
+    DriveSettings[2008](telescope_id=1)
+    PointingCorrection[2007](telescope_id=1)
+    CameraSettings[2002](telescope_id=2)
+    CameraOrganization[2003](telescope_id=2)
 
 To get table of all object versions and counts in a file,
 use ``eventio_print_object_information``, it can also print json if given the 
@@ -144,27 +152,37 @@ use ``eventio_print_object_information``, it can also print json if given the
 .. code:: shell
     
     $ eventio_print_object_information eventio/resources/gamma_test.simtel.gz
-     Type | Version | #Objects
-    --------------------------
-       70 |       1 |        3
-       71 |       1 |        3
-       72 |       1 |    32840
-     1212 |       0 |        2
-     2000 |       2 |        1
-     2001 |       4 |        2
-     2002 |       2 |       98
-     2002 |       3 |       28
-     2003 |       1 |      126
-     2004 |       2 |      126
-     2005 |       0 |      126
-     2006 |       0 |      126
-     2007 |       0 |      126
-     2008 |       0 |      126
-     2009 |       2 |       10
-    .
-    .
-    .
-
+     Type | Version | Level | #Objects | eventio-class
+    ------------------------------------------------------------
+       70 |       1 |     0 |        3 | simtel.objects.History
+       71 |       1 |     1 |        3 | simtel.objects.HistoryCommandLine
+       72 |       1 |     1 |    32840 | simtel.objects.HistoryConfig
+     1212 |       0 |     0 |        2 | iact.objects.InputCard
+     2000 |       2 |     0 |        1 | simtel.objects.RunHeader
+     2001 |       4 |     0 |        2 | simtel.objects.MCRunHeader
+     2002 |       2 |     0 |       98 | simtel.objects.CameraSettings
+     2002 |       3 |     0 |       28 | simtel.objects.CameraSettings
+     2003 |       1 |     0 |      126 | simtel.objects.CameraOrganization
+     2004 |       2 |     0 |      126 | simtel.objects.PixelSettings
+     2005 |       0 |     0 |      126 | simtel.objects.DisabledPixels
+     2006 |       0 |     0 |      126 | simtel.objects.CameraSoftwareSettings
+     2007 |       0 |     0 |      126 | simtel.objects.PointingCorrection
+     2008 |       0 |     0 |      126 | simtel.objects.DriveSettings
+     2009 |       2 |     1 |       10 | simtel.objects.TriggerInformation
+     2010 |       0 |     0 |       10 | simtel.objects.ArrayEvent
+     2011 |       1 |     2 |       50 | simtel.objects.TelescopeEventHeader
+     2013 |       3 |     2 |       50 | simtel.objects.ADCSamples
+     2014 |       5 |     2 |       44 | simtel.objects.ImageParameters
+     2016 |       1 |     2 |       49 | simtel.objects.PixelTiming
+     2020 |       1 |     0 |      122 | simtel.objects.MCShower
+     2021 |       1 |     0 |     1214 | simtel.objects.MCEvent
+     2022 |       0 |     0 |      126 | simtel.objects.CameraMonitoring
+     2023 |       2 |     0 |      126 | simtel.objects.LaserCalibration
+     2026 |       2 |     0 |       21 | simtel.objects.MCPhotoelectronSum
+     2027 |       0 |     2 |       93 | simtel.objects.PixelList
+     2100 |       0 |     1 |       42 | simtel.objects.TrackingPosition
+     2200 |       1 |     1 |       50 | simtel.objects.TelescopeEvent
+    ------------------------------------------------------------
 
 To plot histograms stored in an eventio file (Type 100),
 use ``eventio_plot_histograms``.

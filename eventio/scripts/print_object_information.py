@@ -1,12 +1,16 @@
 from eventio import EventIOFile
 from argparse import ArgumentParser
-from collections import Counter
+from collections import Counter, namedtuple
 import json
 import warnings
 from eventio.simtel import TrackingPosition, TelescopeEvent
 
 
-def count_versions(f):
+ObjectInfo = namedtuple('ObjectInfo', ['type', 'version', 'level', 'name'])
+
+
+
+def count_versions(f, level=0):
     c = Counter()
     try:
         for o in f:
@@ -17,13 +21,14 @@ def count_versions(f):
             else:
                 eventio_type = o.header.type
 
-            c.update([(
-                eventio_type,
-                o.header.version,
-                o.__module__ + '.' + o.__class__.__qualname__)
-            ])
+            c.update([ObjectInfo(
+                type=eventio_type,
+                level=level,
+                version=o.header.version,
+                name=(o.__module__ + '.' + o.__class__.__qualname__)[8:],
+            )])
             if o.header.only_subobjects:
-                c.update(count_versions(o))
+                c.update(count_versions(o, level=level + 1))
     except EOFError:
         warnings.warn("File seems to be truncated")
     return c
@@ -42,16 +47,16 @@ def main():
 
     if args.json:
         object_info = [
-            {'type': t, 'version': v, 'number_of_objects': c}
-            for (t, v), c in sorted(list(counter.items()))
+            {**info._asdict(), 'number_of_objects': c}
+            for info, c in sorted(list(counter.items()))
         ]
         print(json.dumps(object_info, indent=2))
     else:
-        print(' Type | Version | #Objects | eventio-class')
+        print(' Type | Version | Level | #Objects | eventio-class')
         print('-' * 60)
-        for (t, v, q), c in sorted(list(counter.items())):
-            print('{: 5d} | {: 7d} | {: 8d} | {}'.format(
-                t, v, c, q,
+        for info, count in sorted(list(counter.items())):
+            print('{type: 5d} | {version: 7d} | {level: 5d} | {count: 8d} | {name}'.format(
+                **info._asdict(), count=count,
             ))
         print('-' * 60)
 
