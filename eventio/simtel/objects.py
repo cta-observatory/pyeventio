@@ -392,12 +392,8 @@ class PixelSettings(TelescopeObject):
         return D
 
 
-class DisabledPixels(EventIOObject):
+class DisabledPixels(TelescopeObject):
     eventio_type = 2005
-
-    def __init__(self, header, filehandle):
-        super().__init__(header, filehandle)
-        self.telescope_id = header.id
 
     def parse(self):
         assert_exact_version(self, supported_version=0)
@@ -422,12 +418,8 @@ class DisabledPixels(EventIOObject):
         }
 
 
-class CameraSoftwareSettings(EventIOObject):
+class CameraSoftwareSettings(TelescopeObject):
     eventio_type = 2006
-
-    def __init__(self, header, filehandle):
-        super().__init__(header, filehandle)
-        self.telescope_id = header.id
 
     def parse(self):
         assert_exact_version(self, supported_version=0)
