@@ -151,7 +151,7 @@ class ArrayOffsets(EventIOObject):
             count=self.n_arrays,
         )
 
-    def __repr__(self):
+    def __str__(self):
         return '{}[{}](n_reuses={})'.format(
             self.__class__.__name__,
             self.header.type,
@@ -167,7 +167,7 @@ class TelescopeData(EventIOObject):
     '''
     eventio_type = 1204
 
-    def __repr__(self):
+    def __str__(self):
         return '{}[{}](shower_event_id={})'.format(
             self.__class__.__name__,
             self.header.type,
@@ -205,14 +205,15 @@ class Photons(EventIOObject):
             self.n_bunches
         ) = read_from(self, 'hhfi')
 
-    def __repr__(self):
+    def __str__(self):
         # IACTEXT writes particles at obslevel into photon bunch
         # objects with ids set to 999
         if self.array_id == 999 and self.telescope_id == 999:
             return 'ObservationLevelParticles(n_particles={})'.format(self.n_bunches)
 
-        return '{}(array_id={}, telescope_id={}, n_bunches={})'.format(
+        return '{}[{}](array_id={}, telescope_id={}, n_bunches={})'.format(
             self.__class__.__name__,
+            self.eventio_type,
             self.array_id,
             self.telescope_id,
             self.n_bunches,
