@@ -44,13 +44,11 @@ class TelescopeObject(EventIOObject):
         super().__init__(header, filehandle)
         self.telescope_id = header.id
 
-    def __repr__(self):
-        return '{}[{}](telescope_id={}, size={}, first_byte={})'.format(
+    def __str__(self):
+        return '{}[{}](telescope_id={})'.format(
             self.__class__.__name__,
-            self.eventio_type,
+            self.header.type,
             self.telescope_id,
-            self.header.content_size,
-            self.header.content_address,
         )
 
 
@@ -112,6 +110,9 @@ class RunHeader(EventIOObject):
         result['observer'] = observer
 
         return result
+
+    def __str__(self):
+        return super().__str__() + '(run_id={})'.format(self.run_id)
 
 
 class MCRunHeader(EventIOObject):
@@ -519,8 +520,8 @@ class TriggerInformation(EventIOObject):
         super().__init__(header, filehandle)
         self.global_count = self.header.id
 
-    def __repr__(self):
-        return '{}[{}](shower_event_id={})'.format(
+    def __str__(self):
+        return '{}[{}](event_id={})'.format(
             self.__class__.__name__,
             self.header.type,
             self.header.id,
@@ -624,7 +625,7 @@ class TrackingPosition(EventIOObject):
     def telid_to_type(telescope_id):
         return 2100 + telescope_id % 100 + 1000 * (telescope_id // 100)
 
-    def __repr__(self):
+    def __str__(self):
         return '{}[{}](telescope_id={})'.format(
             self.__class__.__name__,
             self.eventio_type,
@@ -657,13 +658,11 @@ class TelescopeEvent(EventIOObject):
     def telid_to_type(telescope_id):
         return 2200 + telescope_id % 100 + 1000 * (telescope_id // 100)
 
-    def __repr__(self):
-        return '{}[{}](telescope_id={}, size={}, first_byte={})'.format(
+    def __str__(self):
+        return '{}[{}](telescope_id={})'.format(
             self.__class__.__name__,
             self.eventio_type,
             self.telescope_id,
-            self.header.content_size,
-            self.header.content_address,
         )
 
 
@@ -672,22 +671,20 @@ class ArrayEvent(EventIOObject):
 
     def __init__(self, header, filehandle):
         super().__init__(header, filehandle)
-        self.glob_count = header.id
+        self.event_id = header.id
 
-    def __repr__(self):
-        return '{}[{}](glob_count={}, size={}, first_byte={})'.format(
+    def __str__(self):
+        return '{}[{}](event_id={})'.format(
             self.__class__.__name__,
             self.eventio_type,
-            self.glob_count,
-            self.header.content_size,
-            self.header.content_address,
+            self.event_id,
         )
 
 
 class TelescopeEventHeader(TelescopeObject):
     eventio_type = 2011
 
-    def __repr__(self):
+    def __str__(self):
         return '{}[{}](telescope_id={})'.format(
             self.__class__.__name__,
             self.header.type,
@@ -783,7 +780,7 @@ class ADCSums(EventIOObject):
         else:
             self.telescope_id = (header.id >> 12) & 0xffff
 
-    def __repr__(self):
+    def __str__(self):
         return '{}[{}](telescope_id={})'.format(
             self.__class__.__name__,
             self.header.type,
@@ -942,6 +939,9 @@ class ADCSamples(EventIOObject):
 
         self.telescope_id = (flags_ >> 12) & 0xffff
 
+    def __str__(self):
+        return super().__str__() + '(telescope_id={})'.format(self.telescope_id)
+
     def parse(self):
         assert_exact_version(self, supported_version=3)
 
@@ -1061,7 +1061,7 @@ class ImageParameters(EventIOObject):
             (self.header.id & 0xff) | (self.header.id & 0x3f000000) >> 16
         )
 
-    def __repr__(self):
+    def __str__(self):
         return '{}[{}](telescope_id={})'.format(
             self.__class__.__name__,
             self.header.type,
@@ -1134,7 +1134,7 @@ class ImageParameters(EventIOObject):
 class StereoReconstruction(EventIOObject):
     eventio_type = 2015
 
-    def __repr__(self):
+    def __str__(self):
         return '{}[{}](result_bits={})'.format(
             self.__class__.__name__,
             self.header.type,
@@ -1277,7 +1277,7 @@ class MCShower(EventIOObject):
     def __init__(self, header, filehandle):
         super().__init__(header, filehandle)
 
-    def __repr__(self):
+    def __str__(self):
         return '{}[{}](shower_id={})'.format(
             self.__class__.__name__,
             self.header.type,
@@ -1348,7 +1348,7 @@ class MCEvent(EventIOObject):
 
     from .parsing import parse_mc_event
 
-    def __repr__(self):
+    def __str__(self):
         return '{}[{}](event_id={})'.format(
             self.__class__.__name__,
             self.header.type,
@@ -1376,7 +1376,7 @@ class CameraMonitoring(EventIOObject):
             | ((self.header.id & 0x3f000000) >> 16)
         )
 
-    def __repr__(self):
+    def __str__(self):
         return '{}[{}](telescope_id={})'.format(
             self.__class__.__name__,
             self.header.type,
@@ -1573,8 +1573,8 @@ class MCRunStatistics(EventIOObject):
 class MCPhotoelectronSum(EventIOObject):
     eventio_type = 2026
 
-    def __repr__(self):
-        return '{}[{}](shower_event_id={})'.format(
+    def __str__(self):
+        return '{}[{}](event_id={})'.format(
             self.__class__.__name__,
             self.header.type,
             self.header.id,
@@ -1629,18 +1629,20 @@ class MCPhotoelectronSum(EventIOObject):
 
 class PixelList(EventIOObject):
     eventio_type = 2027
+    kinds = {0: 'triggered', 1: 'selected'}
 
     def __init__(self, header, filehandle):
         super().__init__(header, filehandle)
         self.telescope_id = self.header.id % 1000000
         self.code = self.header.id // 1000000
 
-    def __repr__(self):
-        return '{}[{}](telescope_id={}, code={})'.format(
+    def __str__(self):
+        return '{}[{}](telescope_id={}, code={}, kind={})'.format(
             self.__class__.__name__,
             self.header.type,
             self.telescope_id,
             self.code,
+            self.kinds.get(self.code, 'unknown'),
         )
 
     def parse(self):
@@ -1672,7 +1674,7 @@ class CalibrationEvent(EventIOObject):
         super().__init__(header, filehandle)
         self.type = self.header.id
 
-    def __repr__(self):
+    def __str__(self):
         return '{}[{}](type={})'.format(
             self.__class__.__name__, self.eventio_type, self.type
         )

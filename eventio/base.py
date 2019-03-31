@@ -270,6 +270,9 @@ class EventIOObject:
             self.header.content_address
         )
 
+    def __str__(self):
+        return '{}[{}]'.format(self.__class__.__name__, self.header.type)
+
 
 def parse_extension_field(extension_field):
     '''parse the so called "extension" field from `file`
