@@ -1,36 +1,35 @@
 # cython: language_level=3
 import cython
 from cpython cimport array
+from libc.stdint cimport uint8_t, uint32_t, uint64_t, int16_t, int32_t
 import numpy as np
 cimport numpy as np
 
 INT16 = np.int16
-ctypedef np.int16_t INT16_t
-
 
 @cython.wraparound(False)  # disable negative indexing
 cpdef read_sector_information_v1(
-    const unsigned char[:] data,
-    unsigned long n_pixels,
-    unsigned long offset = 0,
+    const uint8_t[:] data,
+    uint64_t n_pixels,
+    uint64_t offset = 0,
 ):
-    cdef unsigned long i
-    cdef short j, n
-    cdef INT16_t* short_ptr
+    cdef uint64_t i
+    cdef int32_t j, n
+    cdef int16_t* short_ptr
 
     cdef list sectors = []
     cdef array.array sector
 
-    cdef unsigned long pos = offset
+    cdef uint64_t pos = offset
     for i in range(n_pixels):
 
-        short_ptr = <INT16_t*> &data[pos]
+        short_ptr = <int16_t*> &data[pos]
         n = short_ptr[0]
         pos += 2
 
         sector = array.array('h')
         for j in range(n):
-            short_ptr = <INT16_t*> &data[pos]
+            short_ptr = <int16_t*> &data[pos]
             sector.append(short_ptr[0])
             pos += 2
 
@@ -52,15 +51,15 @@ cpdef read_sector_information_v1(
 
 @cython.wraparound(False)  # disable negative indexing
 cpdef dict parse_mc_event(
-    const unsigned char[:] data,
-    unsigned int version
+    const uint8_t[:] data,
+    uint32_t version
 ):
 
-    cdef unsigned long pos = 0
+    cdef uint64_t pos = 0
     cdef float xcore, ycore, aweight
-    cdef int shower_num
+    cdef int32_t shower_num
 
-    shower_num = (<int*> &data[pos])[0]
+    shower_num = (<int32_t*> &data[pos])[0]
     pos += 4
     xcore = (<float*> &data[pos])[0]
     pos += 4

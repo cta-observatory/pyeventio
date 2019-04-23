@@ -1,41 +1,48 @@
 # cython: language_level=3
 import cython
+from libc.stdint cimport uint8_t, uint32_t, uint64_t
 
-cdef unsigned int OBJECT_HEADER_SIZE = 12
-cdef unsigned int EXTENSION_SIZE = 4
-cdef unsigned int SYNC_MARKER_SIZE = 4
 
-cdef unsigned int TYPE_N_BITS = 16
-cdef unsigned int TYPE_POS = 0
+# cythonss way to declare constants
+# see https://cython.readthedocs.io/en/latest/src/userguide/language_basics.html#c-variable-and-type-definitions
+cdef enum:
+    OBJECT_HEADER_SIZE = 12
+    EXTENSION_SIZE = 4
+    SYNC_MARKER_SIZE = 4
 
-cdef unsigned int USER_N_BITS = 1
-cdef unsigned int USER_POS = 16
+    TYPE_N_BITS = 16
+    TYPE_POS = 0
 
-cdef unsigned int EXTENDED_N_BITS = 1
-cdef unsigned int EXTENDED_POS = 17
+    USER_N_BITS = 1
+    USER_POS = 16
 
-cdef unsigned int VERSION_N_BITS = 12
-cdef unsigned int VERSION_POS = 20
+    EXTENDED_N_BITS = 1
+    EXTENDED_POS = 17
 
-cdef unsigned int ONLY_SUBOBJECTS_N_BITS = 1
-cdef unsigned int ONLY_SUBOBJECTS_POS = 30
+    VERSION_N_BITS = 12
+    VERSION_POS = 20
 
-cdef unsigned int LENGTH_N_BITS = 30
-cdef unsigned int LENGTH_POS = 0
+    ONLY_SUBOBJECTS_N_BITS = 1
+    ONLY_SUBOBJECTS_POS = 30
 
-cdef unsigned int EXTENSION_N_BITS = 12
-cdef unsigned int EXTENSION_POS = 0
+    LENGTH_N_BITS = 30
+    LENGTH_POS = 0
+
+    EXTENSION_N_BITS = 12
+    EXTENSION_POS = 0
+
+
 
 cdef class ObjectHeader:
-    cdef readonly unsigned long id
-    cdef readonly unsigned int type
-    cdef readonly unsigned int version
+    cdef readonly uint64_t id
+    cdef readonly uint32_t type
+    cdef readonly uint32_t version
     cdef readonly bint user
     cdef readonly bint extended
     cdef readonly bint only_subobjects
-    cdef readonly unsigned short header_size
-    cdef public unsigned long content_address
-    cdef public unsigned long content_size
+    cdef readonly uint8_t header_size
+    cdef public uint64_t content_address
+    cdef public uint64_t content_size
 
     @property
     def total_size(self):
@@ -55,17 +62,17 @@ cdef class ObjectHeader:
         )
 
 
-cpdef bint bool_bit_from_pos(unsigned int uint32_word, unsigned int pos):
+cpdef bint bool_bit_from_pos(uint32_t uint32_word, uint32_t pos):
     '''parse a Python Boolean from a bit a position `pos` in an
     unsigned 32bit integer.
     '''
     return uint32_word & (1 << pos)
 
 
-cpdef unsigned int get_bits_from_word(
-    unsigned int uint32_word,
-    unsigned int n_bits,
-    unsigned int first,
+cpdef uint32_t get_bits_from_word(
+    uint32_t uint32_word,
+    uint32_t n_bits,
+    uint32_t first,
 ):
     '''return `n_bits` bits from the input word
     starting at first
@@ -81,7 +88,7 @@ cpdef unsigned int get_bits_from_word(
     return (uint32_word >> first) & ((1 << n_bits) - 1)
 
 
-cdef (unsigned int, unsigned int, bint, bint) parse_type_field(unsigned int word):
+cdef (uint32_t, uint32_t, bint, bint) parse_type_field(uint32_t word):
     '''parse TypeInfo
     '''
     type_ = get_bits_from_word(word, TYPE_N_BITS, TYPE_POS)
@@ -93,26 +100,21 @@ cdef (unsigned int, unsigned int, bint, bint) parse_type_field(unsigned int word
 
 @cython.boundscheck(False)
 @cython.wraparound(False)
-cdef unsigned long unpack_uint32(const unsigned char[:] data):
-    return (
-        (<unsigned long> data[0])
-        + ((<unsigned long> data[1]) << 8)
-        + ((<unsigned long> data[2]) << 16)
-        + ((<unsigned long> data[3]) << 24)
-    )
+cdef uint32_t unpack_uint32(const uint8_t[:] data):
+    return (<uint32_t*> &data[0])[0]
 
 
-cpdef ObjectHeader parse_header_bytes(const unsigned char[:] header_bytes, bint toplevel=0):
-    cdef unsigned long type_int
-    cdef unsigned long id_field
-    cdef unsigned long length_field
+cpdef ObjectHeader parse_header_bytes(const uint8_t[:] header_bytes, bint toplevel=0):
+    cdef uint64_t type_int
+    cdef uint64_t id_field
+    cdef uint64_t length_field
 
-    cdef unsigned long type_
+    cdef uint64_t type_
     cdef bint user
     cdef bint extended
-    cdef unsigned long version
+    cdef uint64_t version
     cdef bint only_subobjects
-    cdef unsigned long length
+    cdef uint64_t length
 
 
     type_int = unpack_uint32(header_bytes[0:4])
