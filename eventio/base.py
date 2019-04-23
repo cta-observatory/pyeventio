@@ -106,13 +106,7 @@ def read_sync_marker(byte_stream):
     '''
     sync = byte_stream.read(constants.SYNC_MARKER_SIZE)
     check_size_or_raise(sync, constants.SYNC_MARKER_SIZE, zero_ok=True)
-
-    endianness = parse_sync_bytes(sync)
-
-    if endianness == '>':
-        raise NotImplementedError(
-            'Big endian byte order is not supported by this reader'
-        )
+    check_sync_bytes(sync)
 
 
 def read_header(byte_stream, offset, toplevel=False):
@@ -146,16 +140,16 @@ def read_header(byte_stream, offset, toplevel=False):
     return header
 
 
-def parse_sync_bytes(sync):
+def check_sync_bytes(sync):
     ''' returns the endianness as given by the sync byte '''
 
     if sync == constants.SYNC_MARKER_LITTLE_ENDIAN:
-        log.debug('Found Little Endian byte order')
         return '<'
 
     if sync == constants.SYNC_MARKER_BIG_ENDIAN:
-        log.debug('Found Big Endian byte order')
-        return '>'
+        raise NotImplementedError(
+            'Big endian byte order is not supported by this reader'
+        )
 
     raise ValueError(
         'Sync must be 0xD41F8A37 or 0x378A1FD4. Got: {}'.format(sync)
