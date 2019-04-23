@@ -34,7 +34,7 @@ cdef enum:
 
 
 cdef class ObjectHeader:
-    cdef readonly uint64_t id
+    cdef readonly uint32_t id
     cdef readonly uint32_t type
     cdef readonly uint32_t version
     cdef readonly bint user
