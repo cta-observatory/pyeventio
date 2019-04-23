@@ -69,8 +69,8 @@ class NoTrackingPositions(Exception):
 
 
 class SimTelFile(EventIOFile):
-    def __init__(self, path, allowed_telescopes=None, skip_calibration=False):
-        super().__init__(path)
+    def __init__(self, path, allowed_telescopes=None, skip_calibration=False, zcat=True):
+        super().__init__(path, zcat=zcat)
 
         self.path = path
         self.allowed_telescopes = None

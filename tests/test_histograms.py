@@ -1,4 +1,4 @@
-from eventio.search_utils import collect_toplevel_of_type
+from eventio.search_utils import yield_toplevel_of_type
 
 
 prod4b_sst1m_file = 'tests/resources/gamma_20deg_0deg_run102___cta-prod4-sst-1m_desert-2150m-Paranal-sst-1m.simtel.gz'
@@ -22,15 +22,14 @@ def test_histograms():
 
     with EventIOFile(prod4b_sst1m_file) as f:
 
-        objects = collect_toplevel_of_type(f, Histograms)
-        assert len(objects) > 0
-
-        for obj in objects:
+        n_read = 0
+        for obj in yield_toplevel_of_type(f, Histograms):
             hists = obj.parse()
             unread = obj.read()
             assert len(unread) == 0 or all(b == 0 for b in unread)
+            n_read += 1
 
             for hist, title in zip(hists, titles):
                 assert hist['title'] == title
 
-
+        assert n_read == 1

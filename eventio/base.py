@@ -1,6 +1,7 @@
 import struct
 import gzip
 import logging
+import subprocess as sp
 
 from .file_types import is_gzip, is_eventio, is_zstd
 from .header import parse_header_bytes, get_bits_from_word
@@ -18,18 +19,66 @@ log = logging.getLogger(__name__)
 KNOWN_OBJECTS = {}
 
 
+class PipeWrapper:
+    '''
+    This class makes a sp.PIPE  forward-seekable
+    by keeping track of the bytes already read
+    and reading as many bytes as required in `seek`
+    '''
+    def __init__(self, pipe):
+        self.pipe = pipe
+        self.pos = 0
+
+    def read(self, size=-1):
+        data = self.pipe.read(size)
+        self.pos += len(data)
+        return data
+
+    def seek(self, offset, whence=0):
+        if whence == 0:
+            to_read = offset - self.pos
+            if to_read < 0:
+                raise IOError('Only forward seeking possible')
+            self.pos += len(self.pipe.read(to_read))
+
+        if whence == 1:
+            if offset < 0:
+                raise IOError('Only forward seeking possible')
+            self.pos += len(self.pipe.read(offset))
+
+        if whence == 2:
+            raise IOError('Only forward seeking possible')
+
+        return self.pos
+
+    def close(self):
+        return self.pipe.close()
+
+
 class EventIOFile:
 
-    def __init__(self, path):
+    def __init__(self, path, zcat=True):
         log.info('Opening new file {}'.format(path))
         self.path = path
+        self.read_process = None
 
         if not is_eventio(path):
             raise ValueError('File {} is not an eventio file'.format(path))
 
         if is_gzip(path):
             log.info('Found gzipped file')
-            self._filehandle = gzip.open(path, mode='rb')
+            if zcat:
+                try:
+                    log.info('Trying to read using zcat')
+                    self.read_process = sp.Popen(['zcat', path], stdout=sp.PIPE)
+                    self._filehandle = PipeWrapper(self.read_process.stdout)
+                    log.info('Using zcat')
+                except Exception:
+                    log.info('Falling back to gzip module')
+                    self._filehandle = gzip.open(path)
+            else:
+                log.info('Using gzip module')
+                self._filehandle = gzip.open(path)
 
         elif is_zstd(path):
             log.info('Found zstd compressed file')
@@ -83,6 +132,8 @@ class EventIOFile:
 
     def close(self):
         self._filehandle.close()
+        if self.read_process is not None:
+            self.read_process.terminate()
 
 
 def check_size_or_raise(data, expected_length, zero_ok=True):
