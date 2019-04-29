@@ -3,7 +3,7 @@ import cython
 from libc.stdint cimport uint8_t, uint32_t, uint64_t
 
 
-# cythonss way to declare constants
+# cython's way to declare constants
 # see https://cython.readthedocs.io/en/latest/src/userguide/language_basics.html#c-variable-and-type-definitions
 cdef enum:
     OBJECT_HEADER_SIZE = 12
