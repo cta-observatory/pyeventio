@@ -2,45 +2,36 @@
 import cython
 import numpy as np
 cimport numpy as np
+from libc.stdint cimport uint8_t, uint16_t, uint32_t, uint64_t, int16_t, int32_t, int64_t
 
-INT16 = np.int16
-ctypedef np.int16_t INT16_t
-
-UINT32 = np.uint32
-ctypedef np.uint32_t UINT32_t
-
-INT32 = np.int32
-ctypedef np.int32_t INT32_t
-
-UINT64 = np.uint64
-ctypedef np.uint64_t UINT64_t
-
-INT64 = np.int64
-ctypedef np.int64_t INT64_t
-
+cdef INT16 = np.int16
+cdef UINT32 = np.uint32
+cdef INT32 = np.int32
+cdef UINT64 = np.uint64
+cdef INT64 = np.int64
 cdef F32 = np.float32
 
 
 @cython.wraparound(False)  # disable negative indexing
-cpdef (UINT64_t, unsigned int) unsigned_varint(const unsigned char[:] data, unsigned long offset=0):
-    cdef unsigned int length
-    cdef unsigned long value
+cpdef (uint64_t, uint8_t) unsigned_varint(const uint8_t[:] data, uint64_t offset=0):
+    cdef uint8_t length
+    cdef uint64_t value
     length = get_length_of_varint(data[offset])
     value = parse_varint(data[offset:offset + length])
     return value, length
 
 
 @cython.wraparound(False)  # disable negative indexing
-cpdef (INT64_t, unsigned int) varint(const unsigned char[:] data, unsigned long offset=0):
-    cdef unsigned int length
-    cdef unsigned long value
+cpdef (int64_t, uint8_t) varint(const uint8_t[:] data, uint64_t offset=0):
+    cdef uint8_t length
+    cdef uint64_t value
     value, length = unsigned_varint(data, offset)
     if (value & 1) == 1:  # Negative number;
         return -(value >> 1) - 1, length
     return value >> 1, length
 
 
-cpdef unsigned int get_length_of_varint(const unsigned char first_byte):
+cpdef uint8_t get_length_of_varint(const uint8_t first_byte):
     if (first_byte & 0x80) == 0:
         return 1
     if (first_byte & 0xc0) == 0x80:
@@ -62,10 +53,10 @@ cpdef unsigned int get_length_of_varint(const unsigned char first_byte):
 
 @cython.boundscheck(False)
 @cython.wraparound(False)  # disable negative indexing
-cpdef UINT64_t parse_varint(const unsigned char[:] var_int_bytes):
+cpdef uint64_t parse_varint(const uint8_t[:] var_int_bytes):
     length = var_int_bytes.shape[0]
-    cdef UINT64_t v[9]
-    cdef int i  = 0
+    cdef uint64_t v[9]
+    cdef uint8_t i  = 0
     for i in range(length):
         v[i] = var_int_bytes[i]
 
@@ -141,16 +132,16 @@ cpdef UINT64_t parse_varint(const unsigned char[:] var_int_bytes):
 
 @cython.wraparound(False)  # disable negative indexing
 cpdef unsigned_varint_array(
-    const unsigned char[:] data,
-    unsigned long n_elements,
-    unsigned long offset = 0,
+    const uint8_t[:] data,
+    uint64_t n_elements,
+    uint64_t offset = 0,
 ):
-    cdef np.ndarray[UINT64_t, ndim=1] output = np.empty(n_elements, dtype=UINT64)
+    cdef np.ndarray[uint64_t, ndim=1] output = np.empty(n_elements, dtype=UINT64)
 
-    cdef unsigned long i
-    cdef unsigned long pos
-    cdef unsigned long idx
-    cdef unsigned long length
+    cdef uint64_t i
+    cdef uint64_t pos
+    cdef uint64_t idx
+    cdef uint64_t length
     pos = 0
 
     for i in range(n_elements):
@@ -164,19 +155,19 @@ cpdef unsigned_varint_array(
 
 @cython.wraparound(False)  # disable negative indexing
 cpdef varint_array(
-    const unsigned char[:] data,
-    unsigned long n_elements,
-    unsigned long offset = 0,
+    const uint8_t[:] data,
+    uint64_t n_elements,
+    uint64_t offset = 0,
 ):
-    cdef unsigned long bytes_read
-    cdef np.ndarray[INT64_t, ndim=1] output = np.empty(n_elements, dtype=INT64)
+    cdef uint64_t bytes_read
+    cdef np.ndarray[int64_t, ndim=1] output = np.empty(n_elements, dtype=INT64)
 
-    cdef INT64_t val
-    cdef unsigned int length
+    cdef int64_t val
+    cdef uint8_t length
 
-    cdef int one = 1;
-    cdef unsigned long i
-    cdef unsigned long pos = offset
+    cdef uint8_t one = 1;
+    cdef uint64_t i
+    cdef uint64_t pos = offset
 
     for i in range(n_elements):
         length = get_length_of_varint(data[pos])
@@ -193,21 +184,21 @@ cpdef varint_array(
 
 @cython.wraparound(False)  # disable negative indexing
 cpdef unsigned_varint_arrays_differential(
-    const unsigned char[:] data,
-    unsigned long n_arrays,
-    unsigned long n_elements,
-    unsigned long offset = 0,
+    const uint8_t[:] data,
+    uint64_t n_arrays,
+    uint64_t n_elements,
+    uint64_t offset = 0,
 ):
-    cdef unsigned long pos = 0
-    cdef unsigned long bytes_read = 0
-    cdef unsigned long bytes_read_total = 0
-    cdef unsigned long i
-    cdef unsigned long j
-    cdef (unsigned long, unsigned long) shape = (n_arrays, n_elements)
+    cdef uint64_t pos = 0
+    cdef uint64_t bytes_read = 0
+    cdef uint64_t bytes_read_total = 0
+    cdef uint64_t i
+    cdef uint64_t j
+    cdef (uint64_t, uint64_t) shape = (n_arrays, n_elements)
 
-    cdef np.ndarray[UINT32_t, ndim=2] output = np.zeros(shape, dtype=UINT32)
-    cdef UINT32_t[:, :] output_view = output
-    cdef UINT32_t[:] output_view_1d
+    cdef np.ndarray[uint32_t, ndim=2] output = np.zeros(shape, dtype=UINT32)
+    cdef uint32_t[:, :] output_view = output
+    cdef uint32_t[:] output_view_1d
 
     for i in range(n_arrays):
 
@@ -223,17 +214,17 @@ cpdef unsigned_varint_arrays_differential(
 
 
 @cython.wraparound(False)  # disable negative indexing
-cdef unsigned long unsigned_varint_array_differential(
-    const unsigned char[:] data,
-    UINT32_t[:] output,
-    unsigned long offset = 0,
+cdef uint64_t unsigned_varint_array_differential(
+    const uint8_t[:] data,
+    uint32_t[:] output,
+    uint64_t offset = 0,
 ) except -1:
 
-    cdef unsigned long n_elements = output.shape[0]
-    cdef int val = 0
-    cdef unsigned long i
-    cdef unsigned long pos = 0
-    cdef unsigned char v0, v1, v2, v3, v4
+    cdef uint64_t n_elements = output.shape[0]
+    cdef int32_t val = 0
+    cdef uint64_t i
+    cdef uint64_t pos = 0
+    cdef uint8_t v0, v1, v2, v3, v4
 
     for i in range(n_elements):
         v0 = data[pos + offset]
@@ -317,24 +308,23 @@ cdef unsigned long unsigned_varint_array_differential(
 
 
 def simtel_pixel_timing_parse_list_type_2(
-    const unsigned char[:] data,
-    const INT16_t[:, :] pixel_list,
-    int n_gains,
-    int n_pixels,
-    int n_types,
+    const uint8_t[:] data,
+    const int16_t[:, :] pixel_list,
+    uint32_t n_gains,
+    uint32_t n_pixels,
+    uint32_t n_types,
     bint with_sum,
     bint glob_only_selected,
     float granularity,
 ):
-    cdef int start, stop, list_index
-    cdef int i_pix, i_type
-    cdef unsigned long pos = 0
-    cdef unsigned int length = 0
-    cdef INT16_t* short_ptr
+    cdef uint32_t start, stop, list_index
+    cdef uint32_t i_pix, i_type
+    cdef uint64_t pos = 0
+    cdef uint32_t length = 0
 
     cdef np.ndarray[float, ndim=2] timval = np.full((n_pixels, n_types), np.nan, dtype=np.float32)
-    cdef np.ndarray[INT32_t, ndim=2] pulse_sum_loc = np.zeros((n_gains, n_pixels), dtype=INT32)
-    cdef np.ndarray[INT32_t, ndim=2] pulse_sum_glob = np.zeros((n_gains, n_pixels), dtype=INT32)
+    cdef np.ndarray[int32_t, ndim=2] pulse_sum_loc = np.zeros((n_gains, n_pixels), dtype=INT32)
+    cdef np.ndarray[int32_t, ndim=2] pulse_sum_glob = np.zeros((n_gains, n_pixels), dtype=INT32)
 
     for list_index in range(pixel_list.shape[0]):
         start = pixel_list[list_index][0]
@@ -342,8 +332,7 @@ def simtel_pixel_timing_parse_list_type_2(
 
         for i_pix in range(start, stop + 1):
             for i_type in range(n_types):
-                short_ptr = <INT16_t*> &data[pos]
-                timval[i_pix, i_type] = granularity * short_ptr[0]
+                timval[i_pix, i_type] = granularity * (<int16_t*> &data[pos])[0]
                 pos += 2
 
             if with_sum:
@@ -370,20 +359,17 @@ def simtel_pixel_timing_parse_list_type_2(
 
 
 def parse_1208(
-    const unsigned char[:] data,
-    int n_pixels,
-    int nonempty,
-    int version,
-    unsigned int flags
+    const uint8_t[:] data,
+    uint32_t n_pixels,
+    uint32_t nonempty,
+    uint32_t version,
+    uint32_t flags
 ):
 
-    cdef unsigned int length
-    cdef INT32_t* int_ptr
-    cdef INT16_t* short_ptr
-    cdef float* float_ptr
+    cdef uint32_t length
 
     cdef np.ndarray[float, ndim=1] photoelectrons = np.zeros(n_pixels, dtype=F32)
-    cdef np.ndarray[INT32_t, ndim=1] photon_counts = None
+    cdef np.ndarray[int32_t, ndim=1] photon_counts = None
     cdef list time = [[] for _ in range(n_pixels)]
     cdef list amplitude
 
@@ -392,80 +378,74 @@ def parse_1208(
     else:
         amplitude = None
 
-    cdef unsigned long pos = 0
-    cdef int i, j
+    cdef uint64_t pos = 0
+    cdef uint32_t i, j
 
     for i in range(nonempty):
         if version > 2:
             pix_id, length = varint(data, offset=pos)
         else:
-            short_ptr = <INT16_t*> &data[pos]
-            pix_id = short_ptr[0]
+            pix_id = (<int16_t*> &data[pos])[0]
             length = 2
 
         pos += length
 
-        int_ptr = <INT32_t*> &data[pos]
-        n_pe = int_ptr[0]
+        n_pe = (<int32_t*> &data[pos])[0]
         pos += 4
 
         photoelectrons[pix_id] = n_pe
         for j in range(n_pe):
-            float_ptr = <float*> &data[pos]
-            time[pix_id].append(float_ptr[0])
+            time[pix_id].append((<float*> &data[pos])[0])
             pos += 4
 
         if flags & 1:
             for j in range(n_pe):
-                float_ptr = <float*> &data[pos]
-                amplitude[pix_id].append(float_ptr[0])
+                amplitude[pix_id].append((<float*> &data[pos])[0])
                 pos += 4
 
     if flags & 4:
         photon_counts = np.zeros(n_pixels, dtype=INT32)
 
-        int_ptr = <INT32_t*> &data[pos]
+        int_ptr = <int32_t*> &data[pos]
         nonempty = int_ptr[0]
         pos += 4
 
         for i in range(nonempty):
-            short_ptr = <INT16_t*> &data[pos]
-            pix_id = short_ptr[0]
+            pix_id = (<int16_t*> &data[pos])[0]
             pos += 2
 
-            int_ptr = <INT32_t*> &data[pos]
-            photon_counts[pix_id] = int_ptr[0]
+            photon_counts[pix_id] = (<int32_t*> &data[pos])[0]
             pos += 4
 
     return photoelectrons, time, amplitude, photon_counts
 
 
 cpdef simtel_pixel_timing_parse_list_type_1(
-    const unsigned char[:] data,
-    const INT16_t[:] pixel_list,
-    int n_gains,
-    int n_pixels,
-    int n_types,
+    const uint8_t[:] data,
+    const int16_t[:] pixel_list,
+    uint32_t n_gains,
+    uint32_t n_pixels,
+    uint32_t n_types,
     bint with_sum,
     bint glob_only_selected,
     float granularity,
 ):
-    cdef int start, stop, list_index
-    cdef long pixel_list_length = pixel_list.shape[0]
-    cdef int i, i_gain, i_type, i_pix
-    cdef unsigned int length = 0
-    cdef INT16_t* short_ptr
+    cdef uint32_t start, stop, list_index
+    cdef uint32_t pixel_list_length = pixel_list.shape[0]
+    cdef uint32_t i, i_gain, i_type, i_pix
+    cdef uint32_t length = 0
+    cdef int16_t* short_ptr
 
-    cdef np.ndarray[float, ndim=2] timval = np.full((n_pixels, n_types), np.nan, dtype=np.float32)
-    cdef np.ndarray[INT32_t, ndim=2] pulse_sum_loc = np.zeros((n_gains, n_pixels), dtype=INT32)
-    cdef np.ndarray[INT32_t, ndim=2] pulse_sum_glob = np.zeros((n_gains, n_pixels), dtype=INT32)
+    cdef np.ndarray[float, ndim=2] timval = np.full((n_pixels, n_types), np.nan, dtype=F32)
+    cdef np.ndarray[int32_t, ndim=2] pulse_sum_loc = np.zeros((n_gains, n_pixels), dtype=INT32)
+    cdef np.ndarray[int32_t, ndim=2] pulse_sum_glob = np.zeros((n_gains, n_pixels), dtype=INT32)
 
 
-    cdef unsigned long pos = 0
+    cdef uint64_t pos = 0
     for i in range(pixel_list_length):
         i_pix = pixel_list[i]
         for i_type in range(n_types):
-            short_ptr = <INT16_t*> &(data[pos])
+            short_ptr = <int16_t*> &(data[pos])
             timval[i_pix, i_type] = granularity * short_ptr[0]
             pos += 2
 
@@ -497,18 +477,18 @@ cpdef simtel_pixel_timing_parse_list_type_1(
 
 @cython.wraparound(False)  # disable negative indexing
 cpdef read_sector_information_v2(
-    const unsigned char[:] data,
-    unsigned long n_pixels,
-    unsigned long offset = 0,
+    const uint8_t[:] data,
+    uint32_t n_pixels,
+    uint64_t offset = 0,
 ):
-    cdef unsigned long i
-    cdef unsigned long length
-    cdef int n
+    cdef uint32_t i
+    cdef uint64_t length
+    cdef int64_t n
 
     cdef list sectors = []
-    cdef np.ndarray[INT64_t, ndim=1] sector
+    cdef np.ndarray[int64_t, ndim=1] sector
 
-    cdef unsigned long pos = offset
+    cdef uint64_t pos = offset
     for i in range(n_pixels):
 
         n, length = varint(data, offset=pos)
