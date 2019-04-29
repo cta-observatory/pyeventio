@@ -71,7 +71,7 @@ class EventIOFile:
                 try:
                     log.info('Trying to read using zcat')
                     self.read_process = sp.Popen(
-                        ['gunzip', '-c', path], stdout=sp.PIPE, stderr=sp.PIPE
+                        ['gzip', '-cd', path], stdout=sp.PIPE, stderr=sp.PIPE
                     )
                     self.read_process.poll()
                     rc = self.read_process.returncode
