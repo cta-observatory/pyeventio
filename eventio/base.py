@@ -2,7 +2,6 @@ import struct
 import gzip
 import logging
 import subprocess as sp
-import os
 
 from .file_types import is_gzip, is_eventio, is_zstd
 from .header import parse_header_bytes, get_bits_from_word
@@ -72,9 +71,11 @@ class EventIOFile:
                 try:
                     log.info('Trying to read using zcat')
                     self.read_process = sp.Popen(
-                        ['zcat', os.path.abspath(path)], stdout=sp.PIPE, stderr=sp.PIPE
+                        ['gunzip', '-c', path], stdout=sp.PIPE, stderr=sp.PIPE
                     )
-                    if self.read_process.returncode is not None:
+                    self.read_process.poll()
+                    rc = self.read_process.returncode
+                    if rc is not None and rc != 0:
                         raise ValueError(self.read_process.stderr.read().decode())
 
                     self._filehandle = PipeWrapper(self.read_process.stdout)
