@@ -37,6 +37,7 @@ before_script:
   - source ./download_test_files.sh
 
 script:
+  - ls -lh tests/resources
   - python setup.py test
   - python setup.py check -r -s
 
