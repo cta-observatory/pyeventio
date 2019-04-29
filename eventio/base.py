@@ -54,6 +54,9 @@ class PipeWrapper:
     def close(self):
         return self.pipe.close()
 
+    def tell(self):
+        return self.pos
+
 
 class EventIOFile:
 
