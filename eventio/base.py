@@ -70,11 +70,17 @@ class EventIOFile:
             if zcat:
                 try:
                     log.info('Trying to read using zcat')
-                    self.read_process = sp.Popen(['zcat', path], stdout=sp.PIPE)
+                    self.read_process = sp.Popen(
+                        ['zcat', path], stdout=sp.PIPE, stderr=sp.PIPE
+                    )
+                    if self.read_process.returncode is not None:
+                        raise ValueError(self.read_process.stderr.read().decode())
+
                     self._filehandle = PipeWrapper(self.read_process.stdout)
                     log.info('Using zcat')
-                except Exception:
-                    log.info('Falling back to gzip module')
+                except Exception as e:
+                    log.info(str(e))
+                    log.warning('Falling back to gzip module')
                     self._filehandle = gzip.open(path)
             else:
                 log.info('Using gzip module')
