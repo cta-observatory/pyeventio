@@ -54,7 +54,7 @@ cpdef uint8_t get_length_of_varint(const uint8_t first_byte):
 @cython.boundscheck(False)
 @cython.wraparound(False)  # disable negative indexing
 cpdef uint64_t parse_varint(const uint8_t[:] var_int_bytes):
-    length = var_int_bytes.shape[0]
+    cdef uint8_t length = var_int_bytes.shape[0]
     cdef uint64_t v[9]
     cdef uint8_t i  = 0
     for i in range(length):
@@ -317,7 +317,9 @@ def simtel_pixel_timing_parse_list_type_2(
     bint glob_only_selected,
     float granularity,
 ):
-    cdef uint32_t start, stop, list_index
+    cdef int16_t start, stop
+    cdef uint32_t list_index
+    cdef uint32_t n_lists = pixel_list.shape[0]
     cdef uint32_t i_pix, i_type
     cdef uint64_t pos = 0
     cdef uint32_t length = 0
@@ -326,7 +328,7 @@ def simtel_pixel_timing_parse_list_type_2(
     cdef np.ndarray[int32_t, ndim=2] pulse_sum_loc = np.zeros((n_gains, n_pixels), dtype=INT32)
     cdef np.ndarray[int32_t, ndim=2] pulse_sum_glob = np.zeros((n_gains, n_pixels), dtype=INT32)
 
-    for list_index in range(pixel_list.shape[0]):
+    for list_index in range(n_lists):
         start = pixel_list[list_index][0]
         stop = pixel_list[list_index][1]
 
@@ -379,7 +381,8 @@ def parse_1208(
         amplitude = None
 
     cdef uint64_t pos = 0
-    cdef uint32_t i, j
+    cdef uint32_t i
+    cdef int32_t j
 
     for i in range(nonempty):
         if version > 2:

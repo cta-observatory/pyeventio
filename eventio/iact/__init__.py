@@ -80,8 +80,8 @@ class IACTFile(EventIOFile):
     RunEnd
     '''
 
-    def __init__(self, path):
-        super().__init__(path)
+    def __init__(self, path, zcat=True):
+        super().__init__(path, zcat=zcat)
 
         header_object = next(self)
         check_type(header_object, RunHeader)
