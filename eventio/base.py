@@ -64,6 +64,7 @@ class EventIOFile:
         log.info('Opening new file {}'.format(path))
         self.path = path
         self.read_process = None
+        self.zstd = False
 
         if not is_eventio(path):
             raise ValueError('File {} is not an eventio file'.format(path))
@@ -95,11 +96,11 @@ class EventIOFile:
             log.info('Found zstd compressed file')
             if not has_zstd:
                 raise IOError(
-                    'You need to install the `zstandard module'
-                    'to read zstd compressed file`'
+                    'You need to install the `zstandard` module'
+                    'to read zstd compressed file'
                 )
-            cctx = zstd.ZstdDecompressor()
-            self._filehandle = cctx.stream_reader(open(path, 'rb'))
+            self._filehandle = zstd.ZstdDecompressor().stream_reader(open(path, 'rb'))
+            self.zstd = True
 
         else:
             log.info('Found uncompressed file')
@@ -112,7 +113,7 @@ class EventIOFile:
         return self
 
     def __next__(self):
-        self._filehandle.seek(self._next_header_pos)
+        self.seek(self._next_header_pos)
         read_sync_marker(self)
         header = read_header(
             self,
@@ -127,7 +128,17 @@ class EventIOFile:
         )
 
     def seek(self, position, whence=0):
-        return self._filehandle.seek(position, whence)
+        if not self.zstd:
+            return self._filehandle.seek(position, whence)
+        else:
+            if whence == 0:
+                self._filehandle.read(position - self.tell())
+                return self.tell()
+            elif whence == 1:
+                self._filehandle.read(position)
+                return self.tell()
+            elif whence == 2:
+                raise ValueError('Backseeking not supported')
 
     def tell(self):
         return self._filehandle.tell()
