@@ -130,6 +130,8 @@ class EventIOFile:
     def seek(self, position, whence=0):
         if not self.zstd:
             return self._filehandle.seek(position, whence)
+        # this is a hotfix for https://github.com/indygreg/python-zstandard/issues/82
+        # and should be removed as soon as this is fixed upstream
         else:
             if whence == 0:
                 self._filehandle.read(position - self.tell())
