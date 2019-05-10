@@ -120,6 +120,9 @@ class EventHeader(EventIOObject):
 
         return parse_event_header(data[4:])[0]
 
+    def __str__(self):
+        return super().__str__() + '(event_id={})'.format(self.header.id)
+
 
 class ArrayOffsets(EventIOObject):
     eventio_type = 1203
@@ -168,7 +171,7 @@ class TelescopeData(EventIOObject):
     eventio_type = 1204
 
     def __str__(self):
-        return '{}[{}](shower_event_id={})'.format(
+        return '{}[{}](reuse_id={})'.format(
             self.__class__.__name__,
             self.header.type,
             self.header.id,
@@ -342,6 +345,9 @@ class EventEnd(EventIOObject):
             raise WrongSize('Expected 3 floats, but found {}'.format(n))
 
         return parse_event_end(self.read())
+
+    def __str__(self):
+        return super().__str__() + '(event_id={})'.format(self.header.id)
 
 
 class RunEnd(EventIOObject):
