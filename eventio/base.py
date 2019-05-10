@@ -134,7 +134,9 @@ class EventIOFile:
         # and should be removed as soon as this is fixed upstream
         else:
             if whence == 0:
-                self._filehandle.read(position - self.tell())
+                amount = position - self.tell()
+                if amount != 0:
+                    self._filehandle.read(position - self.tell())
                 return self.tell()
             elif whence == 1:
                 self._filehandle.read(position)
