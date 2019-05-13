@@ -143,3 +143,15 @@ cpdef ObjectHeader parse_header_bytes(const uint8_t[:] header_bytes, bint toplev
         header.header_size += EXTENSION_SIZE
 
     return header
+
+
+cpdef check_size_or_raise(const uint8_t[:] data, uint64_t expected_length, bint zero_ok=True):
+    cdef uint64_t length = data.shape[0]
+    if length == 0:
+        if zero_ok:
+            raise StopIteration
+        else:
+            raise EOFError('File seems to be truncated')
+
+    if length < expected_length:
+        raise EOFError('File seems to be truncated')

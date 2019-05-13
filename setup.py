@@ -50,7 +50,7 @@ with open('README.rst') as f:
 
 setup(
     name='eventio',
-    version='0.20.3',
+    version='0.20.4',
     description='Python read-only implementation of the EventIO file format',
     long_description=long_description,
     url='https://github.com/fact-project/pyeventio',
@@ -92,6 +92,7 @@ setup(
         'Programming Language :: Python :: 3.6',
         'Programming Language :: Python :: 3.7',
         'Programming Language :: Python :: 3 :: Only',
+        'Programming Language :: Python :: 3',
         'Topic :: Scientific/Engineering :: Astronomy',
         'Topic :: Scientific/Engineering :: Physics',
     ],

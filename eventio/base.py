@@ -4,7 +4,7 @@ import logging
 import subprocess as sp
 
 from .file_types import is_gzip, is_eventio, is_zstd
-from .header import parse_header_bytes, get_bits_from_word
+from .header import parse_header_bytes, get_bits_from_word, check_size_or_raise
 from . import constants
 from .exceptions import WrongType
 
@@ -160,17 +160,6 @@ class EventIOFile:
         self._filehandle.close()
         if self.read_process is not None:
             self.read_process.terminate()
-
-
-def check_size_or_raise(data, expected_length, zero_ok=True):
-    if len(data) == 0:
-        if zero_ok:
-            raise StopIteration
-        else:
-            raise EOFError('File seems to be truncated')
-
-    if len(data) < expected_length:
-        raise EOFError('File seems to be truncated')
 
 
 def read_sync_marker(byte_stream):
