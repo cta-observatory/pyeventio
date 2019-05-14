@@ -163,13 +163,14 @@ class EventIOFile:
 
 
 def check_size_or_raise(data, expected_length, zero_ok=True):
-    if len(data) == 0:
+    length = len(data)
+    if length == 0:
         if zero_ok:
             raise StopIteration
         else:
             raise EOFError('File seems to be truncated')
 
-    if len(data) < expected_length:
+    if length < expected_length:
         raise EOFError('File seems to be truncated')
 
 
