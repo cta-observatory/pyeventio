@@ -10,31 +10,31 @@ Documentation of the file format: https://www.mpi-hd.mpg.de/hfm/~bernlohr/sim_te
 
 Most blocks of the IACT extension and SimTel are implemented.
 The following blocks are known, but reading their data is not (yet)
-implemented:
+implemented, because we do not have any test files containing
+these objects. 
 
-+--------+-------------------------------+
-| Code   | Description                   |
-+========+===============================+
-| 1206   | IACT Layout                   |
-+--------+-------------------------------+
-| 1207   | IACT Trigger Time             |
-+--------+-------------------------------+
-| 2017   | SimTel PixelCalib             |
-+--------+-------------------------------+
-| 2024   | SimTel RunStat                |
-+--------+-------------------------------+
-| 2025   | SimTel MC_RunStat             |
-+--------+-------------------------------+
-| 2028   | SimTel CalibEvent             |
-+--------+-------------------------------+
-| 2029   | SimTel AuxiliaryDigitalTraces |
-+--------+-------------------------------+
-| 2030   | SimTel AuxiliaryAnalogTraces  |
-+--------+-------------------------------+
-| 2031   | SimTel FSPhot                 |
-+--------+-------------------------------+
-| 2032   | SimTel PixelTriggerTimes      |
-+--------+-------------------------------+
+If you want support for these objects,
+please open an `issue <https:/github.com/cta-observatory/pyeventio/issues>`_.
+
++--------+---------------------------------+
+| Code   | Description                     |
++========+=================================+
+| 1206   | IACT Camera Layout              |
++--------+---------------------------------+
+| 1207   | IACT Trigger Time               |
++--------+---------------------------------+
+| 2017   | SimTel Pixel Calibriation       |
++--------+---------------------------------+
+| 2024   | SimTel Run Statistics           |
++--------+---------------------------------+
+| 2025   | SimTel MC Run Statisitics       |
++--------+---------------------------------+
+| 2029   | SimTel Auxiliary Digital Traces |
++--------+---------------------------------+
+| 2030   | SimTel Auxiliary Analog Traces  |
++--------+---------------------------------+
+| 2031   | SimTel FSPhot                   |
++--------+---------------------------------+
 
 
 install with

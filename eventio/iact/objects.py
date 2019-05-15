@@ -25,7 +25,7 @@ __all__ = [
     'ArrayOffsets',
     'TelescopeData',
     'Photons',
-    'Layout',
+    'CameraLayout',
     'TriggerTime',
     'PhotoElectrons',
     'EventEnd',
@@ -280,7 +280,7 @@ class Photons(EventIOObject):
         return bunches
 
 
-class Layout(EventIOObject):
+class CameraLayout(EventIOObject):
     eventio_type = 1206
 
 
