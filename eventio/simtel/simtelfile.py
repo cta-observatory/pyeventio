@@ -126,8 +126,35 @@ class SimTelFile(EventIOFile):
     def next_low_level(self):
         o = next(self)
 
-        if isinstance(o, History):
-            self.history.append(o)
+        # order of if statements is roughly sorted
+        # by the number of occurences in a simtel file
+        # this should minimize the number of if statements evaluated
+
+        if isinstance(o, MCEvent):
+            self.current_mc_event = o.parse()
+            self.current_mc_event_id = o.header.id
+
+        elif isinstance(o, MCShower):
+            self.current_mc_shower = o.parse()
+
+        elif isinstance(o, ArrayEvent):
+            self.current_array_event = parse_array_event(
+                o,
+                self.allowed_telescopes
+            )
+
+        elif isinstance(o, iact.TelescopeData):
+            self.current_photoelectrons = parse_photoelectrons(o)
+
+        elif isinstance(o, CameraMonitoring):
+            self.camera_monitorings[o.telescope_id].update(o.parse())
+
+        elif isinstance(o, LaserCalibration):
+            self.laser_calibrations[o.telescope_id].update(o.parse())
+
+        elif isinstance(o, telescope_descriptions_types):
+            key = camel_to_snake(o.__class__.__name__)
+            self.telescope_descriptions[o.telescope_id][key] = o.parse()
 
         elif isinstance(o, RunHeader):
             self.header = o.parse()
@@ -138,40 +165,18 @@ class SimTelFile(EventIOFile):
 
         elif isinstance(o, iact.InputCard):
             self.corsika_inputcards.append(o.parse())
-
-        elif isinstance(o, telescope_descriptions_types):
-            key = camel_to_snake(o.__class__.__name__)
-            self.telescope_descriptions[o.telescope_id][key] = o.parse()
-
-        elif isinstance(o, MCShower):
-            self.current_mc_shower = o.parse()
-
-        elif isinstance(o, MCEvent):
-            self.current_mc_event = o.parse()
-            self.current_mc_event_id = o.header.id
-
-        elif isinstance(o, iact.TelescopeData):
-            self.current_photoelectrons = parse_photoelectrons(o)
-
         elif isinstance(o, MCPhotoelectronSum):
             self.current_photoelectron_sum = o.parse()
 
-        elif isinstance(o, ArrayEvent):
-            self.current_array_event = parse_array_event(
-                o,
-                self.allowed_telescopes
-            )
         elif isinstance(o, CalibrationEvent):
             if not self.skip_calibration:
                 self.current_calibration_event = parse_array_event(
                     next(o),
                     self.allowed_telescopes,
                 )
-        elif isinstance(o, CameraMonitoring):
-            self.camera_monitorings[o.telescope_id].update(o.parse())
 
-        elif isinstance(o, LaserCalibration):
-            self.laser_calibrations[o.telescope_id].update(o.parse())
+        elif isinstance(o, History):
+            self.history.append(o)
 
         elif isinstance(o, Histograms):
             self.histograms = o.parse()
