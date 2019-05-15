@@ -131,12 +131,6 @@ class ArrayOffsets(EventIOObject):
         1: [('x', 'f4'), ('y', 'f4'), ('weight', 'f4')],
     }
 
-    def __init__(self, header, filehandle):
-        super().__init__(header, filehandle)
-        self.n_arrays = read_int(self)
-        self.time_offset = read_float(self)
-        self.n_reuses = self.n_arrays
-
     def parse(self):
         '''
         Read the data in this EventIOItem
@@ -145,20 +139,16 @@ class ArrayOffsets(EventIOObject):
         with a row for each array. This object is used to store the
         array position and contains one set of coordinates for each reuse.
         '''
-        self.seek(8)
         assert_max_version(self, 1)
+        self.seek(0)
 
-        return read_array(
+        n_arrays = read_int(self)
+        time_offset = read_float(self)
+
+        return time_offset, read_array(
             self,
             dtype=self.dtypes[self.header.version],
-            count=self.n_arrays,
-        )
-
-    def __str__(self):
-        return '{}[{}](n_reuses={})'.format(
-            self.__class__.__name__,
-            self.header.type,
-            self.n_reuses,
+            count=n_arrays,
         )
 
 

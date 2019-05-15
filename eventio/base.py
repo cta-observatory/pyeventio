@@ -2,6 +2,7 @@ import struct
 import gzip
 import logging
 import subprocess as sp
+import warnings
 
 from .file_types import is_gzip, is_eventio, is_zstd
 from .header import parse_header_bytes, get_bits_from_word
@@ -11,6 +12,9 @@ from .exceptions import WrongType
 try:
     import zstandard as zstd
     has_zstd = True
+    version = tuple(int(v) for v in zstd.__version__.split('.'))
+    if version < (0, 11, 1):
+        warnings.warn('zstandard < 0.11.1 has a memory leaking bug, please update')
 except ImportError:
     has_zstd = False
 
@@ -127,21 +131,7 @@ class EventIOFile:
         )
 
     def seek(self, position, whence=0):
-        if not self.zstd:
-            return self._filehandle.seek(position, whence)
-        # this is a hotfix for https://github.com/indygreg/python-zstandard/issues/82
-        # and should be removed as soon as this is fixed upstream
-        else:
-            if whence == 0:
-                amount = position - self.tell()
-                if amount != 0:
-                    self._filehandle.read(position - self.tell())
-                return self.tell()
-            elif whence == 1:
-                self._filehandle.read(position)
-                return self.tell()
-            elif whence == 2:
-                raise ValueError('Backseeking not supported')
+        return self._filehandle.seek(position, whence)
 
     def tell(self):
         return self._filehandle.tell()
@@ -162,13 +152,14 @@ class EventIOFile:
 
 
 def check_size_or_raise(data, expected_length, zero_ok=True):
-    if len(data) == 0:
+    length = len(data)
+    if length == 0:
         if zero_ok:
             raise StopIteration
         else:
             raise EOFError('File seems to be truncated')
 
-    if len(data) < expected_length:
+    if length < expected_length:
         raise EOFError('File seems to be truncated')
 
 

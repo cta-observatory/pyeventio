@@ -77,9 +77,9 @@ def test_corsika_array_offsets():
             obj = next(f)
 
         assert isinstance(obj, ArrayOffsets)
-        assert obj.n_arrays == 1
 
-        offsets = obj.parse()
+        time_offset, offsets = obj.parse()
+        assert len(offsets) == 1
         assert offsets['x'][0] == approx(-506.9717102050781)
         assert offsets['y'][0] == approx(-3876.447265625)
 
