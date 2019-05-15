@@ -333,6 +333,13 @@ class EventIOObject:
     def __str__(self):
         return '{}[{}]'.format(self.__class__.__name__, self.header.type)
 
+    def parse(self):
+        raise NotImplementedError(
+            'Parsing of EventIO objects of type {} is not yet implemented'.format(
+                self.header.type
+            )
+        )
+
 
 def parse_extension_field(extension_field):
     '''parse the so called "extension" field from `file`
