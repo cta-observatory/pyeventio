@@ -123,9 +123,8 @@ class IACTFile(EventIOFile):
             reuse_object = next(self)
             check_type(reuse_object, ArrayOffsets)
 
-            n_reuses = reuse_object.n_reuses
-            array_offsets = reuse_object.parse()
-            time_offset = reuse_object.time_offset
+            time_offset, array_offsets = reuse_object.parse()
+            n_reuses = len(array_offsets)
 
             longitudinal = None
             particles = None
