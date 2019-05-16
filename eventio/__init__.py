@@ -5,6 +5,9 @@ from . import simtel
 from .simtel import SimTelFile
 from .histograms import Histograms
 
+
+__version__ = '0.21.1'
+
 __all__ = [
     'EventIOFile',
     'IACTFile',
