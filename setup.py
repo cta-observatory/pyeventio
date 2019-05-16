@@ -1,5 +1,6 @@
 from setuptools import setup, find_packages
 import os
+import re
 
 # make sure users without cython can install our extensions
 try:
@@ -48,9 +49,14 @@ if ext == '.c':
 with open('README.rst') as f:
     long_description = f.read()
 
+
+with open('eventio/__init__.py') as f:
+    m = re.search("__version__ = ([\"'][0-9.]+[\"'])", f.read())
+    version = m.groups()[0]
+
 setup(
     name='eventio',
-    version='0.21.0',
+    version=version,
     description='Python read-only implementation of the EventIO file format',
     long_description=long_description,
     url='https://github.com/fact-project/pyeventio',
