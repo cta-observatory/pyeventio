@@ -59,9 +59,9 @@ setup(
     version=version,
     description='Python read-only implementation of the EventIO file format',
     long_description=long_description,
-    url='https://github.com/fact-project/pyeventio',
+    url='https://github.com/cta-observatory/pyeventio',
     author='Dominik Neise, Maximilian Noethe',
-    author_email='neised@phys.ethz.ch',
+    author_email='maximilian.noethe@tu-dortmund.de',
     license='MIT',
 
     packages=find_packages(),
