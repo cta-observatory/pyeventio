@@ -51,7 +51,7 @@ with open('README.rst') as f:
 
 
 with open('eventio/__init__.py') as f:
-    m = re.search("__version__ = ([\"'][0-9.]+[\"'])", f.read())
+    m = re.search("__version__ = [\"']([0-9.]+)[\"']", f.read())
     version = m.groups()[0]
 
 setup(
