@@ -334,6 +334,9 @@ class EventIOObject:
         return '{}[{}]'.format(self.__class__.__name__, self.header.type)
 
     def parse(self):
+        if self.only_subobjects:
+            raise ValueError('This object only contains subobjects')
+
         raise NotImplementedError(
             'Parsing of EventIO objects of type {} is not yet implemented'.format(
                 self.header.type
