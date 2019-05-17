@@ -73,6 +73,7 @@ setup(
         'eventio': ['*.c'],
         'eventio.simtel': ['*.c'],
     },
+    python_requires='>=3.5',
     install_requires=[
         'numpy',
         'corsikaio ~= 0.2.0',
@@ -94,6 +95,7 @@ setup(
         'Natural Language :: English',
         'Operating System :: OS Independent',
         'Programming Language :: Python',
+        'Programming Language :: Python :: 3',
         'Programming Language :: Python :: 3.5',
         'Programming Language :: Python :: 3.6',
         'Programming Language :: Python :: 3.7',
