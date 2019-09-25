@@ -11,7 +11,7 @@ from corsikaio.subblocks import (
 
 from ..tools import (
     read_short, read_int, read_float, read_from, read_eventio_string,
-    read_array,
+    read_array, read_var_string, read_double, read_utf8_like_unsigned_int
 )
 from ..base import EventIOObject
 from ..exceptions import WrongSize
@@ -409,3 +409,42 @@ class InputCard(EventIOObject):
             input_card.extend(read_eventio_string(self))
             input_card.append(ord('\n'))
         return input_card
+
+
+class AtmosphericProfile(EventIOObject):
+    ''' This Object contains the CORSIKA steering card '''
+    eventio_type = 1216
+
+    def parse(self):
+        '''
+        Read the data in this EventIOObject
+        '''
+        self.seek(0)
+        assert_max_version(self, 1)
+        name = read_var_string(self)
+        obslevel = read_double(self)
+
+        table_size = read_utf8_like_unsigned_int(self)
+
+        # 4 columns, alt_km, rho, rhick, refidx_m1
+        table = read_array(self, 'float64', table_size * 4).reshape(table_size, 4)
+
+        n_five_layer = read_utf8_like_unsigned_int(self)
+        if n_five_layer == 5:
+            htoa = read_double(self)
+            corsika_atmosphere = read_array(self, 'float64', 25).reshape((5, 5))
+        else:
+            htoa = None
+            corsika_atmosphere = None
+
+        return {
+            'id': self.header.id,
+            'name': name,
+            'obslevel': obslevel,
+            'altitude_km': table[:, 0],
+            'rho': table[:, 1],
+            'thickness': table[:, 2],
+            'refractive_index_minus_1': table[:, 3],
+            'five_layer_atmosphere': corsika_atmosphere,
+            'htoa': htoa,
+        }
