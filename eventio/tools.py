@@ -52,8 +52,8 @@ def read_eventio_string(f):
 
 def read_var_string(f):
     '''Read a string from eventio file or object f.
-    Eventio stores strings as a short giving the length
-    of the string and the string itself.
+    This string is similar to the one in `read_eventio_string` but uses
+    the variable length integer instead of a short.
     '''
     length = read_utf8_like_unsigned_int(f)
     return f.read(length)
