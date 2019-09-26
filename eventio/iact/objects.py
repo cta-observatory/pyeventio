@@ -412,7 +412,7 @@ class InputCard(EventIOObject):
 
 
 class AtmosphericProfile(EventIOObject):
-    ''' This Object contains the CORSIKA steering card '''
+    ''' This Object contains the CORSIKA/atmext atmospheric profile '''
     eventio_type = 1216
 
     def parse(self):
