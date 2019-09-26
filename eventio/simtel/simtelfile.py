@@ -82,6 +82,7 @@ class SimTelFile(EventIOFile):
         self.history = []
         self.mc_run_headers = []
         self.corsika_inputcards = []
+        self.atmospheric_profiles = []
         self.header = None
         self.n_telescopes = None
         self.telescope_descriptions = defaultdict(dict)
@@ -180,6 +181,8 @@ class SimTelFile(EventIOFile):
 
         elif isinstance(o, Histograms):
             self.histograms = o.parse()
+        elif isinstance(o, iact.AtmosphericProfile):
+            self.atmospheric_profiles.append(o.parse())
         else:
             raise Exception(
                 'object type encountered, which is no handled'

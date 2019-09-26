@@ -18,6 +18,7 @@ from .objects import (
     RunEnd,
     Longitudinal,
     InputCard,
+    AtmosphericProfile,
 )
 
 
@@ -42,6 +43,7 @@ __all__ = [
     'RunEnd',
     'Longitudinal',
     'InputCard',
+    'AtmosphericProfile',
 ]
 
 
@@ -91,7 +93,14 @@ class IACTFile(EventIOFile):
         check_type(input_card_object, InputCard)
         self.input_card = input_card_object.parse()
 
-        telescope_object = next(self)
+        o = next(self)
+        if isinstance(o, AtmosphericProfile):
+            self.atmospheric_profile = o.parse()
+            telescope_object = next(self)
+        else:
+            self.atmospheric_profile = None
+            telescope_object = o
+
         check_type(telescope_object, TelescopeDefinition)
         self.n_telescopes = telescope_object.n_telescopes
         self.telescope_positions = telescope_object.parse()

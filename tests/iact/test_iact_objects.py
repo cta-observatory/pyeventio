@@ -6,6 +6,7 @@ testfile = 'tests/resources/one_shower.dat'
 prod4_simtel = 'tests/resources/gamma_20deg_0deg_run103___cta-prod4-sst-astri_desert-2150m-Paranal-sst-astri.simtel.gz'
 
 test_emitter_file = 'tests/resources/proton_500GeV_iactext.eventio.gz'
+test_profile_file = 'tests/resources/gamma_100gev_1216.eventio'
 
 
 def test_photo_electrons():
@@ -134,5 +135,26 @@ def test_emitter_bunches():
         # lightest particle should be an electron
         assert np.isclose(np.unique(emitter['mass'])[0], 0.000511, rtol=0.1)
 
-        # second lightest particle should be a muon 
+        # second lightest particle should be a muon
         assert np.isclose(np.unique(emitter['mass'])[1], 0.105, rtol=0.1)
+
+
+def test_atmospheric_profile():
+    from eventio.iact.objects import AtmosphericProfile
+
+    atmprof8 = np.genfromtxt('tests/resources/atmprof8.dat')
+
+    with eventio.EventIOFile(test_profile_file) as f:
+        for i in range(3):
+            o = next(f)
+
+        assert isinstance(o, AtmosphericProfile)
+
+        profile = o.parse()
+
+        assert profile['id'] == 8
+        assert profile['name'] == b'atmprof8.dat'
+        assert np.allclose(profile['altitude_km'], atmprof8[:, 0])
+        assert np.allclose(profile['rho'], atmprof8[:, 1])
+        assert np.allclose(profile['thickness'], atmprof8[:, 2])
+        assert np.allclose(profile['refractive_index_minus_1'], atmprof8[:, 3])

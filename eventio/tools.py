@@ -28,6 +28,11 @@ def read_float(f):
     return struct.unpack('<f', f.read(4))[0]
 
 
+def read_double(f):
+    ''' Read a 4 byte float from `f`'''
+    return struct.unpack('<d', f.read(8))[0]
+
+
 def read_array(f, dtype, count):
     '''Read a numpy array with `dtype` of length `count` from file-like `f`'''
     dt = np.dtype(dtype)
@@ -42,6 +47,15 @@ def read_eventio_string(f):
     of the string and the string itself.
     '''
     length = read_short(f)
+    return f.read(length)
+
+
+def read_var_string(f):
+    '''Read a string from eventio file or object f.
+    This string is similar to the one in `read_eventio_string` but uses
+    the variable length integer instead of a short.
+    '''
+    length = read_utf8_like_unsigned_int(f)
     return f.read(length)
 
 
