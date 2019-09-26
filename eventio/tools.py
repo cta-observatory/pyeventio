@@ -29,7 +29,7 @@ def read_float(f):
 
 
 def read_double(f):
-    ''' Read a 4 byte float from `f`'''
+    ''' Read an 8 byte float from `f`'''
     return struct.unpack('<d', f.read(8))[0]
 
 
