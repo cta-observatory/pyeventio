@@ -1,6 +1,6 @@
 ''' Implementations of the simtel_array EventIO object types '''
 import numpy as np
-from io import BytesIO, SEEK_END
+from io import BytesIO
 import struct
 from ..base import EventIOObject, read_header
 from ..tools import (
