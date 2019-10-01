@@ -161,7 +161,7 @@ def test_2003_v2():
                 # print(pixel_id, sector)
 
 
-def test_2004_3_objects():
+def test_2004():
     from eventio.simtel.objects import PixelSettings
 
     with EventIOFile(prod2_file) as f:
@@ -245,7 +245,7 @@ def test_2008_3_objects():
         assert tracking_info['range_high_alt'] == approx(2 * np.pi)
 
 
-def test_2009_3_objects():
+def test_2009():
     from eventio.simtel.objects import TriggerInformation
 
     with EventIOFile(prod2_file) as f:
@@ -254,6 +254,17 @@ def test_2009_3_objects():
             assert 'cpu_time' in data
             assert 'gps_time' in data
             assert 'teltrg_time_by_type' in data
+
+    with EventIOFile('tests/resources/prod4_pixelsettings_v3.gz') as f:
+        for o in yield_n_and_assert(f, TriggerInformation, n=10):
+            assert o.header.version == 3
+
+            data = parse_and_assert_consumption(o, limit=3)
+            assert 'plane_wavefront_compensation' in data
+            comp = data['plane_wavefront_compensation']
+            assert comp['az'] == 0
+            assert comp['alt'] == np.float32(np.pi / 2)
+            assert comp['speed_of_light'] == approx(29.97, abs=0.01)
 
 
 def test_2100_3_objects():
@@ -288,7 +299,7 @@ def test_2010():
         assert n_events > 0
 
 
-def test_2011_3_objects():
+def test_2011():
     from eventio.simtel.objects import TelescopeEventHeader
 
     with EventIOFile(prod2_file) as f:
@@ -357,6 +368,12 @@ def test_2011_3_objects():
             'time_trgsect': array([27., 27.], dtype=float32)
         }
         '''
+
+    with EventIOFile('tests/resources/prod4_pixelsettings_v3.gz') as f:
+        for i, o in enumerate(yield_n_and_assert(f, TelescopeEventHeader, n=10)):
+            o = parse_and_assert_consumption(o, limit=3)
+            assert 'relative_trigger_time' in o
+            assert 'readout_time' in o
 
 
 def test_2012_3_objects():
