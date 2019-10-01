@@ -182,3 +182,11 @@ def test_skip_calibration_events():
 def test_frankenstein():
     with SimTelFile(frankenstein_path) as f:
         assert len(f.telescope_descriptions) == f.n_telescopes
+
+
+def test_new_prod4():
+    with SimTelFile('tests/resources/prod4_pixelsettings_v3.gz') as f:
+        i = 0
+        for e in f:
+            i += 1
+        assert i == 10

@@ -1,6 +1,6 @@
 ''' Implementations of the simtel_array EventIO object types '''
 import numpy as np
-from io import BytesIO
+from io import BytesIO, SEEK_END
 import struct
 from ..base import EventIOObject, read_header
 from ..tools import (
@@ -534,7 +534,8 @@ class TriggerInformation(EventIOObject):
         )
 
     def parse(self):
-        assert_max_version(self, 2)
+        assert_max_version(self, 3)
+
         self.seek(0)
         byte_stream = BytesIO(self.read())
 
@@ -544,7 +545,8 @@ class TriggerInformation(EventIOObject):
         event_info['trigger_pattern'] = read_int(byte_stream)
         event_info['data_pattern'] = read_int(byte_stream)
 
-        if self.header.version >= 1:
+        version = self.header.version
+        if version >= 1:
             tels_trigger = read_short(byte_stream)
             event_info['n_triggered_telescopes'] = tels_trigger
 
@@ -560,7 +562,7 @@ class TriggerInformation(EventIOObject):
                 byte_stream, count=tels_data, dtype='<i2'
             )
 
-        if self.header.version >= 2:
+        if version >= 2:
             # konrad saves the trigger mask as crazy int, but it uses only 4 bits
             # so it should be indentical to a normal unsigned int with 1 byte
             event_info['teltrg_type_mask'] = read_array(
@@ -578,6 +580,14 @@ class TriggerInformation(EventIOObject):
                         if bool_bit_from_pos(mask, trigger):
                             t = read_float(byte_stream)
                             event_info['teltrg_time_by_type'][tel_id][trigger] = t
+
+        if version >= 3:
+            # information about "plane wavefront compensation"
+            comp = {}
+            comp['az'] = read_float(byte_stream)
+            comp['alt'] = read_float(byte_stream)
+            comp['speed_of_light'] = read_float(byte_stream)
+            event_info['plane_wavefront_compensation'] = comp
 
         return event_info
 
@@ -698,7 +708,7 @@ class TelescopeEventHeader(TelescopeObject):
         )
 
     def parse(self):
-        assert_max_version(self, 2)
+        assert_max_version(self, 3)
         self.seek(0)
         byte_stream = BytesIO(self.read())
 
@@ -748,6 +758,11 @@ class TelescopeEventHeader(TelescopeObject):
                     data, n_elements=event_head['n_phys_addr'], offset=pos
                 )
                 pos += length
+
+        if self.header.version >= 3:
+            times = struct.unpack('ff', data[pos:pos + 8])
+            pos += 8
+            event_head['readout_time'], event_head['relative_trigger_time'] = times
 
         event_head['telescope_id'] = self.header.id
         return event_head
