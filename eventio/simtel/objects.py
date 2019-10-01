@@ -366,7 +366,7 @@ class PixelSettings(TelescopeObject):
     from .pixelset import dt1, build_dt2, build_dt3, build_dt4
 
     def parse(self):
-        assert_max_version(self, 2)
+        assert_max_version(self, 3)
         self.seek(0)
         byte_stream = BytesIO(self.read())
 
@@ -388,8 +388,14 @@ class PixelSettings(TelescopeObject):
             dt4 = PixelSettings.build_dt4(n_ref_shape, l_ref_shape)
             parts.append(read_array(byte_stream, dtype=dt4, count=1)[0])
 
+        if self.header.version >= 3:
+            sum_offset = read_int(byte_stream)
+        else:
+            sum_offset = None
+
         D = merge_structured_arrays_into_dict(parts)
         D['telescope_id'] = self.header.id
+        D['sum_offset'] = sum_offset
         return D
 
 

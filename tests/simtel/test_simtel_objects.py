@@ -170,6 +170,13 @@ def test_2004_3_objects():
             pixelset = parse_and_assert_consumption(o, limit=1)
             assert pixelset['n_pixels'] == 1855
 
+    with EventIOFile('tests/resources/prod4_pixelsettings_v3.gz') as f:
+        for o in yield_n_and_assert(f, PixelSettings, n=1):
+            assert o.header.version == 3
+
+            pixel_settings = o.parse()
+            assert 'sum_offset' in pixel_settings
+
 
 def test_2005_3_objects():
     from eventio.simtel.objects import DisabledPixels
