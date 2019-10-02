@@ -1,7 +1,7 @@
 import numpy as np
 from .base import EventIOObject
 from .version_handling import assert_version_in
-from .tools import read_short, read_int, read_eventio_string, read_float, read_array
+from .tools import read_short, read_int, read_string, read_float, read_array
 
 
 class Histograms(EventIOObject):
@@ -17,7 +17,7 @@ class Histograms(EventIOObject):
         for i in range(n_histograms):
             hist = {}
             hist['type'] = self.read(1).decode('ascii')
-            hist['title'] = read_eventio_string(self).decode('utf-8')
+            hist['title'] = read_string(self).decode('utf-8')
             if len(hist['title']) % 2 == 0:
                 self.read(1)
             hist['id'] = read_int(self)
