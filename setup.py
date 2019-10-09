@@ -89,7 +89,7 @@ setup(
     setup_requires=['pytest-runner', 'numpy'],
     tests_require=['pytest>=3.0.0'],
     classifiers=[
-        'Development Status :: 4 - Beta',
+        'Development Status :: 5 - Production/Stable'
         'Intended Audience :: Science/Research',
         'License :: OSI Approved :: MIT License',
         'Natural Language :: English',

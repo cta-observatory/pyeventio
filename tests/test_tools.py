@@ -1,32 +1,5 @@
 from io import BytesIO
 import struct
-import numpy as np
-
-
-def test_uint32_vector_differential():
-    from eventio.tools import read_vector_of_uint32_scount_differential
-    from eventio.tools import read_vector_of_uint32_scount_differential_optimized
-    num = 5
-    num <<= 1
-    b = BytesIO(num.to_bytes(1, 'little'))
-
-    assert read_vector_of_uint32_scount_differential(b, 1) == 5
-    b.seek(0)
-    assert read_vector_of_uint32_scount_differential_optimized(b, 1) == 5
-
-    values = (np.arange(10) - 5)**2
-    differential = np.append(values[0], np.diff(values))
-
-    b = np.empty(10, dtype='uint8')
-    mask = differential < 0
-    b[mask] = (-(differential[mask] + 1) << 1) | 1
-    b[~mask] = (differential[~mask] << 1)
-
-    b = BytesIO(b.tobytes())
-
-    assert np.all(values == read_vector_of_uint32_scount_differential(b, 10))
-    b.seek(0)
-    assert np.all(values == read_vector_of_uint32_scount_differential_optimized(b, 10))
 
 
 def test_read_types():
@@ -54,7 +27,7 @@ def test_read_types():
 
 
 def test_read_string():
-    from eventio.tools import read_eventio_string
+    from eventio.tools import read_string
     s = b'Hello World'
 
     buffer = BytesIO()
@@ -63,11 +36,11 @@ def test_read_string():
     buffer.write(s)
     buffer.seek(0)
 
-    assert read_eventio_string(buffer) == s
+    assert read_string(buffer) == s
 
 
-def test_read_utf8_like_unsigned_int():
-    from eventio.tools import read_utf8_like_unsigned_int
+def test_read_unsigned_varint():
+    from eventio.tools import read_unsigned_varint
     testcases = [
         # (input, output, tell_after_done)
         (bytes([0b01111111, 1, 2, 3, 4, 5, 6, 7, 8]), 0b01111111, 1),
@@ -103,6 +76,6 @@ def test_read_utf8_like_unsigned_int():
     ]
     for data, expected_result, tell_after_done in testcases:
         f = BytesIO(data)
-        assert read_utf8_like_unsigned_int(f) == expected_result
+        assert read_unsigned_varint(f) == expected_result
         # make sure we do not seek too far
         assert f.tell() == tell_after_done

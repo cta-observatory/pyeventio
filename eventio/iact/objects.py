@@ -10,8 +10,8 @@ from corsikaio.subblocks import (
 )
 
 from ..tools import (
-    read_short, read_int, read_float, read_from, read_eventio_string,
-    read_array, read_var_string, read_double, read_utf8_like_unsigned_int
+    read_short, read_int, read_float, read_from, read_string,
+    read_array, read_var_string, read_double, read_unsigned_varint
 )
 from ..base import EventIOObject
 from ..exceptions import WrongSize
@@ -406,7 +406,7 @@ class InputCard(EventIOObject):
         n_strings = read_int(self)
         input_card = bytearray()
         for i in range(n_strings):
-            input_card.extend(read_eventio_string(self))
+            input_card.extend(read_string(self))
             input_card.append(ord('\n'))
         return input_card
 
@@ -424,12 +424,12 @@ class AtmosphericProfile(EventIOObject):
         name = read_var_string(self)
         obslevel = read_double(self)
 
-        table_size = read_utf8_like_unsigned_int(self)
+        table_size = read_unsigned_varint(self)
 
         # 4 columns, alt_km, rho, rhick, refidx_m1
         table = read_array(self, 'float64', table_size * 4).reshape(table_size, 4)
 
-        n_five_layer = read_utf8_like_unsigned_int(self)
+        n_five_layer = read_unsigned_varint(self)
         if n_five_layer == 5:
             htoa = read_double(self)
             corsika_atmosphere = read_array(self, 'float64', 25).reshape((5, 5))

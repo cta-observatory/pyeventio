@@ -7,10 +7,10 @@ from ..tools import (
     read_short,
     read_int,
     read_float,
-    read_eventio_string,
+    read_string,
     read_from,
-    read_utf8_like_signed_int,
-    read_utf8_like_unsigned_int,
+    read_varint,
+    read_unsigned_varint,
     read_array,
     read_time,
 )
@@ -61,7 +61,7 @@ class HistoryCommandLine(EventIOObject):
 
     def parse(self):
         timestamp = read_int(self)
-        string = read_eventio_string(self)
+        string = read_string(self)
         return timestamp, string
 
 
@@ -70,7 +70,7 @@ class HistoryConfig(EventIOObject):
 
     def parse(self):
         timestamp = read_int(self)
-        string = read_eventio_string(self)
+        string = read_string(self)
         return timestamp, string
 
 
@@ -101,8 +101,8 @@ class RunHeader(EventIOObject):
         part2 = read_array(byte_stream, dtype=dt2, count=1)[0]
 
         # rest is two null-terminated strings
-        target = read_eventio_string(byte_stream)
-        observer = read_eventio_string(byte_stream)
+        target = read_string(byte_stream)
+        observer = read_string(byte_stream)
 
         result = dict(zip(part1.dtype.names, part1))
         result.update(dict(zip(part2.dtype.names, part2)))
@@ -176,8 +176,8 @@ class CameraSettings(TelescopeObject):
         cam['pixel_y'] = read_array(byte_stream, count=n_pixels, dtype='float32')
 
         if self.header.version >= 4:
-            cam['curved_surface'] = read_utf8_like_signed_int(byte_stream)
-            cam['pixels_parallel'] = read_utf8_like_signed_int(byte_stream)
+            cam['curved_surface'] = read_varint(byte_stream)
+            cam['pixels_parallel'] = read_varint(byte_stream)
 
             if cam['curved_surface']:
                 cam['pixel_z'] = read_array(byte_stream, dtype='<f4', count=n_pixels)
@@ -190,15 +190,15 @@ class CameraSettings(TelescopeObject):
             else:
                 cam['nxpix'] = cam['nypix'] = np.zeros(n_pixels, dtype='f4')
 
-            cam['common_pixel_shape'] = read_utf8_like_signed_int(byte_stream)
+            cam['common_pixel_shape'] = read_varint(byte_stream)
             if not cam['common_pixel_shape']:
                 cam['pixel_shape'] = np.array([
-                    read_utf8_like_signed_int(byte_stream) for _ in range(n_pixels)
+                    read_varint(byte_stream) for _ in range(n_pixels)
                 ])
                 cam['pixel_area'] = read_array(byte_stream, dtype='<f4', count=n_pixels)
                 cam['pixel_size'] = read_array(byte_stream, dtype='<f4', count=n_pixels)
             else:
-                cam['pixel_shape'] = np.repeat(read_utf8_like_signed_int(byte_stream), n_pixels)
+                cam['pixel_shape'] = np.repeat(read_varint(byte_stream), n_pixels)
                 cam['pixel_area'] = np.repeat(read_float(byte_stream), n_pixels)
                 cam['pixel_size'] = np.repeat(read_float(byte_stream), n_pixels)
         else:
@@ -382,8 +382,8 @@ class PixelSettings(TelescopeObject):
 
         parts = [p1, p2, p3]
         if self.header.version >= 2:
-            n_ref_shape = read_utf8_like_signed_int(byte_stream)
-            l_ref_shape = read_utf8_like_signed_int(byte_stream)
+            n_ref_shape = read_varint(byte_stream)
+            l_ref_shape = read_varint(byte_stream)
 
             dt4 = PixelSettings.build_dt4(n_ref_shape, l_ref_shape)
             parts.append(read_array(byte_stream, dtype=dt4, count=1)[0])
@@ -1012,10 +1012,10 @@ class ADCSamples(EventIOObject):
             dtype='f4'
         ) * np.nan
 
-        list_size = read_utf8_like_signed_int(byte_stream)
+        list_size = read_varint(byte_stream)
         pixel_ranges = []
         for _ in range(list_size):
-            start_pixel_id = read_utf8_like_signed_int(byte_stream)
+            start_pixel_id = read_varint(byte_stream)
             if start_pixel_id < 0:
                 pixel_ranges.append(
                     (
@@ -1027,7 +1027,7 @@ class ADCSamples(EventIOObject):
                 pixel_ranges.append(
                     (
                         start_pixel_id,
-                        read_utf8_like_signed_int(byte_stream) + 1
+                        read_varint(byte_stream) + 1
                     )
                 )
         adc_samples = np.zeros(
@@ -1106,8 +1106,8 @@ class ImageParameters(EventIOObject):
         tel_image['n_sat'] = read_short(byte_stream)
 
         # from version 6 on
-        # pixels = read_utf8_like_signed_int(self)  # from version 6 on
-        # n_sat = read_utf8_like_signed_int(self)
+        # pixels = read_varint(self)  # from version 6 on
+        # n_sat = read_varint(self)
 
         if tel_image['n_sat'] > 0:
             tel_image['clip_amp'] = read_float(byte_stream)
@@ -1354,8 +1354,8 @@ class MCExtraParams(EventIOObject):
 
         ep = {
             'weight': read_float(byte_stream),
-            'n_iparam': read_utf8_like_unsigned_int(byte_stream),
-            'n_fparam': read_utf8_like_unsigned_int(byte_stream),
+            'n_iparam': read_unsigned_varint(byte_stream),
+            'n_fparam': read_unsigned_varint(byte_stream),
         }
         if ep['n_iparam'] > 0:
             ep['iparam'] = read_array(byte_stream, dtype='<i4', count=ep['n_iparam'])
@@ -1420,10 +1420,10 @@ class CameraMonitoring(EventIOObject):
         if self.header.version == 0:
             ns, np, nd, ng = read_from(byte_stream, '<hhhh')
         else:  # version == 1
-            ns = read_utf8_like_signed_int(byte_stream)
-            np = read_utf8_like_signed_int(byte_stream)
-            nd = read_utf8_like_signed_int(byte_stream)
-            ng = read_utf8_like_signed_int(byte_stream)
+            ns = read_varint(byte_stream)
+            np = read_varint(byte_stream)
+            nd = read_varint(byte_stream)
+            ng = read_varint(byte_stream)
 
         result = {
             'telescope_id': self.telescope_id,
@@ -1724,7 +1724,7 @@ class PixelTriggerTimes(TelescopeObject):
 
         trigger_times = {}
         trigger_times['time_step'] = read_float(byte_stream)
-        n_times = read_utf8_like_signed_int(byte_stream)
+        n_times = read_varint(byte_stream)
         trigger_times['n_times'] = n_times
 
         data = byte_stream.read()
