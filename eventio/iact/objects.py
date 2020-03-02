@@ -357,8 +357,8 @@ class RunEnd(EventIOObject):
         n = read_int(self)
         if n != 3:
             raise WrongSize('Expected 3 floats, but found {}'.format(n))
-        d = bytearray(self.read())
-        d.extend(b'\x00' * (270 * 4))
+        d = bytearray(273 * 4)
+        d[:n * 4] = self.read()
         return parse_run_end(d)
 
 
