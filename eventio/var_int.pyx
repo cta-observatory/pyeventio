@@ -1,8 +1,9 @@
 # cython: language_level=3
 import cython
 import numpy as np
-cimport numpy as np
+cimport numpy as cnp
 from libc.stdint cimport uint8_t, uint16_t, uint32_t, uint64_t, int16_t, int32_t, int64_t
+from libc.math cimport NAN
 
 cdef INT16 = np.int16
 cdef UINT32 = np.uint32
@@ -10,6 +11,8 @@ cdef INT32 = np.int32
 cdef UINT64 = np.uint64
 cdef INT64 = np.int64
 cdef F32 = np.float32
+
+cnp.import_array()
 
 
 @cython.wraparound(False)  # disable negative indexing
@@ -136,21 +139,19 @@ cpdef unsigned_varint_array(
     uint64_t n_elements,
     uint64_t offset = 0,
 ):
-    cdef np.ndarray[uint64_t, ndim=1] output = np.empty(n_elements, dtype=UINT64)
+    cdef cnp.npy_intp[1] shape = [n_elements]
+    cdef cnp.ndarray[uint64_t, ndim=1] output = cnp.PyArray_SimpleNew(1, shape, cnp.NPY_UINT64)
 
     cdef uint64_t i
-    cdef uint64_t pos
-    cdef uint64_t idx
     cdef uint64_t length
-    pos = 0
+    cdef uint64_t pos = offset
 
     for i in range(n_elements):
-        idx = pos + offset
-        length = get_length_of_varint(data[idx])
-        output[i] = parse_varint(data[idx:idx + length])
+        length = get_length_of_varint(data[pos])
+        output[i] = parse_varint(data[pos:pos + length])
         pos += length
 
-    return output, pos
+    return output, pos - offset
 
 
 @cython.wraparound(False)  # disable negative indexing
@@ -159,8 +160,8 @@ cpdef varint_array(
     uint64_t n_elements,
     uint64_t offset = 0,
 ):
-    cdef uint64_t bytes_read
-    cdef np.ndarray[int64_t, ndim=1] output = np.empty(n_elements, dtype=INT64)
+    cdef cnp.npy_intp[1] shape = [n_elements];
+    cdef cnp.ndarray[int64_t, ndim=1] output = cnp.PyArray_SimpleNew(1, shape, cnp.NPY_INT64)
 
     cdef int64_t val
     cdef uint8_t length
@@ -194,9 +195,9 @@ cpdef unsigned_varint_arrays_differential(
     cdef uint64_t bytes_read_total = 0
     cdef uint64_t i
     cdef uint64_t j
-    cdef (uint64_t, uint64_t) shape = (n_arrays, n_elements)
 
-    cdef np.ndarray[uint32_t, ndim=2] output = np.zeros(shape, dtype=UINT32)
+    cdef cnp.npy_intp[2] shape = [n_arrays, n_elements]
+    cdef cnp.ndarray[uint32_t, ndim=2] output = cnp.PyArray_SimpleNew(2, shape, cnp.NPY_UINT32)
     cdef uint32_t[:, :] output_view = output
     cdef uint32_t[:] output_view_1d
 
@@ -324,9 +325,13 @@ def simtel_pixel_timing_parse_list_type_2(
     cdef uint64_t pos = 0
     cdef uint32_t length = 0
 
-    cdef np.ndarray[float, ndim=2] timval = np.full((n_pixels, n_types), np.nan, dtype=np.float32)
-    cdef np.ndarray[int32_t, ndim=2] pulse_sum_loc = np.zeros((n_gains, n_pixels), dtype=INT32)
-    cdef np.ndarray[int32_t, ndim=2] pulse_sum_glob = np.zeros((n_gains, n_pixels), dtype=INT32)
+    cdef cnp.npy_intp[2] shape = (n_pixels, n_types)
+    cdef cnp.ndarray[float, ndim=2] timval = cnp.PyArray_SimpleNew(2, shape, cnp.NPY_FLOAT32)
+    cnp.PyArray_FillWithScalar(timval, NAN)
+
+    shape[:] = (n_gains, n_pixels)
+    cdef cnp.ndarray[int32_t, ndim=2] pulse_sum_loc = cnp.PyArray_ZEROS(2, shape, cnp.NPY_INT32, False)
+    cdef cnp.ndarray[int32_t, ndim=2] pulse_sum_glob = cnp.PyArray_ZEROS(2, shape, cnp.NPY_INT32, False)
 
     for list_index in range(n_lists):
         start = pixel_list[list_index][0]
@@ -370,8 +375,10 @@ def parse_1208(
 
     cdef uint32_t length
 
-    cdef np.ndarray[float, ndim=1] photoelectrons = np.zeros(n_pixels, dtype=F32)
-    cdef np.ndarray[int32_t, ndim=1] photon_counts = None
+    cdef cnp.npy_intp[1] shape = [n_pixels]
+    cdef cnp.ndarray[float, ndim=1] photoelectrons = cnp.PyArray_ZEROS(1, shape, cnp.NPY_FLOAT32, False)
+    cdef cnp.ndarray[int32_t, ndim=1] photon_counts = None
+
     cdef list time = [[] for _ in range(n_pixels)]
     cdef list amplitude
 
@@ -407,7 +414,7 @@ def parse_1208(
                 pos += 4
 
     if flags & 4:
-        photon_counts = np.zeros(n_pixels, dtype=INT32)
+        photon_counts = cnp.PyArray_ZEROS(1, shape, cnp.NPY_INT32, False)
 
         int_ptr = <int32_t*> &data[pos]
         nonempty = int_ptr[0]
@@ -439,10 +446,13 @@ cpdef simtel_pixel_timing_parse_list_type_1(
     cdef uint32_t length = 0
     cdef int16_t* short_ptr
 
-    cdef np.ndarray[float, ndim=2] timval = np.full((n_pixels, n_types), np.nan, dtype=F32)
-    cdef np.ndarray[int32_t, ndim=2] pulse_sum_loc = np.zeros((n_gains, n_pixels), dtype=INT32)
-    cdef np.ndarray[int32_t, ndim=2] pulse_sum_glob = np.zeros((n_gains, n_pixels), dtype=INT32)
+    cdef cnp.npy_intp[2] shape = (n_pixels, n_types)
+    cdef cnp.ndarray[float, ndim=2] timval = cnp.PyArray_SimpleNew(2, shape, cnp.NPY_FLOAT32)
+    cnp.PyArray_FillWithScalar(timval, NAN)
 
+    shape[:] = (n_gains, n_pixels)
+    cdef cnp.ndarray[int32_t, ndim=2] pulse_sum_loc = cnp.PyArray_ZEROS(2, shape, cnp.NPY_INT32, False)
+    cdef cnp.ndarray[int32_t, ndim=2] pulse_sum_glob = cnp.PyArray_ZEROS(2, shape, cnp.NPY_INT32, False)
 
     cdef uint64_t pos = 0
     for i in range(pixel_list_length):
@@ -489,7 +499,7 @@ cpdef read_sector_information_v2(
     cdef int64_t n
 
     cdef list sectors = []
-    cdef np.ndarray[int64_t, ndim=1] sector
+    cdef cnp.ndarray[int64_t, ndim=1] sector
 
     cdef uint64_t pos = offset
     for i in range(n_pixels):
