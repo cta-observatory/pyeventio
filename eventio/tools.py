@@ -83,7 +83,6 @@ def read_time(f):
 
 
 def read_varint(f):
-    # this is mostly a verbatim copy from eventio.c lines 1082ff
     u = read_unsigned_varint(f)
     # u values of 0,1,2,3,4,... here correspond to signed values of
     #   0,-1,1,-2,2,... We have to test the least significant bit:
@@ -95,10 +94,9 @@ def read_varint(f):
 
 def read_unsigned_varint(f):
     '''this returns a python integer'''
-    # this is a reimplementation from eventio.c lines 797ff
     var_int_bytes = bytearray(f.read(1))
     var_int_length = get_length_of_varint(var_int_bytes[0])
-    if var_int_length - 1 > 0:
-        var_int_bytes.extend(f.read(var_int_length - 1))
+    if var_int_length > 1:
+        var_int_bytes += f.read(var_int_length - 1)
 
     return parse_varint(var_int_bytes)
