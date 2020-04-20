@@ -565,15 +565,17 @@ def test_2022_3_objects():
             '''
 
 
-def test_2023_3_objects():
+def test_2023():
     from eventio.simtel.objects import LaserCalibration
 
     with EventIOFile(prod2_file) as f:
         for i, o in enumerate(yield_n_and_assert(f, LaserCalibration, n=3)):
             d = parse_and_assert_consumption(o, limit=0)
 
+            assert o.header.version == 2
             assert d['telescope_id'] == i + 1
             assert d['lascal_id'] == 2
+            assert 'flat_fielding' not in d
 
     '''
     {
@@ -589,6 +591,16 @@ def test_2023_3_objects():
         ..., -22.023653, -21.650948, -21.601557]],
         dtype=float32)}
     '''
+
+    with EventIOFile('tests/resources/test_lasercal_v3.simtel.gz') as f:
+        for i, o in enumerate(yield_n_and_assert(f, LaserCalibration, n=4)):
+            d = parse_and_assert_consumption(o, limit=0)
+
+            assert o.header.version == 3
+            assert d['telescope_id'] == i + 1
+            assert d['lascal_id'] == 2
+            assert 'flat_fielding' in d
+            assert d['flat_fielding'].shape == d['calib'].shape
 
 
 @pytest.mark.xfail

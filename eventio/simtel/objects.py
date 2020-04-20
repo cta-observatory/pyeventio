@@ -1554,9 +1554,10 @@ class LaserCalibration(TelescopeObject):
     eventio_type = 2023
 
     def parse(self):
-        assert_exact_version(self, supported_version=2)
+        assert_max_version(self, 3)
         self.seek(0)
         byte_stream = BytesIO(self.read())
+        version = self.header.version
 
         n_pixels = read_short(byte_stream)
         n_gains = read_short(byte_stream)
@@ -1565,22 +1566,30 @@ class LaserCalibration(TelescopeObject):
             byte_stream, 'f4', n_gains * n_pixels
         ).reshape(n_gains, n_pixels)
 
-        tmp_ = read_array(byte_stream, 'f4', n_gains * 2).reshape(n_gains, 2)
-        max_int_frac = tmp_[:, 0]
-        max_pixtm_frac = tmp_[:, 1]
-
-        tm_calib = read_array(
-            byte_stream, 'f4', n_gains * n_pixels
-        ).reshape(n_gains, n_pixels)
-
-        return {
+        lascal = {
             'telescope_id': self.telescope_id,
             'lascal_id': lascal_id,
             'calib': calib,
-            'max_int_frac': max_int_frac,
-            'max_pixtm_frac': max_pixtm_frac,
-            'tm_calib': tm_calib,
         }
+
+        if version >= 1:
+            tmp = read_array(
+                byte_stream, 'f4', n_gains * 2
+            ).reshape(n_gains, 2)
+            lascal['max_int_frac'] = tmp[:, 0]
+            lascal['max_pixtm_frac'] = tmp[:, 1]
+
+        if version >= 2:
+            lascal['tm_calib'] = read_array(
+                byte_stream, 'f4', n_gains * n_pixels
+            ).reshape(n_gains, n_pixels)
+
+        if version >= 3:
+            lascal['flat_fielding'] = read_array(
+                byte_stream, 'f4', n_gains * n_pixels
+            ).reshape(n_gains, n_pixels)
+
+        return lascal
 
 
 class RunStatistics(EventIOObject):
