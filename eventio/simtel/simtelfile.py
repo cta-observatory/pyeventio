@@ -175,6 +175,7 @@ class SimTelFile(EventIOFile):
                     next(o),
                     self.allowed_telescopes,
                 )
+                self.current_calibration_event['calibration_type'] = o.type
 
         elif isinstance(o, History):
             self.history.append(o)
@@ -272,6 +273,7 @@ class SimTelFile(EventIOFile):
                 'telescope_events': event['telescope_events'],
                 'tracking_positions': event['tracking_positions'],
                 'trigger_information': event['trigger_information'],
+                'calibration_type': event['calibration_type'],
             }
 
             event_data['camera_monitorings'] = {

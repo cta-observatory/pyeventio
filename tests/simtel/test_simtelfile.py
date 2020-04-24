@@ -161,7 +161,11 @@ def test_calibration_events():
     with SimTelFile(calib_path) as f:
         i = 0
         for event in f:
+            print(event.keys())
             assert event['type'] == 'calibration'
+
+            # this file contains pedestals
+            assert event['calibration_type'] == 1
 
             for t in event['telescope_events'].keys():
                 assert t in event['laser_calibrations']
