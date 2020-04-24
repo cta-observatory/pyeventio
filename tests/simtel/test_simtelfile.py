@@ -138,7 +138,6 @@ def test_allowed_tels():
     with SimTelFile(prod2_path, allowed_telescopes=allowed_telescopes) as f:
         try:
             for i, event in enumerate(f):
-                print(i)
                 telescopes = set(event['telescope_events'].keys())
                 assert allowed_telescopes.issuperset(telescopes)
                 assert telescopes.issubset(allowed_telescopes)
@@ -161,7 +160,6 @@ def test_calibration_events():
     with SimTelFile(calib_path) as f:
         i = 0
         for event in f:
-            print(event.keys())
             assert event['type'] == 'calibration'
 
             # this file contains pedestals
