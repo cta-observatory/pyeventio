@@ -1434,7 +1434,6 @@ class CameraMonitoring(EventIOObject):
             'moni_time': moni_time,
         }
         part_parser_args = {
-            'byte_stream': byte_stream,
             'n_sectors': ns,
             'n_gains': ng,
             'n_pixels': np,
@@ -1455,7 +1454,7 @@ class CameraMonitoring(EventIOObject):
 
         for part_id in range(8):
             part_parser = part_parser_map[what & (1 << part_id)]
-            result.update(part_parser(**part_parser_args))
+            result.update(part_parser(byte_stream=byte_stream, **part_parser_args))
 
         result['telescope_id'] = self.telescope_id
         return result
