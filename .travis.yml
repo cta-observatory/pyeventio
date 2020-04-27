@@ -4,25 +4,26 @@ env:
   global:
     - secure: "Q4Au2/8QmW1x5KQme6WPXz0uLJHrYuQR/MhjgU2k74tfcaObOl/frE3hyrCBoMHMS6mAwjPmkCNO1YsuiFs2SU0ruFRKEJnc6fNyl1+w+GBFOPRC7BrmZtcbrpDtK50F9Fy0KQze0C6Rxkf/Db+wVsCCUI0nqN8zqJLKHjD6xJcpV+u7wqaJdzpvPRpXifOWu6j4EoqW1KxP5Kmm4tgYKSdF9wxMPBM7B7BeCO4jmyqV93DB3l47NrLdhJIcj3/cjYoVcu+tcsQrLcFqw8AjaDDOeNca3bpddUZnPs38h56dLes2wjuFbJwauTIhAWiYeWQlaq6y20KHN9Dz3iW+8GgrDXPIF+59TuUOL5PkSY1PuzRYP9g4YpvXAbVGxtSC6/3m3ViLDbD7Q0i2kbcPBlL/iOgnuzvwauJyWbuP+6dKEwcU1EuFX9wRoS1ZubBEYgZXNoqDwNIWshDZjmOTzkSIJaN4M7JEtt8IKez9TOdbvGWB/tizEGaar1t+NnPwYlgwezfX217h79UKmn0/MH2+/tgqwadJ/xO7EfyZEckvT5WdS6cNlPGhby9HoIg4uO/NU3YH9WTEs7jltJ61LZJIrR4wpODnudFcm1aFFRkVxl5iUzeXYlo3kNATOymfrHXnxYRloZ2ZM7jltJSppEU1zux0pgjdHwTE0QBKEXk="
     - MPLBACKEND=Agg
+    - PYTEST_ADDOPTS='--color=yes'
+
 
 matrix:
   include:
     - os: linux
-      python: "3.5"
-    - os: linux
       python: "3.6"
     - os: linux
-      dist: xenial
       python: "3.7"
-    - os: osx
-      language: generic
-      env: PYTHON="3.5"
+    - os: linux
+      python: "3.8"
     - os: osx
       language: generic
       env: PYTHON="3.6"
     - os: osx
       language: generic
       env: PYTHON="3.7"
+    - os: osx
+      language: generic
+      env: PYTHON="3.8"
 
 
 install:
