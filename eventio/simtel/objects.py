@@ -1610,7 +1610,8 @@ class MCPhotoelectronSum(EventIOObject):
         )
 
     def parse(self):
-        assert_exact_version(self, supported_version=2)
+        assert_max_version(self, 2)
+        version = self.header.version
         self.seek(0)
         byte_stream = BytesIO(self.read())
 
@@ -1618,42 +1619,35 @@ class MCPhotoelectronSum(EventIOObject):
         shower_num = read_int(byte_stream)
         n_tel = read_int(byte_stream)
         n_pes = read_array(byte_stream, 'i4', n_tel)
-        n_pixels = read_array(byte_stream, 'i4', n_tel)
 
-        # NOTE:
-        # I don't see how we can speed this up easily since the length
-        # of this thing is not known upfront.
-
-        # pixel_pe: a list (running over telescope_id)
-        #         of 2-tuples: (pixel_id, pe)
-        pixel_pe = []
-        mask = (n_pixels > 0) & (n_pes > 0)
-
-        for n_pe, n_pixels in zip(n_pes[mask], n_pixels[mask]):
-            non_empty = read_short(byte_stream)
-            pixel_id = read_array(byte_stream, 'i2', non_empty)
-            pe = read_array(byte_stream, 'i4', non_empty)
-            pixel_pe.append((pixel_id, pe))
-
-        photons = read_array(byte_stream, 'f4', n_tel)
-        photons_atm = read_array(byte_stream, 'f4', n_tel)
-        photons_atm_3_6 = read_array(byte_stream, 'f4', n_tel)
-        photons_atm_qe = read_array(byte_stream, 'f4', n_tel)
-        photons_atm_400 = read_array(byte_stream, 'f4', n_tel)
-
-        return {
+        result = {
             'event': event,
             'shower_num': shower_num,
             'n_tel': n_tel,
             'n_pe': n_pes,
-            'n_pixels': n_pixels,
-            'pixel_pe': pixel_pe,
-            'photons': photons,
-            'photons_atm': photons_atm,
-            'photons_atm_3_6': photons_atm_3_6,
-            'photons_atm_qe': photons_atm_qe,
-            'photons_atm_400': photons_atm_400,
         }
+
+        # According to K. Bernlöhr (2020-05-18):
+        # Writing pixel values here was implemented in the io layer of eventio
+        # but never used in actual simulations, so no files
+        # having data here should exist. So we raise an error in case this happens.
+        n_pixels = read_array(byte_stream, 'i4', n_tel)
+        if np.count_nonzero(n_pixels) > 0:
+            raise NotImplementedError(
+                f'Reading pixel data in {self} is not supported, '
+                'please contact the pyeventio maintainers if this happens'
+            )
+
+        if version >= 1:
+            result['photons'] = read_array(byte_stream, 'f4', n_tel)
+            result['photons_atm'] = read_array(byte_stream, 'f4', n_tel)
+            result['photons_atm_3_6'] = read_array(byte_stream, 'f4', n_tel)
+            result['photons_atm_qe'] = read_array(byte_stream, 'f4', n_tel)
+
+        if version >= 2:
+            result['photons_atm_400'] = read_array(byte_stream, 'f4', n_tel)
+
+        return result
 
 
 class PixelList(EventIOObject):
