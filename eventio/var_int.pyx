@@ -370,6 +370,8 @@ def parse_1208(
 
     cdef cnp.npy_intp[1] shape = [n_pixels]
     cdef cnp.ndarray[float, ndim=1] photoelectrons = cnp.PyArray_ZEROS(1, shape, cnp.NPY_FLOAT32, False)
+    cdef cnp.ndarray[float, ndim=1] mean_time = cnp.PyArray_SimpleNew(1, shape, cnp.NPY_FLOAT32)
+    cnp.PyArray_FillWithScalar(mean_time, NAN)
     cdef cnp.ndarray[int32_t, ndim=1] photon_counts = None
 
     cdef list time = [[] for _ in range(n_pixels)]
@@ -385,6 +387,7 @@ def parse_1208(
     cdef uint32_t i
     cdef int32_t j
     cdef dict result = {}
+    cdef float t
 
 
     for i in range(nonempty):
@@ -400,9 +403,16 @@ def parse_1208(
         pos += 4
 
         photoelectrons[pix_id] = n_pe
+        if n_pe > 0:
+            mean_time[pix_id] = 0.0
+
         for j in range(n_pe):
-            time[pix_id].append((<float*> &data[pos])[0])
+            t = (<float*> &data[pos])[0]
+            time[pix_id].append(t)
+            mean_time[pix_id] += t
             pos += 4
+
+        mean_time[pix_id] /= n_pe
 
         if has_amplitudes:
             for j in range(n_pe):
@@ -411,6 +421,7 @@ def parse_1208(
 
     result['photoelectrons'] = photoelectrons
     result['time'] = time
+    result['mean_time'] = mean_time
 
     if has_amplitudes:
         result['amplitude'] = amplitude
