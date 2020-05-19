@@ -1627,8 +1627,10 @@ class MCPhotoelectronSum(EventIOObject):
             'n_pe': n_pes,
         }
 
-        # this code was never used according to K. Bernlöhr
-        # so we raise an error in case this happens
+        # According to K. Bernlöhr (2020-05-18):
+        # Writing pixel values here was implemented in the io layer of eventio
+        # but never used in actual simulations, so no files
+        # having data here should exist. So we raise an error in case this happens.
         n_pixels = read_array(byte_stream, 'i4', n_tel)
         if np.count_nonzero(n_pixels) > 0:
             raise NotImplementedError(
