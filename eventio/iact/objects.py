@@ -161,7 +161,7 @@ class TelescopeData(EventIOObject):
     eventio_type = 1204
 
     def __str__(self):
-        return '{}[{}](reuse_id={})'.format(
+        return '{}[{}](event_id={})'.format(
             self.__class__.__name__,
             self.header.type,
             self.header.id,
@@ -323,6 +323,11 @@ class PhotoElectrons(EventIOObject):
         pe['photons'] = photons
 
         return pe
+
+    def __str__(self):
+        return super().__str__() + '(array_id={}, telescope_id={})'.format(
+            self.array_id, self.telescope_id,
+        )
 
 
 class EventEnd(EventIOObject):
