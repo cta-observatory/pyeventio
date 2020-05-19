@@ -29,6 +29,11 @@ def test_photo_electrons():
 
             # times should be within 200 nanoseconds
             assert all(0 <= t <= 200 for pixel in data['time'] for t in pixel)
+            mean_time = np.array([
+                np.mean(t) if len(t) > 0 else np.nan
+                for t in data['time']
+            ])
+            assert np.allclose(data['mean_time'], mean_time, equal_nan=True)
 
             not_read = o.read()
             assert len(not_read) == 0 or all(b == 0 for b in not_read)
