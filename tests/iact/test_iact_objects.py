@@ -16,7 +16,20 @@ def test_photo_electrons():
 
     with EventIOFile(prod4_simtel) as f:
         for o in yield_n_subobjects(f, PhotoElectrons):
-            o.parse()
+            data = o.parse()
+
+            # astri's number of pixels
+            assert data['n_pixels'] == 2368
+            assert data['n_pe'] > 0
+            assert 0 <= data['non_empty'] <= data['n_pixels']
+            assert len(data['photoelectrons']) == data['n_pixels']
+            assert data['photoelectrons'].sum() == data['n_pe']
+            assert len(data['time']) == 2368
+            assert sum(len(pixel) for pixel in data['time']) == data['n_pe']
+
+            # times should be within 200 nanoseconds
+            assert all(0 <= t <= 200 for pixel in data['time'] for t in pixel)
+
             not_read = o.read()
             assert len(not_read) == 0 or all(b == 0 for b in not_read)
 
