@@ -313,14 +313,9 @@ class PhotoElectrons(EventIOObject):
 
         data = self.read()
 
-        photoelectrons, time, amplitude, photons = PhotoElectrons.parse_1208(
+        pe.update(PhotoElectrons.parse_1208(
             data, pe['n_pixels'], pe['non_empty'], self.header.version, flags
-        )
-
-        pe['photoelectrons'] = photoelectrons
-        pe['time'] = time
-        pe['amplitude'] = amplitude
-        pe['photons'] = photons
+        ))
 
         return pe
 

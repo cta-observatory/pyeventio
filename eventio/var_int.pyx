@@ -5,13 +5,6 @@ cimport numpy as cnp
 from libc.stdint cimport uint8_t, uint16_t, uint32_t, uint64_t, int16_t, int32_t, int64_t
 from libc.math cimport NAN
 
-cdef INT16 = np.int16
-cdef UINT32 = np.uint32
-cdef INT32 = np.int32
-cdef UINT64 = np.uint64
-cdef INT64 = np.int64
-cdef F32 = np.float32
-
 cnp.import_array()
 
 
@@ -377,19 +370,25 @@ def parse_1208(
 
     cdef cnp.npy_intp[1] shape = [n_pixels]
     cdef cnp.ndarray[float, ndim=1] photoelectrons = cnp.PyArray_ZEROS(1, shape, cnp.NPY_FLOAT32, False)
+    cdef cnp.ndarray[float, ndim=1] mean_time = cnp.PyArray_SimpleNew(1, shape, cnp.NPY_FLOAT32)
+    cnp.PyArray_FillWithScalar(mean_time, NAN)
     cdef cnp.ndarray[int32_t, ndim=1] photon_counts = None
 
     cdef list time = [[] for _ in range(n_pixels)]
     cdef list amplitude
 
-    if flags & 1:
+    cdef bint has_amplitudes = flags & 1
+    cdef bint has_photon_counts = flags & 4
+
+    if has_amplitudes:
         amplitude = [[] for _ in range(n_pixels)]
-    else:
-        amplitude = None
 
     cdef uint64_t pos = 0
     cdef uint32_t i
     cdef int32_t j
+    cdef dict result = {}
+    cdef float t
+
 
     for i in range(nonempty):
         if version > 2:
@@ -404,20 +403,33 @@ def parse_1208(
         pos += 4
 
         photoelectrons[pix_id] = n_pe
+        if n_pe > 0:
+            mean_time[pix_id] = 0.0
+
         for j in range(n_pe):
-            time[pix_id].append((<float*> &data[pos])[0])
+            t = (<float*> &data[pos])[0]
+            time[pix_id].append(t)
+            mean_time[pix_id] += t
             pos += 4
 
-        if flags & 1:
+        mean_time[pix_id] /= n_pe
+
+        if has_amplitudes:
             for j in range(n_pe):
                 amplitude[pix_id].append((<float*> &data[pos])[0])
                 pos += 4
 
-    if flags & 4:
+    result['photoelectrons'] = photoelectrons
+    result['time'] = time
+    result['mean_time'] = mean_time
+
+    if has_amplitudes:
+        result['amplitude'] = amplitude
+
+    if has_photon_counts:
         photon_counts = cnp.PyArray_ZEROS(1, shape, cnp.NPY_INT32, False)
 
-        int_ptr = <int32_t*> &data[pos]
-        nonempty = int_ptr[0]
+        nonempty = (<int32_t*> &data[pos])[0]
         pos += 4
 
         for i in range(nonempty):
@@ -427,7 +439,9 @@ def parse_1208(
             photon_counts[pix_id] = (<int32_t*> &data[pos])[0]
             pos += 4
 
-    return photoelectrons, time, amplitude, photon_counts
+        result['photon_counts'] = photon_counts
+
+    return result
 
 
 cpdef simtel_pixel_timing_parse_list_type_1(
