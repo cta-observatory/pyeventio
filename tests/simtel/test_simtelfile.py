@@ -68,6 +68,8 @@ def test_show_event_is_not_empty_and_has_some_members_for_sure():
                 'tracking_positions',
                 'photoelectron_sums',
                 'photoelectrons',
+                'photons',
+                'emitter',
                 'camera_monitorings',
                 'laser_calibrations',
             }
@@ -128,7 +130,11 @@ def test_iterate_mc_events():
     expected = 200
     with SimTelFile(prod4_path) as f:
         for counter, event in enumerate(f.iter_mc_events(), start=1):
-            pass
+            assert event.keys() == {
+                'event_id',
+                'mc_shower', 'mc_event',
+                'photoelectrons', 'photons', 'emitter',
+            }
     assert counter == expected
 
 
@@ -192,3 +198,18 @@ def test_new_prod4():
         for e in f:
             i += 1
         assert i == 10
+
+
+def test_photons():
+    from eventio.iact.objects import Photons
+
+    with SimTelFile('tests/resources/lst_with_photons.simtel.zst') as f:
+        e = next(iter(f))
+
+        assert len(e['photons']) == 1
+        photons = e['photons'][0]
+        assert photons.dtype == Photons.long_dtype
+
+        # no emitter info in file
+        print(e['emitter'])
+        assert len(e['emitter']) == 0

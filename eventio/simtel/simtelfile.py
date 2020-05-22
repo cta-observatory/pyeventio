@@ -92,6 +92,8 @@ class SimTelFile(EventIOFile):
         self.current_mc_event = None
         self.current_photoelectron_sum = None
         self.current_photoelectrons = {}
+        self.current_photons = {}
+        self.current_emitter = {}
         self.current_array_event = None
         self.current_calibration_event = None
         self.skip_calibration = skip_calibration
@@ -145,7 +147,10 @@ class SimTelFile(EventIOFile):
             )
 
         elif isinstance(o, iact.TelescopeData):
-            self.current_photoelectrons = parse_photoelectrons(o)
+            photons, emitter, photoelectrons = parse_telescope_data(o)
+            self.current_photons = photons
+            self.current_emitter = emitter
+            self.current_photoelectrons = photoelectrons
 
         elif isinstance(o, CameraMonitoring):
             self.camera_monitorings[o.telescope_id].update(o.parse())
@@ -205,6 +210,9 @@ class SimTelFile(EventIOFile):
                 'event_id': self.current_mc_event_id,
                 'mc_shower': self.current_mc_shower,
                 'mc_event': self.current_mc_event,
+                'photons': self.current_photons,
+                'emitter': self.current_emitter,
+                'photoelectrons': self.current_photoelectrons,
             }
             self.current_mc_event = None
             return event_data
@@ -242,8 +250,10 @@ class SimTelFile(EventIOFile):
                 'telescope_events': self.current_array_event['telescope_events'],
                 'tracking_positions': self.current_array_event['tracking_positions'],
                 'trigger_information': self.current_array_event['trigger_information'],
-                'photoelectron_sums': self.current_photoelectron_sum,
+                'photons': self.current_photons,
+                'emitter': self.current_emitter,
                 'photoelectrons': self.current_photoelectrons,
+                'photoelectron_sums': self.current_photoelectron_sum,
             }
 
             event_data['camera_monitorings'] = {
@@ -349,15 +359,23 @@ def parse_array_event(array_event, allowed_telescopes=None):
     }
 
 
-def parse_photoelectrons(telescope_data):
+def parse_telescope_data(telescope_data):
+    ''' Parse the TelescopeData block with Cherenkov Photon information'''
     check_type(telescope_data, iact.TelescopeData)
 
+    photons = {}
+    emitter = {}
     photo_electrons = {}
     for o in telescope_data:
-        check_type(o, iact.PhotoElectrons)
-        photo_electrons[o.telescope_id] = o.parse()
+        if isinstance(o, iact.PhotoElectrons):
+            photo_electrons[o.telescope_id] = o.parse()
+        elif isinstance(o, iact.Photons):
+            p, e = o.parse()
+            photons[o.telescope_id] = p
+            if e is not None:
+                emitter[o.telescope_id] = e
 
-    return photo_electrons
+    return photons, emitter, photo_electrons
 
 
 def parse_telescope_event(telescope_event):
