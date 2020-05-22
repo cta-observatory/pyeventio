@@ -69,6 +69,7 @@ def test_show_event_is_not_empty_and_has_some_members_for_sure():
                 'photoelectron_sums',
                 'photoelectrons',
                 'photons',
+                'emitter',
                 'camera_monitorings',
                 'laser_calibrations',
             }
@@ -132,7 +133,7 @@ def test_iterate_mc_events():
             assert event.keys() == {
                 'event_id',
                 'mc_shower', 'mc_event',
-                'photoelectrons', 'photons',
+                'photoelectrons', 'photons', 'emitter',
             }
     assert counter == expected
 
