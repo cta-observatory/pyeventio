@@ -363,7 +363,8 @@ def parse_1208(
     uint32_t n_pixels,
     uint32_t nonempty,
     uint32_t version,
-    uint32_t flags
+    uint32_t flags,
+    uint32_t total_n_pe
 ):
 
     cdef uint32_t length
@@ -371,9 +372,9 @@ def parse_1208(
     cdef cnp.npy_intp[1] shape = [n_pixels]
     cdef cnp.ndarray[float, ndim=1] photoelectrons = cnp.PyArray_ZEROS(1, shape, cnp.NPY_FLOAT32, False)
     cdef cnp.ndarray[int32_t, ndim=1] photon_counts = None
+    cdef cnp.ndarray[uint32_t, ndim=1] pixel_array = cnp.PyArray_ZEROS(1, [total_n_pe], cnp.NPY_UINT32, False)
+    cdef cnp.ndarray[float, ndim=1] time_array = cnp.PyArray_ZEROS(1, [total_n_pe], cnp.NPY_FLOAT32, False)
 
-    cdef list pixel_array = []
-    cdef list time_array = []
     cdef list amplitude
 
     cdef bint has_amplitudes = flags & 1
@@ -383,6 +384,7 @@ def parse_1208(
         amplitude = [[] for _ in range(n_pixels)]
 
     cdef uint64_t pos = 0
+    cdef uint64_t ipe = 0
     cdef uint32_t i
     cdef int32_t j
     cdef dict result = {}
@@ -405,9 +407,10 @@ def parse_1208(
 
         for j in range(n_pe):
             t = (<float*> &data[pos])[0]
-            pixel_array.append(pix_id)
-            time_array.append(t)
+            pixel_array[ipe] = pix_id
+            time_array[ipe] = t
             pos += 4
+            ipe += 1
 
         if has_amplitudes:
             for j in range(n_pe):
@@ -415,8 +418,8 @@ def parse_1208(
                 pos += 4
 
     result['photoelectrons'] = photoelectrons
-    result['photoelectron_arrival_pixel'] = np.array(pixel_array)
-    result['photoelectron_arrival_time'] = np.array(time_array)
+    result['photoelectron_arrival_pixel'] = pixel_array
+    result['photoelectron_arrival_time'] = time_array
 
     if has_amplitudes:
         result['amplitude'] = amplitude

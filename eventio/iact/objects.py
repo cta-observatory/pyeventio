@@ -314,7 +314,7 @@ class PhotoElectrons(EventIOObject):
         data = self.read()
 
         pe.update(PhotoElectrons.parse_1208(
-            data, pe['n_pixels'], pe['non_empty'], self.header.version, flags
+            data, pe['n_pixels'], pe['non_empty'], self.header.version, flags, pe['n_pe']
         ))
 
         return pe
