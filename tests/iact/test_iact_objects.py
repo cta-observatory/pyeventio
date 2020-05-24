@@ -24,12 +24,12 @@ def test_photo_electrons():
             assert 0 <= data['non_empty'] <= data['n_pixels']
             assert len(data['photoelectrons']) == data['n_pixels']
             assert data['photoelectrons'].sum() == data['n_pe']
-            assert len(data['photoelectron_arrival_pixel']) == data['n_pe']
-            assert len(data['photoelectron_arrival_time']) == data['n_pe']
+            assert len(data['pixel_id']) == data['n_pe']
+            assert len(data['time']) == data['n_pe']
 
             # times should be within 200 nanoseconds
-            assert all(0 <= data['photoelectron_arrival_time'])
-            assert all(data['photoelectron_arrival_time'] <= 200)
+            assert np.all(0 <= data['time'])
+            assert np.all(data['time'] <= 200)
 
             not_read = o.read()
             assert len(not_read) == 0 or all(b == 0 for b in not_read)
