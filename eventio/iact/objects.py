@@ -314,7 +314,7 @@ class PhotoElectrons(EventIOObject):
         data = self.read()
 
         pe.update(PhotoElectrons.parse_1208(
-            data, pe['n_pixels'], pe['non_empty'], self.header.version, flags
+            data, pe['n_pixels'], pe['non_empty'], self.header.version, flags, pe['n_pe']
         ))
 
         return pe
@@ -401,8 +401,8 @@ class InputCard(EventIOObject):
         n_strings = read_int(self)
         input_card = bytearray()
         for i in range(n_strings):
-            input_card.extend(read_string(self))
-            input_card.append(ord('\n'))
+            input_card += read_string(self)
+            input_card += b'\n'
         return input_card
 
 
