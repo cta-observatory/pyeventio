@@ -401,8 +401,8 @@ class InputCard(EventIOObject):
         n_strings = read_int(self)
         input_card = bytearray()
         for i in range(n_strings):
-            input_card.extend(read_string(self))
-            input_card.append(ord('\n'))
+            input_card += read_string(self)
+            input_card += b'\n'
         return input_card
 
 
