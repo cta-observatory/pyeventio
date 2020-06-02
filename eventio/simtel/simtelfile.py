@@ -94,9 +94,9 @@ class SimTelFile(EventIOFile):
         self.current_mc_event_id = None
         self.current_telescope_data_event_id = None
         self.current_photoelectron_sum = None
-        self.current_photoelectrons = None
-        self.current_photons = None
-        self.current_emitter = None
+        self.current_photoelectrons = {}
+        self.current_photons = {}
+        self.current_emitter = {}
         self.current_array_event = None
         self.current_calibration_event = None
         self.skip_calibration = skip_calibration
