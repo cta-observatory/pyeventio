@@ -200,6 +200,14 @@ def test_new_prod4():
         assert i == 10
 
 
+def test_correct_event_ids_iter_mc_events():
+
+    with SimTelFile('tests/resources/lst_with_photons.simtel.zst') as f:
+        for e in f:
+            assert f.current_mc_event_id == f.current_telescope_data_event_id
+            assert f.current_mc_shower_id == f.current_mc_event_id // 100
+
+
 def test_photons():
     from eventio.iact.objects import Photons
 
