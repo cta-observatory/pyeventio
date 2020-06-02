@@ -16,3 +16,13 @@ def test_iterator():
 
     for o in it:
         assert o.header.content_address > first.header.content_address
+
+
+def test_peek():
+    f = EventIOFile(testfile)
+
+    o = f.peek()
+    assert o is f.peek()  # make sure peek does not advance
+    assert o is next(f)   # make sure peek gives us the next object
+    assert o is not f.peek()  # assure we get the next
+    assert f.peek() is next(f)
