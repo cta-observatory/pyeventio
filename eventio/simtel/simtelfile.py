@@ -89,7 +89,10 @@ class SimTelFile(EventIOFile):
         self.camera_monitorings = defaultdict(dict)
         self.laser_calibrations = defaultdict(dict)
         self.current_mc_shower = None
+        self.current_mc_shower_id = None
         self.current_mc_event = None
+        self.current_mc_event_id = None
+        self.current_telescope_data_event_id = None
         self.current_photoelectron_sum = None
         self.current_photoelectrons = {}
         self.current_photons = {}
@@ -139,6 +142,7 @@ class SimTelFile(EventIOFile):
 
         elif isinstance(o, MCShower):
             self.current_mc_shower = o.parse()
+            self.current_mc_shower_id = o.header.id
 
         elif isinstance(o, ArrayEvent):
             self.current_array_event = parse_array_event(
@@ -147,7 +151,8 @@ class SimTelFile(EventIOFile):
             )
 
         elif isinstance(o, iact.TelescopeData):
-            photons, emitter, photoelectrons = parse_telescope_data(o)
+            event_id, photons, emitter, photoelectrons = parse_telescope_data(o)
+            self.current_telescope_data_event_id = event_id
             self.current_photons = photons
             self.current_emitter = emitter
             self.current_photoelectrons = photoelectrons
@@ -206,14 +211,19 @@ class SimTelFile(EventIOFile):
 
     def try_build_mc_event(self):
         if self.current_mc_event:
+
             event_data = {
                 'event_id': self.current_mc_event_id,
                 'mc_shower': self.current_mc_shower,
                 'mc_event': self.current_mc_event,
-                'photons': self.current_photons,
-                'emitter': self.current_emitter,
-                'photoelectrons': self.current_photoelectrons,
             }
+            # if next object is TelescopeData, it belongs to this event
+            if isinstance(self.peek(), iact.TelescopeData):
+                self.next_low_level()
+                event_data['photons'] = self.current_photons
+                event_data['emitter'] = self.current_emitter
+                event_data['photoelectrons'] = self.current_photoelectrons
+
             self.current_mc_event = None
             return event_data
         self.next_low_level()
@@ -375,7 +385,7 @@ def parse_telescope_data(telescope_data):
             if e is not None:
                 emitter[o.telescope_id] = e
 
-    return photons, emitter, photo_electrons
+    return telescope_data.header.id, photons, emitter, photo_electrons
 
 
 def parse_telescope_event(telescope_event):

@@ -130,12 +130,19 @@ def test_iterate_mc_events():
     expected = 200
     with SimTelFile(prod4_path) as f:
         for counter, event in enumerate(f.iter_mc_events(), start=1):
+            assert 'event_id' in event
+            assert 'mc_shower' in event
+            assert 'mc_event' in event
+
+    assert counter == expected
+
+    with SimTelFile('tests/resources/lst_with_photons.simtel.zst') as f:
+        for counter, event in enumerate(f.iter_mc_events(), start=1):
             assert event.keys() == {
                 'event_id',
                 'mc_shower', 'mc_event',
-                'photoelectrons', 'photons', 'emitter',
+                'photons', 'photoelectrons', 'emitter'
             }
-    assert counter == expected
 
 
 def test_allowed_tels():
@@ -198,6 +205,14 @@ def test_new_prod4():
         for e in f:
             i += 1
         assert i == 10
+
+
+def test_correct_event_ids_iter_mc_events():
+
+    with SimTelFile('tests/resources/lst_with_photons.simtel.zst') as f:
+        for e in f:
+            assert f.current_mc_event_id == f.current_telescope_data_event_id
+            assert f.current_mc_shower_id == f.current_mc_event_id // 100
 
 
 def test_photons():

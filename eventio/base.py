@@ -69,6 +69,7 @@ class EventIOFile:
         self.path = path
         self.read_process = None
         self.zstd = False
+        self.next = None
 
         if not is_eventio(path):
             raise ValueError('File {} is not an eventio file'.format(path))
@@ -116,6 +117,11 @@ class EventIOFile:
         return self
 
     def __next__(self):
+        if self.next is not None:
+            o = self.next
+            self.next = None
+            return o
+
         self.seek(self._next_header_pos)
         read_sync_marker(self)
         header = read_header(
@@ -129,6 +135,11 @@ class EventIOFile:
             header,
             filehandle=self._filehandle,
         )
+
+    def peek(self):
+        if self.next is None:
+            self.next = next(self)
+        return self.next
 
     def seek(self, position, whence=0):
         return self._filehandle.seek(position, whence)
