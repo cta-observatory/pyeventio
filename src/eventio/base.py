@@ -135,7 +135,11 @@ class EventIOFile:
 
     def peek(self):
         if self.next is None:
-            self.next = next(self)
+            try:
+                self.next = next(self)
+            except (StopIteration, EOFError):
+                return None
+
         return self.next
 
     def seek(self, position, whence=0):
