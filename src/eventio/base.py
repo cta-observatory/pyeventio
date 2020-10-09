@@ -65,6 +65,7 @@ class EventIOFile:
         self.zstd = False
         self.next = None
         self._filehandle = None
+        self.peek_error = None
 
         if not is_eventio(path):
             raise ValueError('File {} is not an eventio file'.format(path))
@@ -137,8 +138,9 @@ class EventIOFile:
         if self.next is None:
             try:
                 self.next = next(self)
-            except (StopIteration, EOFError):
-                return None
+            except (StopIteration, EOFError, IOError) as e:
+                self.peek_error = e
+                self.next = None
 
         return self.next
 
