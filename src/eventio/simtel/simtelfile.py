@@ -2,6 +2,7 @@
 Implementation of an EventIOFile that
 loops through SimTel Array events.
 '''
+from functools import lru_cache
 import re
 from copy import copy
 from collections import defaultdict
@@ -68,6 +69,13 @@ camel_re1 = re.compile('(.)([A-Z][a-z]+)')
 camel_re2 = re.compile('([a-z0-9])([A-Z])')
 
 
+# these objects mark the end of the current event
+NEXT_EVENT_MARKERS = (
+    MCEvent, MCShower, CalibrationEvent, CalibrationPhotoelectrons, type(None)
+)
+
+
+@lru_cache()
 def camel_to_snake(name):
     s1 = camel_re1.sub(r'\1_\2', name)
     return camel_re2.sub(r'\1_\2', s1).lower()
@@ -77,17 +85,48 @@ class NoTrackingPositions(Exception):
     pass
 
 
-class SimTelFile(EventIOFile):
-    def __init__(self, path, allowed_telescopes=None, skip_calibration=False, zcat=True):
-        super().__init__(path, zcat=zcat)
+class SimTelFile:
+    '''
+    This assumes the following top-level structure once events are seen:
 
+    Either:
+    MCShower[2020]
+    MCEvent[2021]
+      # stuff belonging to this MCEvent
+      optional TelescopeData[1204]
+      optional PixelMonitoring[2033] for each telescope
+      optional (CameraMonitoring[2022], LaserCalibration[2023]) for each telescope
+      optional MCPhotoelectronSum[2026]
+      optional ArrayEvent[2010]
+
+    optional MCEvent for same shower (reuse)
+
+    Or:
+    CalibrationEvent[2028]
+
+    with possibly more CameraMonitoring / LaserCalibration in between
+    calibration events
+    '''
+    def __init__(
+        self,
+        path,
+        skip_non_triggered=True,
+        skip_calibration=False,
+        allowed_telescopes=None,
+        zcat=True,
+    ):
+        self._file = EventIOFile(path, zcat=zcat)
         self.path = path
+
+        self.skip_calibration = skip_calibration
+        self.skip_non_triggered = skip_non_triggered
+
         self.allowed_telescopes = None
         if allowed_telescopes:
             self.allowed_telescopes = set(allowed_telescopes)
 
+        # object storage
         self.histograms = None
-
         self.history = []
         self.mc_run_headers = []
         self.corsika_inputcards = []
@@ -110,11 +149,8 @@ class SimTelFile(EventIOFile):
         self.current_photoelectrons = {}
         self.current_photons = {}
         self.current_emitter = {}
-        self.current_array_event = None
-        self.current_calibration_event = None
-        self.current_calibration_event_id = None
+        self.current_array_event = {}
         self.current_calibration_pe = {}
-        self.skip_calibration = skip_calibration
 
         # read the header:
         # assumption: the header is done when
@@ -122,13 +158,12 @@ class SimTelFile(EventIOFile):
         # and we found the telescope_descriptions of all telescopes
         check = []
         found_all_telescopes = False
-        while not (any(o for o in check) and found_all_telescopes):
-            self.next_low_level()
+        while not (any(o is not None for o in check) and found_all_telescopes):
+            self._parse_next_object()
 
             check = [
                 self.current_mc_shower,
                 self.current_array_event,
-                self.current_calibration_event,
                 self.laser_calibrations,
                 self.camera_monitorings,
             ]
@@ -142,10 +177,51 @@ class SimTelFile(EventIOFile):
                 found_all_telescopes = found == self.n_telescopes
 
     def __iter__(self):
-        return self.iter_array_events()
+        '''
+        Iterate over all events in the file.
+        '''
+        return self
 
-    def next_low_level(self):
-        o = next(self)
+    def __next__(self):
+        event = self._read_next_event()
+
+        while self._check_skip(event):
+            event = self._read_next_event()
+
+        return event
+
+    def _read_next_event(self):
+        if self._file.peek() is None:
+            raise StopIteration()
+
+        while isinstance(self._file.peek(), (PixelMonitoring, CameraMonitoring, LaserCalibration)):
+            self._parse_next_object()
+
+        if isinstance(self._file.peek(), CalibrationPhotoelectrons):
+            self._parse_next_object()
+
+        if isinstance(self._file.peek(), MCShower):
+            self._parse_next_object()
+
+        if isinstance(self._file.peek(), (MCEvent, CalibrationEvent)):
+            self._parse_next_object()
+            return self._build_event()
+
+    def _check_skip(self, event):
+        if event['type'] == 'data':
+            return self.skip_non_triggered and not event.get('telescope_events')
+
+        if event['type'] == 'calibration':
+            return self.skip_calibration
+
+        raise ValueError(f'Unexpected event type {event["type"]}')
+
+    def _read_until_next_event(self):
+        while not isinstance(self._file.peek(), NEXT_EVENT_MARKERS):
+            self._parse_next_object()
+
+    def _parse_next_object(self):
+        o = next(self._file)
 
         # order of if statements is roughly sorted
         # by the number of occurences in a simtel file
@@ -200,16 +276,13 @@ class SimTelFile(EventIOFile):
             self.corsika_inputcards.append(o.parse())
 
         elif isinstance(o, CalibrationEvent):
-            if not self.skip_calibration:
-                array_event = next(o)
-                self.current_calibration_event = parse_array_event(
-                    array_event,
-                    self.allowed_telescopes,
-                )
-                # assign negative event_ids to calibration events to avoid
-                # duplicated event_ids
-                self.current_calibration_event_id = -array_event.header.id
-                self.current_calibration_event['calibration_type'] = o.type
+            self.current_array_event = parse_array_event(
+                next(o),
+                self.allowed_telescopes,
+            )
+            self.current_array_event['type'] = 'calibration'
+            self.current_array_event['calibration_type'] = o.type
+
         elif isinstance(o, CalibrationPhotoelectrons):
             telescope_data = next(o)
             if not isinstance(telescope_data, iact.TelescopeData):
@@ -229,7 +302,6 @@ class SimTelFile(EventIOFile):
 
                 tel_id = photoelectrons.telescope_id
                 self.current_calibration_pe[tel_id] = photoelectrons.parse()
-
 
         elif isinstance(o, History):
             for sub in o:
@@ -252,135 +324,72 @@ class SimTelFile(EventIOFile):
                 UnknownObjectWarning,
             )
 
-    def iter_mc_events(self):
-        while True:
-            try:
-                next_event = self.try_build_mc_event()
-            except StopIteration:
-                break
-            if next_event is not None:
-                yield next_event
-
-    def try_build_mc_event(self):
-        if self.current_mc_event:
-
-            event_data = {
-                'event_id': self.current_mc_event_id,
-                'mc_shower': self.current_mc_shower,
-                'mc_event': self.current_mc_event,
-            }
-            # if next object is TelescopeData, it belongs to this event
-            if isinstance(self.peek(), iact.TelescopeData):
-                self.next_low_level()
-                event_data['photons'] = self.current_photons
-                event_data['emitter'] = self.current_emitter
-                event_data['photoelectrons'] = self.current_photoelectrons
-
-            self.current_mc_event = None
-            return event_data
-        self.next_low_level()
-
-    def iter_array_events(self):
-        while True:
-
-            next_event = self.try_build_event()
-            if next_event is not None:
-                yield next_event
-
-            try:
-                self.next_low_level()
-            except StopIteration:
-                break
-
-    def try_build_event(self):
+    def _build_event(self):
         '''check if all necessary info for an event was found,
         then make an event and invalidate old data
         '''
+        self._read_until_next_event()
+
+        # data by default, might be overriden by calibration
+        event = {'type': 'data'}
+
         if self.current_array_event:
-            if (
-                self.allowed_telescopes
-                and not self.current_array_event['telescope_events']
-            ):
-                self.current_array_event = None
-                return None
+            event.update(self.current_array_event)
+            self.current_array_event = {}
 
-            event_id = self.current_array_event['event_id']
+            if 'telescope_events' not in event:
+                return event
 
-            event_data = {
-                'type': 'data',
-                'event_id': event_id,
-                'mc_shower': None,
-                'mc_event': None,
-                'telescope_events': self.current_array_event['telescope_events'],
-                'tracking_positions': self.current_array_event['tracking_positions'],
-                'trigger_information': self.current_array_event['trigger_information'],
-                'photons': {},
-                'emitter': {},
-                'photoelectrons': {},
-                'photoelectron_sums': None,
-            }
-
-            if self.current_mc_event_id == event_id:
-                event_data['mc_shower'] = self.current_mc_shower
-                event_data['mc_event'] =  self.current_mc_event
-
-            if self.current_telescope_data_event_id == event_id:
-                event_data['photons'] = self.current_photons
-                event_data['emitter'] = self.current_emitter
-                event_data['photoelectrons'] = self.current_photoelectrons
-
-            if self.current_photoelectron_sum_event_id == event_id:
-                event_data['photoelectron_sums'] = self.current_photoelectron_sum
-
-            event_data['camera_monitorings'] = {
+            tel_ids = event["telescope_events"].keys()
+            event['camera_monitorings'] = {
                 telescope_id: copy(self.camera_monitorings[telescope_id])
-                for telescope_id in self.current_array_event['telescope_events'].keys()
+                for telescope_id in tel_ids
             }
-            event_data['laser_calibrations'] = {
+            event['laser_calibrations'] = {
                 telescope_id: copy(self.laser_calibrations[telescope_id])
-                for telescope_id in self.current_array_event['telescope_events'].keys()
+                for telescope_id in tel_ids
             }
 
-            event_data['pixel_monitorings'] = {
+            event['pixel_monitorings'] = {
                 telescope_id: copy(self.pixel_monitorings[telescope_id])
-                for telescope_id in self.current_array_event['telescope_events'].keys()
+                for telescope_id in tel_ids
             }
 
-            self.current_array_event = None
+            if event['type'] == 'calibration':
+                # no event_id for calibration events
+                event['event_id'] = -1
+                event["photoelectrons"] = self.current_calibration_pe
 
-            return event_data
+                # no further info for calib events
+                return event
 
-        elif self.current_calibration_event:
-            event = self.current_calibration_event
-            if (
-                self.allowed_telescopes
-                and not self.current_array_event['telescope_events']
-            ):
-                self.current_calibration_event = None
-                return None
+        # this information should always exist
+        event.update({
+            'event_id': self.current_mc_event_id,
+            'mc_shower': self.current_mc_shower,
+            'mc_event': self.current_mc_event,
+            'photons': self.current_photons,
+            'emitter': self.current_emitter,
+            'photoelectrons': self.current_photoelectrons,
+            'photoelectron_sums': self.current_photoelectron_sum,
+        })
 
-            event_data = {
-                'type': 'calibration',
-                'event_id': self.current_calibration_event_id,
-                'telescope_events': event['telescope_events'],
-                'tracking_positions': event['tracking_positions'],
-                'trigger_information': event['trigger_information'],
-                'calibration_type': event['calibration_type'],
-                'photoelectrons': self.current_calibration_pe,
-            }
+        return event
 
-            event_data['camera_monitorings'] = {
-                telescope_id: copy(self.camera_monitorings[telescope_id])
-                for telescope_id in event['telescope_events'].keys()
-            }
-            event_data['laser_calibrations'] = {
-                telescope_id: copy(self.laser_calibrations[telescope_id])
-                for telescope_id in event['telescope_events'].keys()
-            }
+    def __enter__(self):
+        return self
 
-            self.current_calibration_event = None
+    def __exit__(self, exc_type, exc_value, traceback):
+        self.close()
 
-            return event_data
+    def close(self):
+        self._file.close()
+
+    def tell(self):
+        return self._file.tell()
+
+    def seek(self, *args, **kwargs):
+        return self._file.seek(*args, **kwargs)
 
 
 def parse_array_event(array_event, allowed_telescopes=None):
