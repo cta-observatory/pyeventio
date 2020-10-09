@@ -140,8 +140,8 @@ class EventIOFile:
         if self.next is None:
             try:
                 self.next = next(self)
-            except (StopIteration, EOFError):
-                return None
+            except (StopIteration, EOFError, IOError):
+                self.next = None
 
         return self.next
 

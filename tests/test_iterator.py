@@ -36,11 +36,18 @@ def test_peek():
 
     # make sure peek returns None at end of file also for truncated files
     truncated = 'tests/resources/gamma_test_large_truncated.simtel.gz'
-    f = EventIOFile(truncated, zcat=False)
+
+    # make sure file was really truncated and we reached end of file
+    with pytest.raises(EOFError):
+        f = EventIOFile(truncated)
+        for o in f:
+            pass
+
+    f = EventIOFile(truncated)
 
     while f.peek() is not None:
         o = next(f)
 
-    # make sure file was really truncated and we reached end of file
-    with pytest.raises(EOFError):
-        next(f)
+    # test we can peak multiple times for a truncated file
+    assert f.peek() is None
+    assert f.peek() is None
