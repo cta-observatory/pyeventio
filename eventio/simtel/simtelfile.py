@@ -193,10 +193,7 @@ class SimTelFile:
         '''check if we want to keep this event or throw it away'''
 
         if event['type'] == 'data':
-            if 'telescope_events' in event:  # is_triggered?
-                return True
-            else:
-                return self.keep_non_triggered
+            return self.keep_non_triggered or event.get('telescope_events')
 
         if event['type'] == 'calibration':
             return self.keep_calibration
