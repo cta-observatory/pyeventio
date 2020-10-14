@@ -98,16 +98,16 @@ class SimTelFile:
     def __init__(
         self,
         path,
-        skip_non_triggered=True,
-        skip_calibration=False,
+        keep_non_triggered=False,
+        keep_calibration=True,
         allowed_telescopes=None,
         zcat=True,
     ):
         self._file = EventIOFile(path, zcat=zcat)
         self.path = path
 
-        self.skip_calibration = skip_calibration
-        self.skip_non_triggered = skip_non_triggered
+        self.keep_calibration = keep_calibration
+        self.keep_non_triggered = keep_non_triggered
 
         self.allowed_telescopes = None
         if allowed_telescopes:
@@ -168,7 +168,7 @@ class SimTelFile:
     def __next__(self):
         event = self._read_next_event()
 
-        while self._check_skip(event):
+        while not self._check_keep(event):
             event = self._read_next_event()
 
         return event
@@ -189,12 +189,17 @@ class SimTelFile:
 
         raise TypeError(f'Unexpected object found {self._file.peek()} in {self.path}')
 
-    def _check_skip(self, event):
+    def _check_keep(self, event):
+        '''check if we want to keep this event or throw it away'''
+
         if event['type'] == 'data':
-            return self.skip_non_triggered and not event.get('telescope_events')
+            if 'telescope_events' in event:  # is_triggered?
+                return True
+            else:
+                return self.keep_non_triggered
 
         if event['type'] == 'calibration':
-            return self.skip_calibration
+            return self.keep_calibration
 
         raise ValueError(f'Unexpected event type {event["type"]}')
 
@@ -253,7 +258,7 @@ class SimTelFile:
             self.current_photoelectron_sum = o.parse()
 
         elif isinstance(o, CalibrationEvent):
-            if not self.skip_calibration:
+            if self.keep_calibration:
                 self.current_array_event = parse_array_event(
                     next(o),
                     self.allowed_telescopes,

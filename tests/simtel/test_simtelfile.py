@@ -128,7 +128,7 @@ def test_iterate_complete_file_zst():
 
 def test_iterate_mc_events():
     expected = 200
-    with SimTelFile(prod4_path, skip_non_triggered=False) as f:
+    with SimTelFile(prod4_path, keep_non_triggered=True) as f:
         for counter, event in enumerate(f, start=1):
             assert 'event_id' in event
             assert 'mc_shower' in event
@@ -137,7 +137,7 @@ def test_iterate_mc_events():
     assert counter == expected
 
     path = 'tests/resources/lst_with_photons.simtel.zst'
-    with SimTelFile(path, skip_non_triggered=False) as f:
+    with SimTelFile(path, keep_non_triggered=True) as f:
         for counter, event in enumerate(f, start=1):
             assert set(event.keys()).issuperset({
                 'event_id',
@@ -187,7 +187,7 @@ def test_calibration_events():
 
 
 def test_skip_calibration_events():
-    with SimTelFile(calib_path, skip_calibration=True) as f:
+    with SimTelFile(calib_path, keep_calibration=False) as f:
         i = 0
         for event in f:
             if event['type'] == 'calibration':
