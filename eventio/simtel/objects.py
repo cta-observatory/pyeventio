@@ -414,7 +414,7 @@ class DisabledPixels(TelescopeObject):
             dtype='i4'
         )
         n_HV_disabled = read_int(byte_stream)
-        HV_disabled = read_array(byte_stream, count=n_trig_disabled, dtype='i4')
+        HV_disabled = read_array(byte_stream, count=n_HV_disabled, dtype='i4')
 
         return {
             'telescope_id': self.telescope_id,
