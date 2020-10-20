@@ -229,7 +229,7 @@ This is how our test file looks like in the low level view:
 
 .. |PyPI| image:: https://badge.fury.io/py/eventio.svg
     :target: https://pypi.org/project/eventio/
-.. |Build| image:: https://travis-ci.org/cta-observatory/pyeventio.svg?branch=master
-   :target: https://travis-ci.org/cta-observatory/pyeventio
+.. |Build| image:: https://travis-ci.com/cta-observatory/pyeventio.svg?branch=master
+   :target: https://travis-ci.com/cta-observatory/pyeventio
 .. |LoC| image:: https://tokei.rs/b1/github/cta-observatory/pyeventio
     :target: https://github.com/cta-observatory/pyeventio
