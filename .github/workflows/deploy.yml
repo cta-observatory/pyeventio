@@ -23,7 +23,7 @@ jobs:
         run: |
           python --version
           pip install -U pip setuptools wheel Cython
-          python setup.py sdist bdist_wheel
+          python setup.py sdist
 
       - name: Publish package
         uses: pypa/gh-action-pypi-publish@master
