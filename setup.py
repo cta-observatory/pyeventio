@@ -77,6 +77,5 @@ setup(
             'eventio_cut_file = eventio.scripts.cut_eventio_file:main',
         ]
     },
-    setup_requires=['pytest-runner', 'numpy'],
     tests_require=['pytest>=3.0.0'],
 )
