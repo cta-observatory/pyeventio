@@ -66,6 +66,7 @@ setup(
     install_requires=[
         'numpy',
         'corsikaio ~= 0.2.0',
+        'zstandard',
     ],
     entry_points={
         'console_scripts': [
