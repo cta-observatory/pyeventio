@@ -66,7 +66,7 @@ setup(
     install_requires=[
         'numpy',
         'corsikaio ~= 0.2.0',
-        'zstandard',
+        'zstandard > 0.11.1', # memory leak in zstandard 0.11.1
     ],
     entry_points={
         'console_scripts': [

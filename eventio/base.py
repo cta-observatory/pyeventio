@@ -2,21 +2,13 @@ import struct
 import gzip
 import logging
 import subprocess as sp
-import warnings
+import zstandard as zstd
 
 from .file_types import is_gzip, is_eventio, is_zstd
 from .header import parse_header_bytes, get_bits_from_word
 from . import constants
 from .exceptions import WrongType
 
-try:
-    import zstandard as zstd
-    has_zstd = True
-    version = tuple(int(v) for v in zstd.__version__.split('.'))
-    if version < (0, 11, 1):
-        warnings.warn('zstandard < 0.11.1 has a memory leaking bug, please update')
-except ImportError:
-    has_zstd = False
 
 log = logging.getLogger(__name__)
 
@@ -99,11 +91,6 @@ class EventIOFile:
 
         elif is_zstd(path):
             log.info('Found zstd compressed file')
-            if not has_zstd:
-                raise IOError(
-                    'You need to install the `zstandard` module'
-                    'to read zstd compressed file'
-                )
             self._filehandle = zstd.ZstdDecompressor().stream_reader(open(path, 'rb'))
             self.zstd = True
 
