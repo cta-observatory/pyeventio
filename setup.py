@@ -66,6 +66,7 @@ setup(
     install_requires=[
         'numpy',
         'corsikaio ~= 0.2.0',
+        'zstandard > 0.11.1', # memory leak in zstandard 0.11.1
     ],
     entry_points={
         'console_scripts': [
@@ -76,6 +77,5 @@ setup(
             'eventio_cut_file = eventio.scripts.cut_eventio_file:main',
         ]
     },
-    setup_requires=['pytest-runner', 'numpy'],
     tests_require=['pytest>=3.0.0'],
 )
