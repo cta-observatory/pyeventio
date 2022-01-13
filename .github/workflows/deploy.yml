@@ -22,8 +22,8 @@ jobs:
       - name: Install dependencies
         run: |
           python --version
-          pip install -U pip setuptools wheel Cython
-          python setup.py sdist
+          pip install -U build
+          python -m build --sdist
 
       - name: Publish package
         uses: pypa/gh-action-pypi-publish@master
