@@ -126,10 +126,7 @@ class EventHeader(EventIOObject):
 
 class ArrayOffsets(EventIOObject):
     eventio_type = 1203
-    dtypes = {
-        0: [('x', 'f4'), ('y', 'f4')],
-        1: [('x', 'f4'), ('y', 'f4'), ('weight', 'f4')],
-    }
+    columns = {0: ['x', 'y'], 1: ['x', 'y', 'weight']}
 
     def parse(self):
         '''
@@ -145,18 +142,14 @@ class ArrayOffsets(EventIOObject):
         n_arrays = read_int(self)
         time_offset = read_float(self)
 
-        n_par = len(self.dtypes[self.header.version])
+        columns = self.columns[self.header.version]
+        n_columns = len(columns)
 
-        offsets = read_array(
-            self,
-            dtype=np.float32,
-            count=n_arrays * n_par,
-        )
+        # the columns are stored one after another
+        offsets = read_array(self, count=n_columns * n_arrays, dtype=np.float32)
+        offsets = offsets.reshape((n_columns, n_arrays))
+        offsets = np.core.records.fromarrays(offsets, names=columns)
 
-        offsets = np.core.records.fromarrays(
-                                offsets.reshape(n_par, n_arrays),
-                                dtype=self.dtypes[self.header.version])
-     
         return time_offset, offsets
 
 
