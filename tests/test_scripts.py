@@ -14,7 +14,7 @@ simple_corsika = 'tests/resources/one_shower.dat'
 
 
 def run_command(*args):
-    result = sp.run(args, stdout=sp.PIPE, stderr=sp.STDOUT, encoding='utf-8')
+    result = sp.run(args, stdout=sp.PIPE, stderr=sp.PIPE, encoding='utf-8')
 
     if result.returncode != 0:
         raise IOError(f'Running {args} failed, output: \n {result.stdout}')
