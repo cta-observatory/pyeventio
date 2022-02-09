@@ -46,14 +46,8 @@ if ext == '.c':
         raise ImportError('You need `Cython` to build this project locally')
 
 
-with open('eventio/__init__.py') as f:
-    m = re.search("__version__ = [\"'](.*)[\"']", f.read())
-    version = m.groups()[0]
-
 setup(
-    version=version,
-
-    packages=find_packages(),
+    use_scm_version={"write_to": os.path.join("eventio", "_version.py")},
 
     ext_modules=extensions,
     cmdclass=cmdclass,
@@ -67,6 +61,7 @@ setup(
         'numpy',
         'corsikaio ~= 0.2.0',
         'zstandard > 0.11.1', # memory leak in zstandard 0.11.1
+        'setuptools_scm',
     ],
     entry_points={
         'console_scripts': [

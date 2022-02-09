@@ -4,9 +4,8 @@ from .iact import IACTFile
 from . import simtel
 from .simtel import SimTelFile
 from .histograms import Histograms
+from .version import __version__
 
-
-__version__ = '1.5.1.post2'
 
 __all__ = [
     'EventIOFile',
@@ -14,6 +13,7 @@ __all__ = [
     'SimTelFile',
     'simtel',
     'iact',
+    '__version__',
 ]
 
 

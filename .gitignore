@@ -1,3 +1,4 @@
+eventio/_version.py
 # Cython extensions
 header.c
 var_int.c
