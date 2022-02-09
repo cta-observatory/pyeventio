@@ -145,11 +145,19 @@ class ArrayOffsets(EventIOObject):
         n_arrays = read_int(self)
         time_offset = read_float(self)
 
-        return time_offset, read_array(
+        n_par = len(self.dtypes[self.header.version])
+
+        offsets = read_array(
             self,
-            dtype=self.dtypes[self.header.version],
-            count=n_arrays,
+            dtype=np.float32,
+            count=n_arrays * n_par,
         )
+
+        offsets = np.core.records.fromarrays(
+                                offsets.reshape(n_par, n_arrays),
+                                dtype=self.dtypes[self.header.version])
+     
+        return time_offset, offsets
 
 
 class TelescopeData(EventIOObject):
