@@ -213,7 +213,7 @@ class SimTelFile(EventIOFile):
         else:
             warnings.warn(
                 'object type encountered, which is no handled'
-                'at the moment: {}'.format(o),
+                ' at the moment: {}'.format(o),
                 UnknownObjectWarning,
             )
 

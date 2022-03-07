@@ -80,10 +80,12 @@ class HistoryMeta(EventIOObject):
 
     def parse(self):
         n_items = read_varint(self)
-        return {
-            read_var_string(self): read_var_string(self)
-            for _ in range(n_items)
-        }
+        data = {}
+        for _ in range(n_items):
+            k = read_var_string(self)
+            v = read_var_string(self)
+            data[k] = v
+        return data
 
     def __str__(self):
         id_ = 'global' if self.header.id == -1 else f'telescope_id={self.header.id}'
