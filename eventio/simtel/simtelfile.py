@@ -5,7 +5,9 @@ loops through SimTel Array events.
 import re
 from copy import copy
 from collections import defaultdict
+import warnings
 import logging
+
 from ..base import EventIOFile
 from ..exceptions import check_type
 from .. import iact
@@ -22,6 +24,7 @@ from .objects import (
     DisabledPixels,
     DriveSettings,
     History,
+    HistoryMeta,
     ImageParameters,
     LaserCalibration,
     MCEvent,
@@ -50,6 +53,10 @@ telescope_descriptions_types = (
     DriveSettings,
     PointingCorrection,
 )
+
+
+class UnknownObjectWarning(UserWarning):
+    pass
 
 
 log = logging.getLogger(__name__)
@@ -85,6 +92,8 @@ class SimTelFile(EventIOFile):
         self.atmospheric_profiles = []
         self.header = None
         self.n_telescopes = None
+        self.telescope_meta = {}
+        self.global_meta = {}
         self.telescope_descriptions = defaultdict(dict)
         self.camera_monitorings = defaultdict(dict)
         self.laser_calibrations = defaultdict(dict)
@@ -191,14 +200,21 @@ class SimTelFile(EventIOFile):
             for sub in o:
                 self.history.append(sub.parse())
 
+        elif isinstance(o, HistoryMeta):
+            if o.header.id == -1:
+                self.global_meta = o.parse()
+            else:
+                self.telescope_meta[o.header.id] = o.parse()
+
         elif isinstance(o, Histograms):
             self.histograms = o.parse()
         elif isinstance(o, iact.AtmosphericProfile):
             self.atmospheric_profiles.append(o.parse())
         else:
-            raise Exception(
+            warnings.warn(
                 'object type encountered, which is no handled'
-                'at the moment: {}'.format(o)
+                ' at the moment: {}'.format(o),
+                UnknownObjectWarning,
             )
 
     def iter_mc_events(self):

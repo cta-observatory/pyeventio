@@ -12,6 +12,7 @@ camorgan_v2_file = 'tests/resources/test_camorganv2.simtel.gz'
 prod4b_sst1m_file = 'tests/resources/gamma_20deg_0deg_run102___cta-prod4-sst-1m_desert-2150m-Paranal-sst-1m.simtel.gz'
 prod4b_astri_file = 'tests/resources/gamma_20deg_0deg_run103___cta-prod4-sst-astri_desert-2150m-Paranal-sst-astri.simtel.gz'
 calib_path = 'tests/resources/calib_events.simtel.gz'
+history_meta_path = 'tests/resources/history_meta_75.simtel.zst'
 
 
 test_files = [
@@ -73,6 +74,30 @@ def test_72_3_objects():
             t, s = parse_and_assert_consumption(o, limit=3)
             assert isinstance(s, bytes)
 
+
+def test_75():
+    from eventio.simtel.objects import HistoryMeta
+
+    n_found = 0
+    with EventIOFile(history_meta_path) as f:
+        for o in yield_toplevel_of_type(f, HistoryMeta):
+            data = o.parse()
+            assert isinstance(data, dict)
+
+            if n_found == 0:
+                assert 'global' in str(o)
+                assert len(data) == 0
+            else:
+                assert f'telescope_id={n_found}' in str(o)
+                assert b'OPTICS_CONFIG_NAME' in data
+                assert b'OPTICS_CONFIG_VARIANT' in data
+                assert b'OPTICS_CONFIG_VERSION' in data
+
+            n_found += 1
+
+
+    # 1 global plus 1 per telescope
+    assert n_found == 20
 
 def test_2000_1_object():
     from eventio.simtel.objects import RunHeader

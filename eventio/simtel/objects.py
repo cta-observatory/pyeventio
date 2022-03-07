@@ -9,6 +9,7 @@ from ..tools import (
     read_float,
     read_string,
     read_from,
+    read_var_string,
     read_varint,
     read_unsigned_varint,
     read_array,
@@ -72,6 +73,27 @@ class HistoryConfig(EventIOObject):
         timestamp = read_int(self)
         string = read_string(self)
         return timestamp, string
+
+
+class HistoryMeta(EventIOObject):
+    eventio_type = 75
+
+    def parse(self):
+        n_items = read_varint(self)
+        data = {}
+        for _ in range(n_items):
+            k = read_var_string(self)
+            v = read_var_string(self)
+            data[k] = v
+        return data
+
+    def __str__(self):
+        id_ = 'global' if self.header.id == -1 else f'telescope_id={self.header.id}'
+        return '{}[{}]({})'.format(
+            self.__class__.__name__,
+            self.header.type,
+            id_,
+        )
 
 
 class RunHeader(EventIOObject):
