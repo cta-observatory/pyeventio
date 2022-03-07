@@ -11,6 +11,7 @@ prod4_astri_path = 'tests/resources/gamma_20deg_0deg_run103___cta-prod4-sst-astr
 prod4_zst_path = 'tests/resources/gamma_20deg_0deg_run102___cta-prod4-sst-1m_desert-2150m-Paranal-sst-1m.simtel.zst'
 calib_path = 'tests/resources/calib_events.simtel.gz'
 frankenstein_path = 'tests/resources/gamma_merged.simtel.gz'
+history_meta_path = 'tests/resources/history_meta_75.simtel.zst'
 
 
 test_paths = [prod2_path, prod3_path, prod4_path]
@@ -228,3 +229,10 @@ def test_photons():
         # no emitter info in file
         print(e['emitter'])
         assert len(e['emitter']) == 0
+
+
+def test_history_meta():
+    with SimTelFile(history_meta_path) as f:
+        assert isinstance(f.global_meta, dict) 
+        assert isinstance(f.telescope_meta, dict) 
+        assert len(f.telescope_meta) == 19
