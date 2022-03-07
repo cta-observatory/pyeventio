@@ -1,6 +1,6 @@
 # cython: language_level=3
 import cython
-from libc.stdint cimport uint8_t, uint32_t, uint64_t
+from libc.stdint cimport uint8_t, uint32_t, uint64_t, int32_t
 
 
 # cython's way to declare constants
@@ -34,7 +34,7 @@ cdef enum:
 
 
 cdef class ObjectHeader:
-    cdef readonly uint32_t id
+    cdef readonly int32_t id
     cdef readonly uint32_t type
     cdef readonly uint32_t version
     cdef readonly bint user
@@ -104,6 +104,12 @@ cdef uint32_t unpack_uint32(const uint8_t[:] data):
     return (<uint32_t*> &data[0])[0]
 
 
+@cython.boundscheck(False)
+@cython.wraparound(False)
+cdef int32_t unpack_int32(const uint8_t[:] data):
+    return (<int32_t*> &data[0])[0]
+
+
 cpdef ObjectHeader parse_header_bytes(const uint8_t[:] header_bytes, bint toplevel=0):
     cdef uint64_t type_int
     cdef uint64_t id_field
@@ -119,7 +125,7 @@ cpdef ObjectHeader parse_header_bytes(const uint8_t[:] header_bytes, bint toplev
 
     type_int = unpack_uint32(header_bytes[0:4])
     type_, version, user, extended = parse_type_field(type_int)
-    id_field = unpack_uint32(header_bytes[4:8])
+    id_field = unpack_int32(header_bytes[4:8])
 
     length_field = unpack_uint32(header_bytes[8:12])
 
