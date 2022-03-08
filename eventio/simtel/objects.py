@@ -79,7 +79,8 @@ class HistoryMeta(EventIOObject):
     eventio_type = 75
 
     def parse(self):
-        n_items = read_varint(self)
+        n_items = read_unsigned_varint(self)
+
         data = {}
         for _ in range(n_items):
             k = read_var_string(self)

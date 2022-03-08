@@ -233,6 +233,7 @@ def test_photons():
 
 def test_history_meta():
     with SimTelFile(history_meta_path) as f:
-        assert isinstance(f.global_meta, dict) 
-        assert isinstance(f.telescope_meta, dict) 
+        assert isinstance(f.global_meta, dict)
+        assert isinstance(f.telescope_meta, dict)
+        assert len(f.global_meta) == 11
         assert len(f.telescope_meta) == 19
