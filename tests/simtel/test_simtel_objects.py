@@ -86,7 +86,10 @@ def test_75():
 
             if n_found == 0:
                 assert 'global' in str(o)
-                assert len(data) == 0
+                assert len(data) == 11
+                assert b'CONFIG_RELEASE' in data
+                assert data[b'SIMTEL_RELEASE'] == b'2021-12-16 (development beyond prod-5)'
+                assert data[b'SIMTEL_BASE_RELEASE'] == b'2021-12-16 (development beyond prod-5)'
             else:
                 assert f'telescope_id={n_found}' in str(o)
                 assert b'OPTICS_CONFIG_NAME' in data
