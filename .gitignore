@@ -4,9 +4,7 @@ header.c
 var_int.c
 parsing.c
 # cython html profiling
-header.html
-var_int.html
-parsing.html
+*.html
 # Byte-compiled / optimized / DLL files
 __pycache__/
 *.py[cod]
