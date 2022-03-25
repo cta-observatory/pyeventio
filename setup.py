@@ -67,6 +67,7 @@ setup(
         'console_scripts': [
             'eventio_print_structure = eventio.scripts.print_structure:main',
             'eventio_print_simtel_history = eventio.scripts.print_simtel_history:main',
+            'eventio_print_simtel_metaparams = eventio.scripts.print_simtel_metaparams:main',
             'eventio_plot_histograms = eventio.scripts.plot_hists:main',
             'eventio_print_object_information = eventio.scripts.print_object_information:main',
             'eventio_cut_file = eventio.scripts.cut_eventio_file:main',

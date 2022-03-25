@@ -30,6 +30,32 @@ def test_print_simtel_history():
     run_command('eventio_print_simtel_history', prod4b_astri_file)
 
 
+
+expected_metaparams = '''
+METAPARAMs for telescope=19
+---------------------------
+OPTICS_CONFIG_NAME = MST
+OPTICS_CONFIG_VARIANT = MST86
+OPTICS_CONFIG_VERSION = 2020-06-08
+CAMERA_CONFIG_NAME = NectarCam
+CAMERA_CONFIG_VARIANT = analog-majority, with nsb_autoscale_airmass
+CAMERA_CONFIG_VERSION = 2021-01-06
+'''
+
+
+def test_print_simtel_metaparams():
+    result = run_command(
+        "eventio_print_simtel_metaparams",
+        "tests/resources/history_meta_75.simtel.zst",
+    )
+
+    assert "Global METAPARAMs" in result.stdout
+    for i in range(1, 20):
+        assert f"METAPARAMs for telescope={i}" in result.stdout
+
+    assert expected_metaparams in result.stdout
+
+
 def test_print_object_information():
     run_command('eventio_print_object_information', prod4b_astri_file)
 
