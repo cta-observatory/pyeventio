@@ -12,6 +12,7 @@ prod4_zst_path = 'tests/resources/gamma_20deg_0deg_run102___cta-prod4-sst-1m_des
 calib_path = 'tests/resources/calib_events.simtel.gz'
 frankenstein_path = 'tests/resources/gamma_merged.simtel.gz'
 history_meta_path = 'tests/resources/history_meta_75.simtel.zst'
+pixel_monitoring_path = 'tests/resources/type2033.simtel.zst'
 
 
 test_paths = [prod2_path, prod3_path, prod4_path]
@@ -73,6 +74,7 @@ def test_show_event_is_not_empty_and_has_some_members_for_sure():
                 'emitter',
                 'camera_monitorings',
                 'laser_calibrations',
+                'pixel_monitorings',
             }
 
             telescope_events = event['telescope_events']
@@ -237,3 +239,21 @@ def test_history_meta():
         assert isinstance(f.telescope_meta, dict)
         assert len(f.global_meta) == 11
         assert len(f.telescope_meta) == 19
+
+
+def test_type_2033():
+    with SimTelFile(pixel_monitoring_path) as f:
+        e = next(iter(f))
+        assert e['pixel_monitorings'].keys() == e['telescope_events'].keys()
+
+        for pixel_monitorings in e['pixel_monitorings'].values():
+            if pixel_monitorings['n_gains'] == 2:
+                assert pixel_monitorings.keys() == {
+                    'flags', 'n_pixels', 'n_gains', 'nsb_rate', 'qe_rel', 'gain_rel',
+                    'hv_rel', 'current', 'fadc_amp_hg', 'fadc_amp_lg', 'disabled',
+                }
+            else:
+                assert pixel_monitorings.keys() == {
+                    'flags', 'n_pixels', 'n_gains', 'nsb_rate', 'qe_rel', 'gain_rel',
+                    'hv_rel', 'current', 'fadc_amp_hg', 'disabled',
+                }

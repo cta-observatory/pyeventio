@@ -1759,6 +1759,39 @@ class PixelTriggerTimes(TelescopeObject):
         return trigger_times
 
 
+class PixelMonitoring(TelescopeObject):
+    eventio_type = 2033
+
+    def parse(self):
+        assert_exact_version(self, supported_version=0)
+        byte_stream = BytesIO(self.read())
+
+        flags = read_int(byte_stream)
+        n_pixels = read_int(byte_stream)
+        n_gains = read_short(byte_stream)
+
+        data = {"flags": flags, "n_pixels": n_pixels, "n_gains": n_gains}
+        if flags & 0b0000_0001 != 0:
+            data['nsb_rate'] = read_array(byte_stream, np.float32, n_pixels)
+        if flags & 0b0000_0010 != 0:
+            data['qe_rel'] = read_array(byte_stream, np.float32, n_pixels)
+        if flags & 0b0000_0100 != 0:
+            data['gain_rel'] = read_array(byte_stream, np.float32, n_pixels)
+        if flags & 0b0000_1000 != 0:
+            data['hv_rel'] = read_array(byte_stream, np.float32, n_pixels)
+        if flags & 0b0001_0000 != 0:
+            data['current'] = read_array(byte_stream, np.float32, n_pixels)
+        if flags & 0b0010_0000 != 0:
+            data['fadc_amp_hg'] = read_array(byte_stream, np.float32, n_pixels)
+        if flags & 0b0100_0000 != 0 and n_gains > 1:
+            data['fadc_amp_lg'] = read_array(byte_stream, np.float32, n_pixels)
+        if flags & 0b1000_0000 != 0:
+            data['disabled'] = read_array(byte_stream, np.bool_, n_pixels)
+
+        return data
+
+
+
 def merge_structured_arrays_into_dict(arrays):
     result = dict()
     for array in arrays:

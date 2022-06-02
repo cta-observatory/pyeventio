@@ -35,6 +35,7 @@ from .objects import (
     PixelSettings,
     PixelTiming,
     PixelTriggerTimes,
+    PixelMonitoring,
     PointingCorrection,
     RunHeader,
     TelescopeEvent,
@@ -95,6 +96,7 @@ class SimTelFile(EventIOFile):
         self.telescope_meta = {}
         self.global_meta = {}
         self.telescope_descriptions = defaultdict(dict)
+        self.pixel_monitorings = defaultdict(dict)
         self.camera_monitorings = defaultdict(dict)
         self.laser_calibrations = defaultdict(dict)
         self.current_mc_shower = None
@@ -171,6 +173,9 @@ class SimTelFile(EventIOFile):
 
         elif isinstance(o, LaserCalibration):
             self.laser_calibrations[o.telescope_id].update(o.parse())
+
+        elif isinstance(o, PixelMonitoring):
+            self.pixel_monitorings[o.telescope_id].update(o.parse())
 
         elif isinstance(o, telescope_descriptions_types):
             key = camel_to_snake(o.__class__.__name__)
@@ -289,6 +294,11 @@ class SimTelFile(EventIOFile):
             }
             event_data['laser_calibrations'] = {
                 telescope_id: copy(self.laser_calibrations[telescope_id])
+                for telescope_id in self.current_array_event['telescope_events'].keys()
+            }
+
+            event_data['pixel_monitorings'] = {
+                telescope_id: copy(self.pixel_monitorings[telescope_id])
                 for telescope_id in self.current_array_event['telescope_events'].keys()
             }
 
