@@ -752,3 +752,39 @@ def test_2032():
             assert 'n_times' in d
             assert 'pixel_ids' in d
             assert 'trigger_times' in d
+
+
+def test_2033():
+    from eventio.simtel.objects import PixelMonitoring
+
+    with EventIOFile('tests/resources/type2033.simtel.zst') as f:
+        objects = yield_n_and_assert(f, PixelMonitoring, n=79)
+        tel_id = 0
+        for tel_id, o in enumerate(objects, start=1):
+            assert o.header.id == tel_id
+            data = o.parse()
+            if data['n_gains'] == 2:
+                assert data.keys() == {
+                    'flags', 'n_pixels', 'n_gains', 'nsb_rate', 'qe_rel',
+                    'gain_rel', 'hv_rel', 'current', 'fadc_amp_hg',
+                    'fadc_amp_lg', 'disabled',
+                }
+            else:
+                assert data.keys() == {
+                    'flags', 'n_pixels', 'n_gains', 'nsb_rate', 'qe_rel',
+                    'gain_rel', 'hv_rel', 'current', 'fadc_amp_hg', 'disabled',
+                }
+
+
+            assert (data['qe_rel'] > 0).any()
+            # file was simulated with random disabled pixels
+            assert np.count_nonzero(data['disabled']) > 0
+            # disabled pixels should have no qe
+            assert (data['qe_rel'][data['disabled']] == 0.0).all()
+            # amplification in hg should be higher than lg
+            valid = ~data['disabled']
+
+            if data['n_gains'] == 2:
+                assert (data['fadc_amp_hg'][valid] > data['fadc_amp_lg'][valid]).all()
+
+        assert tel_id == 79
