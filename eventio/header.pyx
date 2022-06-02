@@ -56,7 +56,7 @@ cdef class ObjectHeader:
             + 'user={}, '.format(self.user)
             + 'extended={}, '.format(self.extended)
             + 'only_subobjects={}, '.format(self.only_subobjects)
-            + 'header_size{}, '.format(self.header_size)
+            + 'header_size={}, '.format(self.header_size)
             + 'content_size={}, '.format(self.content_size)
             + 'content_address={})'.format(self.content_address)
         )
