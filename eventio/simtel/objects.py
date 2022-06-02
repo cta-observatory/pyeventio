@@ -184,7 +184,7 @@ class CameraSettings(TelescopeObject):
     eventio_type = 2002
 
     def parse(self):
-        assert_version_in(self, [0, 1, 2, 3, 4, 5])
+        assert_max_version(self, 6)
         self.seek(0)
         byte_stream = BytesIO(self.read())
 
@@ -194,6 +194,12 @@ class CameraSettings(TelescopeObject):
         cam['focal_length'] = read_float(byte_stream)
         if self.header.version > 4:
             cam['effective_focal_length'] = read_float(byte_stream)
+
+        if self.header.version > 5:
+            cam['effective_focal_length_x'] = read_float(byte_stream)
+            cam['effective_focal_length_y'] = read_float(byte_stream)
+            cam['effective_focal_length_dx'] = read_float(byte_stream)
+            cam['effective_focal_length_dy'] = read_float(byte_stream)
 
         cam['pixel_x'] = read_array(byte_stream, count=n_pixels, dtype='float32')
         cam['pixel_y'] = read_array(byte_stream, count=n_pixels, dtype='float32')

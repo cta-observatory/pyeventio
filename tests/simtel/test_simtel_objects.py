@@ -144,6 +144,34 @@ def test_2002_v3_3_objects():
                 assert camera_data['cam_rot'] == 0.1901187151670456
 
 
+def test_2002_v5_v6():
+    from eventio.simtel.objects import CameraSettings
+
+    with EventIOFile('tests/resources/camsettings_v6.simtel.zst') as f:
+        for i, o in enumerate(yield_n_and_assert(f, CameraSettings, n=19)):
+            camera_data = parse_and_assert_consumption(o, limit=0)
+
+
+            # LSTs have assymetric focal length in this file
+            # EFFECTIVE_FOCAL_Length 2923.7, 2927.8, 2919.5, 0., 0.
+            if i < 4:
+                assert o.header.version == 6
+                assert camera_data['telescope_id'] == i + 1
+                assert np.isclose(camera_data['focal_length'], 28.0)
+                assert np.isclose(camera_data['effective_focal_length'], 29.237)
+                assert np.isclose(camera_data['effective_focal_length_x'], 29.278)
+                assert np.isclose(camera_data['effective_focal_length_y'], 29.195)
+                assert np.isclose(camera_data['effective_focal_length_dx'], 0.0)
+                assert np.isclose(camera_data['effective_focal_length_dy'], 0.0)
+            else:
+                assert o.header.version == 5
+                # focal_length           = 1600
+                # effective_focal_length = 1644.505
+                assert np.isclose(camera_data['focal_length'], 16.0)
+                assert np.isclose(camera_data['effective_focal_length'], 16.44505)
+
+
+
 def test_2002_v5_3_objects():
     from eventio.simtel.objects import CameraSettings
 
