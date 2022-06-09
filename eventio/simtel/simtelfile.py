@@ -105,11 +105,13 @@ class SimTelFile(EventIOFile):
         self.current_mc_event_id = None
         self.current_telescope_data_event_id = None
         self.current_photoelectron_sum = None
+        self.current_photoelectron_sum_event_id = None
         self.current_photoelectrons = {}
         self.current_photons = {}
         self.current_emitter = {}
         self.current_array_event = None
         self.current_calibration_event = None
+        self.current_calibration_event_id = None
         self.skip_calibration = skip_calibration
 
         # read the header:
@@ -168,6 +170,10 @@ class SimTelFile(EventIOFile):
             self.current_emitter = emitter
             self.current_photoelectrons = photoelectrons
 
+        elif isinstance(o, MCPhotoelectronSum):
+            self.current_photoelectron_sum_event_id = o.header.id
+            self.current_photoelectron_sum = o.parse()
+
         elif isinstance(o, CameraMonitoring):
             self.camera_monitorings[o.telescope_id].update(o.parse())
 
@@ -190,15 +196,17 @@ class SimTelFile(EventIOFile):
 
         elif isinstance(o, iact.InputCard):
             self.corsika_inputcards.append(o.parse())
-        elif isinstance(o, MCPhotoelectronSum):
-            self.current_photoelectron_sum = o.parse()
 
         elif isinstance(o, CalibrationEvent):
             if not self.skip_calibration:
+                array_event = next(o)
                 self.current_calibration_event = parse_array_event(
-                    next(o),
+                    array_event,
                     self.allowed_telescopes,
                 )
+                # assign negative event_ids to calibration events to avoid
+                # duplicated event_ids
+                self.current_calibration_event_id = -array_event.header.id
                 self.current_calibration_event['calibration_type'] = o.type
 
         elif isinstance(o, History):
@@ -274,19 +282,33 @@ class SimTelFile(EventIOFile):
                 self.current_array_event = None
                 return None
 
+            event_id = self.current_array_event['event_id']
+
             event_data = {
                 'type': 'data',
-                'event_id': self.current_mc_event_id,
-                'mc_shower': self.current_mc_shower,
-                'mc_event': self.current_mc_event,
+                'event_id': event_id,
+                'mc_shower': None,
+                'mc_event': None,
                 'telescope_events': self.current_array_event['telescope_events'],
                 'tracking_positions': self.current_array_event['tracking_positions'],
                 'trigger_information': self.current_array_event['trigger_information'],
-                'photons': self.current_photons,
-                'emitter': self.current_emitter,
-                'photoelectrons': self.current_photoelectrons,
-                'photoelectron_sums': self.current_photoelectron_sum,
+                'photons': None,
+                'emitter': None,
+                'photoelectrons': None,
+                'photoelectron_sums': None,
             }
+
+            if self.current_mc_event_id == event_id:
+                event_data['mc_shower'] = self.current_mc_shower
+                event_data['mc_event'] =  self.current_mc_event
+
+            if self.current_telescope_data_event_id == event_id:
+                event_data['photons'] = self.current_photons
+                event_data['emitter'] = self.current_emitter
+                event_data['photoelectrons'] = self.current_photoelectrons
+
+            if self.current_photoelectron_sum_event_id == event_id:
+                event_data['photoelectron_sums'] = self.current_photoelectron_sum
 
             event_data['camera_monitorings'] = {
                 telescope_id: copy(self.camera_monitorings[telescope_id])
@@ -317,6 +339,7 @@ class SimTelFile(EventIOFile):
 
             event_data = {
                 'type': 'calibration',
+                'event_id': self.current_calibration_event_id,
                 'telescope_events': event['telescope_events'],
                 'tracking_positions': event['tracking_positions'],
                 'trigger_information': event['trigger_information'],
@@ -362,11 +385,15 @@ def parse_array_event(array_event, allowed_telescopes=None):
 
     telescope_events = {}
     tracking_positions = {}
+    # for older files, the array_event.header.id does not match the mc event id
+    # so we overwrite it later with the event id in the trigger information
+    event_id = array_event.header.id
 
     for i, o in enumerate(array_event):
         # require first element to be a TriggerInformation
         if i == 0:
             check_type(o, TriggerInformation)
+            event_id = o.header.id
             trigger_information = o.parse()
             telescopes = set(trigger_information['telescopes_with_data'])
 
@@ -390,6 +417,7 @@ def parse_array_event(array_event, allowed_telescopes=None):
         )
 
     return {
+        'event_id': event_id,
         'trigger_information': trigger_information,
         'telescope_events': telescope_events,
         'tracking_positions': tracking_positions,
