@@ -292,9 +292,9 @@ class SimTelFile(EventIOFile):
                 'telescope_events': self.current_array_event['telescope_events'],
                 'tracking_positions': self.current_array_event['tracking_positions'],
                 'trigger_information': self.current_array_event['trigger_information'],
-                'photons': None,
-                'emitter': None,
-                'photoelectrons': None,
+                'photons': {},
+                'emitter': {},
+                'photoelectrons': {},
                 'photoelectron_sums': None,
             }
 
