@@ -233,6 +233,15 @@ def test_photons():
         assert len(e['emitter']) == 0
 
 
+def test_missing_photons():
+    with SimTelFile('tests/resources/gamma_test.simtel.gz') as f:
+        e = next(iter(f))
+
+        assert e['photons'] == {}
+        assert e['photoelectrons'] == {}
+        assert e['emitter'] == {}
+
+
 def test_history_meta():
     with SimTelFile(history_meta_path) as f:
         assert isinstance(f.global_meta, dict)
