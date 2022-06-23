@@ -18,7 +18,7 @@ parser.add_argument(
 )
 
 
-def main():
+def print_structure():
     args = parser.parse_args()
 
     conv = str if not args.repr else repr
@@ -49,6 +49,13 @@ def main():
                     print('    ' * level, conv(o))
         except EOFError as e:
             print(e)
+
+
+def main():
+    try:
+        print_structure()
+    except BrokenPipeError:
+        pass
 
 
 if __name__ == '__main__':

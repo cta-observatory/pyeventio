@@ -8,7 +8,7 @@ parser.add_argument('inputfile')
 parser.add_argument('--encoding', default='utf8', help='Encoding to use for decoding METAPARAMs')
 
 
-def main():
+def print_metaparams():
     args = parser.parse_args()
 
     with EventIOFile(args.inputfile) as f:
@@ -40,6 +40,12 @@ def main():
             for k, v in o.parse().items():
                 print(k.decode(args.encoding), "=", v.decode(args.encoding))
 
+
+def main():
+    try:
+        print_metaparams()
+    except BrokenPipeError:
+        pass
 
 
 if __name__ == '__main__':
