@@ -7,7 +7,7 @@ parser = ArgumentParser()
 parser.add_argument('inputfile')
 
 
-def main():
+def print_history():
     args = parser.parse_args()
 
     with EventIOFile(args.inputfile) as f:
@@ -18,6 +18,13 @@ def main():
                 t = datetime.fromtimestamp(t)
                 print(f'{t:%Y-%m-%dT%H:%M:%S}', line.decode('utf-8').strip())
             o = next(f)
+
+
+def main():
+    try:
+        print_history()
+    except BrokenPipeError:
+        pass
 
 
 if __name__ == '__main__':
