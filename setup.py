@@ -1,6 +1,5 @@
-from setuptools import setup, find_packages
+from setuptools import setup
 import os
-import re
 
 # make sure users without cython can install our extensions
 try:
@@ -27,11 +26,11 @@ class build_ext(_build_ext):
 # if we have cython, use the cython file if not the c file
 ext = '.pyx' if USE_CYTHON else '.c'
 extensions = [
-    Extension('eventio.header', sources=['eventio/header' + ext]),
-    Extension('eventio.var_int', sources=['eventio/var_int' + ext]),
+    Extension('eventio.header', sources=['src/eventio/header' + ext]),
+    Extension('eventio.var_int', sources=['src/eventio/var_int' + ext]),
     Extension(
         'eventio.simtel.parsing',
-        sources=['eventio/simtel/parsing' + ext]
+        sources=['src/eventio/simtel/parsing' + ext]
     ),
 ]
 cmdclass = {'build_ext': build_ext}
@@ -47,7 +46,7 @@ if ext == '.c':
 
 
 setup(
-    use_scm_version={"write_to": os.path.join("eventio", "_version.py")},
+    use_scm_version={"write_to": os.path.join("src", "eventio", "_version.py")},
 
     ext_modules=extensions,
     cmdclass=cmdclass,
