@@ -1797,6 +1797,13 @@ class PixelMonitoring(TelescopeObject):
         return data
 
 
+class CalibrationPhotoelectrons(EventIOObject):
+    eventio_type = 2034
+
+    def __str__(self):
+        return f'{self.__class__.__name__}(type={self.header.id})'
+
+
 
 def merge_structured_arrays_into_dict(arrays):
     result = dict()

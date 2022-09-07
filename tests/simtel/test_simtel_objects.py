@@ -791,17 +791,17 @@ def test_2033():
 
 
 def test_2034():
-    from eventio.simtel.objects import CalibrationEventPhotoelectrons
+    from eventio.simtel.objects import CalibrationPhotoelectrons
     from eventio.iact.objects import TelescopeData, PhotoElectrons
 
     with EventIOFile('tests/resources/calib_true_pe.simtel.zst') as f:
         # file contains two calibration events
-        objects = yield_n_and_assert(f, CalibrationEventPhotoelectrons, n=2)
+        objects = yield_n_and_assert(f, CalibrationPhotoelectrons, n=2)
 
         for object in objects:
             # CalibrationEventPhotoelectrons should be a container object
             # holding a corsika array with photo electrons
             telescope_data = next(object)
-            assert isinstance(telescope_data, telescope_data)
+            assert isinstance(telescope_data, TelescopeData)
             photo_electrons = next(telescope_data)
             assert isinstance(photo_electrons, PhotoElectrons)
