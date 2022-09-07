@@ -242,6 +242,11 @@ def test_missing_photons():
         assert e['emitter'] == {}
 
 
+def test_calibration_photoelectrons():
+    with SimTelFile('tests/resources/calib_true_pe.simtel.zst') as f:
+        e = next(iter(f))
+        assert 'photoelectrons' in e['photoelectrons']
+
 def test_history_meta():
     with SimTelFile(history_meta_path) as f:
         assert isinstance(f.global_meta, dict)
