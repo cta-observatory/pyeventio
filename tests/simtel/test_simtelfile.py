@@ -1,5 +1,6 @@
 from pytest import importorskip
 from eventio.simtel import SimTelFile
+import numpy as np
 
 prod2_path = 'tests/resources/gamma_test.simtel.gz'
 prod3_path = 'tests/resources/gamma_test_large_truncated.simtel.gz'
@@ -241,6 +242,14 @@ def test_missing_photons():
         assert e['photoelectrons'] == {}
         assert e['emitter'] == {}
 
+
+def test_calibration_photoelectrons():
+    with SimTelFile('tests/resources/calib_true_pe.simtel.zst') as f:
+        for e, expected_pe in zip(f, (1.7, 20)):
+            assert 'photoelectrons' in e
+            assert 0 in e['photoelectrons']
+            true_image = e['photoelectrons'][0]['photoelectrons']
+            assert np.isclose(np.mean(true_image), expected_pe, rtol=0.05)
 
 def test_history_meta():
     with SimTelFile(history_meta_path) as f:

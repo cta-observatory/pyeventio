@@ -30,7 +30,6 @@ jobs:
           python --version
           pip install codecov pytest-cov
           pip install -U pytest docutils pygments Cython matplotlib
-          pip install https://github.com/cta-observatory/pyhessio/archive/v2.1.1.tar.gz
           pip install -e .
           pip freeze
 

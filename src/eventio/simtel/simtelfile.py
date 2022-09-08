@@ -42,6 +42,7 @@ from .objects import (
     TelescopeEventHeader,
     TrackingPosition,
     TriggerInformation,
+    CalibrationPhotoelectrons,
 )
 
 
@@ -112,6 +113,7 @@ class SimTelFile(EventIOFile):
         self.current_array_event = None
         self.current_calibration_event = None
         self.current_calibration_event_id = None
+        self.current_calibration_pe = {}
         self.skip_calibration = skip_calibration
 
         # read the header:
@@ -208,6 +210,26 @@ class SimTelFile(EventIOFile):
                 # duplicated event_ids
                 self.current_calibration_event_id = -array_event.header.id
                 self.current_calibration_event['calibration_type'] = o.type
+        elif isinstance(o, CalibrationPhotoelectrons):
+            telescope_data = next(o)
+            if not isinstance(telescope_data, iact.TelescopeData):
+                warnings.warn(
+                    f"Unexpected sub-object: {telescope_data} in {o}, ignoring",
+                    UnknownObjectWarning
+                )
+                return
+
+            self.current_calibration_pe = {}
+            for photoelectrons in telescope_data:
+                if not isinstance(photoelectrons, iact.PhotoElectrons):
+                    warnings.warn(
+                        f"Unexpected sub-object: {photoelectrons} in {telescope_data}, ignoring",
+                        UnknownObjectWarning
+                    )
+
+                tel_id = photoelectrons.telescope_id
+                self.current_calibration_pe[tel_id] = photoelectrons.parse()
+
 
         elif isinstance(o, History):
             for sub in o:
@@ -344,6 +366,7 @@ class SimTelFile(EventIOFile):
                 'tracking_positions': event['tracking_positions'],
                 'trigger_information': event['trigger_information'],
                 'calibration_type': event['calibration_type'],
+                'photoelectrons': self.current_calibration_pe,
             }
 
             event_data['camera_monitorings'] = {
