@@ -206,12 +206,6 @@ def read_header(byte_stream, offset, toplevel=False):
     '''
 
     header_bytes = byte_stream.read(constants.OBJECT_HEADER_SIZE)
-    check_size_or_raise(
-        header_bytes,
-        constants.OBJECT_HEADER_SIZE,
-        zero_ok=False,
-    )
-
     header = parse_header_bytes(header_bytes, toplevel=toplevel)
 
     if header.extended:
