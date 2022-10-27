@@ -443,6 +443,25 @@ def test_2011():
             assert 'relative_trigger_time' in o
             assert 'readout_time' in o
 
+    """
+    $ /hessioxxx/bin/read_hess -S tests/resources/gamma_prod6_tel_event_header_v4.simtel.zst | grep -i 'readout starts at'
+    Readout starts at bin 32, global time -35.865 ns, rel. trigger time: 9.277 ns (-> trigger time: -26.588 ns).
+    Readout starts at bin 32, global time 49.381 ns, rel. trigger time: 9.033 ns (-> trigger time: 58.414 ns).
+    Readout starts at bin 33, global time 192.805 ns, rel. trigger time: 9.521 ns (-> trigger time: 202.327 ns).
+    Readout starts at bin 40, global time -263.573 ns, rel. trigger time: 18.250 ns (-> trigger time: -245.323 ns).
+    Readout starts at bin 39, global time -247.961 ns, rel. trigger time: 18.000 ns (-> trigger time: -229.961 ns).
+    Readout starts at bin 39, global time -133.900 ns, rel. trigger time: 18.750 ns (-> trigger time: -115.150 ns).
+    Readout starts at bin 39, global time 43.862 ns, rel. trigger time: 18.500 ns (-> trigger time: 62.362 ns).
+    """
+    expected_start = [32, 32, 33, 40, 39, 39, 39]
+    expected_time = [-35.865, 49.381, 192.805, -263.573, -247.961, -133.900, 43.862]
+    with EventIOFile('tests/resources/gamma_prod6_tel_event_header_v4.simtel.zst') as f:
+        for i, o in enumerate(yield_n_and_assert(f, TelescopeEventHeader, n=len(expected_start))):
+            data = parse_and_assert_consumption(o, limit=3)
+            assert data['start_readout'] == expected_start[i]
+            assert round(data['readout_time'], 3) == expected_time[i]
+
+
 
 def test_2012_3_objects():
     from eventio.simtel.objects import ADCSums

@@ -36,6 +36,9 @@ def read_remaining_with_check(byte_stream, length):
     return data
 
 
+_s_int32 = struct.Struct('<i')
+
+
 class TelescopeObject(EventIOObject):
     '''
     BaseClass that reads telescope id from header.id and puts it in repr
@@ -737,7 +740,7 @@ class TelescopeEventHeader(TelescopeObject):
         )
 
     def parse(self):
-        assert_max_version(self, 3)
+        assert_max_version(self, 4)
         self.seek(0)
         byte_stream = BytesIO(self.read())
 
@@ -792,6 +795,10 @@ class TelescopeEventHeader(TelescopeObject):
             times = struct.unpack('ff', data[pos:pos + 8])
             pos += 8
             event_head['readout_time'], event_head['relative_trigger_time'] = times
+
+        if self.header.version >= 4:
+            event_head['start_readout'] = _s_int32.unpack(data[pos:pos + 4])[0]
+            pos += 4
 
         event_head['telescope_id'] = self.header.id
         return event_head
