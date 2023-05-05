@@ -116,7 +116,10 @@ Open a file produced by simtel_array
 Commandline Tools
 -----------------
 
-We provide three commandline tools, to look into eventio files.
+We provide a few commandline tools to look into eventio files.
+
+eventio_print_structure
+~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 To get an overview over the structure of a file, use ``eventio_print_structure``,
 for larger files, you might want to pipe its output into e.g. ``less``:
@@ -144,6 +147,9 @@ for larger files, you might want to pipe its output into e.g. ``less``:
     PointingCorrection[2007](telescope_id=1)
     CameraSettings[2002](telescope_id=2)
     CameraOrganization[2003](telescope_id=2)
+
+eventio_print_object_information
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 To get table of all object versions and counts in a file,
 use ``eventio_print_object_information``, it can also print json if given the
@@ -184,6 +190,9 @@ use ``eventio_print_object_information``, it can also print json if given the
      2200 |       1 |     1 |       50 | simtel.objects.TelescopeEvent
     ------------------------------------------------------------
 
+eventio_plot_histograms
+~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
 To plot histograms stored in an eventio file (Type 100),
 use ``eventio_plot_histograms``.
 
@@ -196,6 +205,60 @@ use ``eventio_plot_histograms``.
    :alt: First histogram of a prod3b file
 
    Histogram of Impact distance vs log10(E / TeV)
+
+eventio_print_simtel_metaparams
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+To print the metaparameters stored in an eventio file (the values of the parameters used in the simulation), 
+use ``eventio_print_simtel_metaparams``.
+
+.. code:: shell
+
+    $ eventio_print_simtel_metaparams tests/resources/history_meta_75.simtel.zst
+
+    Global METAPARAMs
+    -----------------
+    CONFIG_RELEASE = Release "2021-12-16 (development beyond prod-5)" from 2021-12-25T19:33:19 UTC.
+    CONFIG_VERSION = 
+    ARRAY_CONFIG_NAME = LaPalma-baseline-prod5
+    ARRAY_CONFIG_VARIANT = LST/MST-NectarCam (including other MST camera type) at CTA North prod-5/prod-5b (extended)
+    ARRAY_CONFIG_VERSION = 2020-11-20
+    RANDOM_GENERATOR = mt19937
+    RANDOM_STATE = auto
+    RANDOM_SEED = auto
+    SIMTEL_VERSION = 2021-12-16 18:31:13 CET (konrad@wizard4)
+    SIMTEL_RELEASE = 2021-12-16 (development beyond prod-5)
+    SIMTEL_BASE_RELEASE = 2021-12-16 (development beyond prod-5)
+
+    METAPARAMs for telescope=1
+    --------------------------
+    OPTICS_CONFIG_NAME = LST
+    OPTICS_CONFIG_VARIANT = LST-1 prototype
+    OPTICS_CONFIG_VERSION = 2020-04-29
+    CAMERA_CONFIG_NAME = LST
+    CAMERA_CONFIG_VARIANT = LST-1 prototype, with nsb_autoscale_airmass
+    CAMERA_CONFIG_VERSION = 2020-11-24
+
+    METAPARAMs for telescope=2
+    --------------------------
+    OPTICS_CONFIG_NAME = LST
+    OPTICS_CONFIG_VARIANT = 
+    OPTICS_CONFIG_VERSION = 2020-04-29
+    CAMERA_CONFIG_NAME = LST
+    CAMERA_CONFIG_VARIANT = LST camera, with nsb_autoscale_airmass
+    CAMERA_CONFIG_VERSION = 2020-11-24
+
+    METAPARAMs for telescope=3
+    --------------------------
+    OPTICS_CONFIG_NAME = LST
+    OPTICS_CONFIG_VARIANT = 
+    OPTICS_CONFIG_VERSION = 2020-04-29
+    CAMERA_CONFIG_NAME = LST
+    CAMERA_CONFIG_VARIANT = LST camera, with nsb_autoscale_airmass
+    CAMERA_CONFIG_VERSION = 2020-11-24
+    
+    ...
+
 
 
 Low level access
