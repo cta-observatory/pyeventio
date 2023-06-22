@@ -55,7 +55,7 @@ setup(
         'eventio': ['*.c'],
         'eventio.simtel': ['*.c'],
     },
-    python_requires='>=3.6',
+    python_requires='>=3.8',
     install_requires=[
         'numpy',
         'corsikaio ~= 0.2.0',
