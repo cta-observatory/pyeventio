@@ -55,10 +55,10 @@ setup(
         'eventio': ['*.c'],
         'eventio.simtel': ['*.c'],
     },
-    python_requires='>=3.6',
+    python_requires='>=3.8',
     install_requires=[
         'numpy',
-        'corsikaio ~= 0.2.0',
+        'corsikaio ~= 0.3.3',
         'zstandard > 0.11.1', # memory leak in zstandard 0.11.1
         'setuptools_scm',
     ],
