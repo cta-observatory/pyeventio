@@ -143,6 +143,7 @@ class SimTelFile:
         self.current_mc_shower_id = None
         self.current_mc_event = None
         self.current_mc_event_id = None
+        self.current_array_event_id = None
         self.current_telescope_data_event_id = None
         self.current_photoelectron_sum = None
         self.current_photoelectron_sum_event_id = None
@@ -205,7 +206,16 @@ class SimTelFile:
 
         if isinstance(self._file.peek(), (MCEvent, CalibrationEvent)):
             self._parse_next_object()
+            self._read_until_next_event()
             return self._build_event()
+
+        # extracted calibration events have "naked" ArrayEvents without
+        # a preceding MCEvent or CalibrationEvent wrapper
+        if isinstance(self._file.peek(), ArrayEvent):
+            self._parse_next_object()
+            return self._build_event()
+
+        raise ValueError(f"Unexpected obj type: {self._file.peek()}")
 
     def _check_skip(self, event):
         if event['type'] == 'data':
@@ -236,6 +246,7 @@ class SimTelFile:
             self.current_mc_shower_id = o.header.id
 
         elif isinstance(o, ArrayEvent):
+            self.current_array_event_id = o.header.id
             self.current_array_event = parse_array_event(
                 o,
                 self.allowed_telescopes
@@ -328,14 +339,16 @@ class SimTelFile:
         '''check if all necessary info for an event was found,
         then make an event and invalidate old data
         '''
-        self._read_until_next_event()
 
         # data by default, might be overriden by calibration
         event = {'type': 'data'}
 
         if self.current_array_event:
             event.update(self.current_array_event)
+            if self.current_array_event_id is not None:
+                event["event_id"] = self.current_array_event_id
             self.current_array_event = {}
+            self.current_array_event_id = None
 
             if 'telescope_events' not in event:
                 return event
@@ -363,16 +376,17 @@ class SimTelFile:
                 # no further info for calib events
                 return event
 
-        # this information should always exist
-        event.update({
-            'event_id': self.current_mc_event_id,
-            'mc_shower': self.current_mc_shower,
-            'mc_event': self.current_mc_event,
-            'photons': self.current_photons,
-            'emitter': self.current_emitter,
-            'photoelectrons': self.current_photoelectrons,
-            'photoelectron_sums': self.current_photoelectron_sum,
-        })
+        # update with mc data if available
+        if self.current_mc_shower:
+            event.update({
+                'event_id': self.current_mc_event_id,
+                'mc_shower': self.current_mc_shower,
+                'mc_event': self.current_mc_event,
+                'photons': self.current_photons,
+                'emitter': self.current_emitter,
+                'photoelectrons': self.current_photoelectrons,
+                'photoelectron_sums': self.current_photoelectron_sum,
+            })
 
         return event
 
