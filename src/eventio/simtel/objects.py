@@ -1,4 +1,5 @@
 ''' Implementations of the simtel_array EventIO object types '''
+import sys
 import numpy as np
 from io import BytesIO
 import struct
@@ -20,12 +21,15 @@ from ..var_int import (
     unsigned_varint_arrays_differential,
     varint_array,
     varint,
+    unsigned_varint_array,
 )
 from ..version_handling import (
     assert_exact_version,
     assert_max_version,
     assert_version_in
 )
+
+H_MAX_TRIG_TYPES = 4
 
 
 def read_remaining_with_check(byte_stream, length):
@@ -37,6 +41,15 @@ def read_remaining_with_check(byte_stream, length):
 
 
 _s_int32 = struct.Struct('<i')
+_s_float32 = struct.Struct('<f')
+
+
+if sys.version_info < (3, 10):
+    def bit_count(num):
+        return bin(num).count("1")
+else:
+    def bit_count(num):
+        return num.bit_count()
 
 
 class TelescopeObject(EventIOObject):
@@ -595,30 +608,38 @@ class TriggerInformation(EventIOObject):
             )
 
         if version >= 2:
-            # konrad saves the trigger mask as crazy int, but it uses only 4 bits
-            # so it should be indentical to a normal unsigned int with 1 byte
-            event_info['teltrg_type_mask'] = read_array(
-                byte_stream, count=tels_trigger, dtype='uint8'
+            data = read_remaining_with_check(byte_stream, self.header.content_size)
+            del byte_stream
+            pos = 0
+
+            event_info['teltrg_type_mask'], bytes_read = unsigned_varint_array(
+                data, n_elements=tels_trigger,
             )
-            assert np.all(event_info['teltrg_type_mask'] < 128), 'Unexpected trigger mask'
+            pos += bytes_read
 
             event_info['teltrg_time_by_type'] = {}
             it = zip(event_info['triggered_telescopes'], event_info['teltrg_type_mask'])
+
             for tel_id, mask in it:
-                # trigger times are only written if more than one trigger is there
-                if mask not in {0b001, 0b010, 0b100}:
+                # check the lowest 4 bits, individual times are only stored
+                # if more than one trigger fired
+                if bit_count(int(mask) & 0b1111) > 1:
                     event_info['teltrg_time_by_type'][tel_id] = {}
-                    for trigger in range(3):
+                    for trigger in range(H_MAX_TRIG_TYPES):
                         if bool_bit_from_pos(mask, trigger):
-                            t = read_float(byte_stream)
+                            t = _s_float32.unpack(data[pos:pos + _s_float32.size])[0]
+                            pos += _s_float32.size
                             event_info['teltrg_time_by_type'][tel_id][trigger] = t
 
         if version >= 3:
             # information about "plane wavefront compensation"
             comp = {}
-            comp['az'] = read_float(byte_stream)
-            comp['alt'] = read_float(byte_stream)
-            comp['speed_of_light'] = read_float(byte_stream)
+            comp['az'] = _s_float32.unpack(data[pos:pos + _s_float32.size])[0]
+            pos += _s_float32.size
+            comp['alt'] = _s_float32.unpack(data[pos:pos + _s_float32.size])[0]
+            pos += _s_float32.size
+            comp['speed_of_light'] = _s_float32.unpack(data[pos:pos + _s_float32.size])[0]
+            pos += _s_float32.size
             event_info['plane_wavefront_compensation'] = comp
 
         return event_info
