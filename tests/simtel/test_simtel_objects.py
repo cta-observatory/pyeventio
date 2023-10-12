@@ -829,6 +829,7 @@ def test_2034():
 
 
 def test_mono_trigger():
+    """Regression test for #261"""
     with EventIOFile("tests/resources/mono_trigger.simtel.zst") as f:
         for trigger in yield_subobjects(f, TriggerInformation):
             trigger.parse()
