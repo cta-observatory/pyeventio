@@ -5,7 +5,9 @@ from eventio import EventIOFile
 from eventio.search_utils import (
     yield_toplevel_of_type,
     yield_n_subobjects,
+    yield_subobjects,
 )
+from eventio.simtel.objects import TriggerInformation
 
 prod2_file = 'tests/resources/gamma_test.simtel.gz'
 camorgan_v2_file = 'tests/resources/test_camorganv2.simtel.gz'
@@ -824,3 +826,9 @@ def test_2034():
             assert isinstance(telescope_data, TelescopeData)
             photo_electrons = next(telescope_data)
             assert isinstance(photo_electrons, PhotoElectrons)
+
+
+def test_mono_trigger():
+    with EventIOFile("tests/resources/mono_trigger.simtel.zst") as f:
+        for trigger in yield_subobjects(f, TriggerInformation):
+            trigger.parse()
