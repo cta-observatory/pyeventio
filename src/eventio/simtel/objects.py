@@ -608,14 +608,13 @@ class TriggerInformation(EventIOObject):
             )
 
         if version >= 2:
+            # read remaining data as varint_array only works with bytes, not a fileobj
             data = read_remaining_with_check(byte_stream, self.header.content_size)
-            del byte_stream
-            pos = 0
-
             event_info['teltrg_type_mask'], bytes_read = unsigned_varint_array(
                 data, n_elements=tels_trigger,
             )
-            pos += bytes_read
+            # back into a BytesIO to simplify code below
+            byte_stream = BytesIO(data[bytes_read:])
 
             event_info['teltrg_time_by_type'] = {}
             it = zip(event_info['triggered_telescopes'], event_info['teltrg_type_mask'])
@@ -627,19 +626,15 @@ class TriggerInformation(EventIOObject):
                     event_info['teltrg_time_by_type'][tel_id] = {}
                     for trigger in range(H_MAX_TRIG_TYPES):
                         if bool_bit_from_pos(mask, trigger):
-                            t = _s_float32.unpack(data[pos:pos + _s_float32.size])[0]
-                            pos += _s_float32.size
+                            t = read_float(byte_stream)
                             event_info['teltrg_time_by_type'][tel_id][trigger] = t
 
         if version >= 3:
             # information about "plane wavefront compensation"
             comp = {}
-            comp['az'] = _s_float32.unpack(data[pos:pos + _s_float32.size])[0]
-            pos += _s_float32.size
-            comp['alt'] = _s_float32.unpack(data[pos:pos + _s_float32.size])[0]
-            pos += _s_float32.size
-            comp['speed_of_light'] = _s_float32.unpack(data[pos:pos + _s_float32.size])[0]
-            pos += _s_float32.size
+            comp['az'] = read_float(byte_stream)
+            comp['alt'] = read_float(byte_stream)
+            comp['speed_of_light'] = read_float(byte_stream)
             event_info['plane_wavefront_compensation'] = comp
 
         return event_info
