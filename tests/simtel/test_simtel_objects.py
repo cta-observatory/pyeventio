@@ -1,3 +1,4 @@
+from itertools import zip_longest
 import pytest
 from pytest import approx
 import numpy as np
@@ -7,7 +8,7 @@ from eventio.search_utils import (
     yield_n_subobjects,
     yield_subobjects,
 )
-from eventio.simtel.objects import TriggerInformation
+from eventio.simtel.objects import LaserCalibration, TriggerInformation
 
 prod2_file = 'tests/resources/gamma_test.simtel.gz'
 camorgan_v2_file = 'tests/resources/test_camorganv2.simtel.gz'
@@ -833,3 +834,12 @@ def test_mono_trigger():
     with EventIOFile("tests/resources/mono_trigger.simtel.zst") as f:
         for trigger in yield_subobjects(f, TriggerInformation):
             trigger.parse()
+
+
+def test_laser_calibration_n_pixels():
+    """Regression test for #264"""
+
+    with EventIOFile("tests/resources/40k_pixels.simtel.zst") as f:
+        for laser_calibration in yield_subobjects(f, LaserCalibration):
+            data = laser_calibration.parse()
+            assert data["calib"].shape == (1, 40000)

@@ -10,6 +10,7 @@ from ..tools import (
     read_float,
     read_string,
     read_from,
+    read_unsigned_short,
     read_var_string,
     read_varint,
     read_unsigned_varint,
@@ -1610,7 +1611,7 @@ class LaserCalibration(TelescopeObject):
         byte_stream = BytesIO(self.read())
         version = self.header.version
 
-        n_pixels = read_short(byte_stream)
+        n_pixels = read_unsigned_short(byte_stream)
         n_gains = read_short(byte_stream)
         lascal_id = read_int(byte_stream)
         calib = read_array(
