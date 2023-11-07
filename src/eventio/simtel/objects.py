@@ -1735,15 +1735,17 @@ class PixelList(EventIOObject):
         # even in the prod3b version of Max N the objects
         # of type 2027 seem to be of version 0 only.
         # not sure if version 1 was ever produced.
-        assert_exact_version(self, supported_version=0)
+        assert_max_version(self, last_supported=1)
         self.seek(0)
         byte_stream = BytesIO(self.read())
 
-        pixels = read_short(byte_stream)
-        # in version 1 pixels is a crazy int
-
-        pixel_list = read_array(byte_stream, 'i2', pixels)
-        # in version 1 pixel_list is an array of crazy int
+        if self.header.version < 1:
+            pixels = read_short(byte_stream)
+            pixel_list = read_array(byte_stream, 'i2', pixels)
+        else:
+            pixels = read_varint(byte_stream)
+            data = read_remaining_with_check(byte_stream, self.header.content_size)
+            pixel_list, _ = varint_array(data, pixels)
 
         return {
             'code': self.code,
