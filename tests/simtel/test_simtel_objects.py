@@ -8,7 +8,7 @@ from eventio.search_utils import (
     yield_n_subobjects,
     yield_subobjects,
 )
-from eventio.simtel.objects import LaserCalibration, TriggerInformation
+from eventio.simtel.objects import ImageParameters, LaserCalibration, TriggerInformation
 
 prod2_file = 'tests/resources/gamma_test.simtel.gz'
 camorgan_v2_file = 'tests/resources/test_camorganv2.simtel.gz'
@@ -843,3 +843,16 @@ def test_laser_calibration_n_pixels():
         for laser_calibration in yield_subobjects(f, LaserCalibration):
             data = laser_calibration.parse()
             assert data["calib"].shape == (1, 40000)
+
+
+def test_image_parameters_version_6():
+    """Test for implementation of #266"""
+
+    with EventIOFile("tests/resources/40k_pixels.simtel.zst") as f:
+        for image_parameters in yield_subobjects(f, ImageParameters):
+            assert image_parameters.header.version == 6
+            data = image_parameters.parse()
+            assert data["hot_amp"].shape == (data["n_hot"], )
+            assert data["hot_amp"].dtype == np.float32
+            assert data["hot_pixel"].shape == (data["n_hot"], )
+            assert data["hot_pixel"].dtype == np.int64
