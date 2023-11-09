@@ -1,3 +1,4 @@
+from itertools import zip_longest
 import pytest
 from pytest import approx
 import numpy as np
@@ -7,7 +8,7 @@ from eventio.search_utils import (
     yield_n_subobjects,
     yield_subobjects,
 )
-from eventio.simtel.objects import TriggerInformation
+from eventio.simtel.objects import ImageParameters, LaserCalibration, PixelList, TriggerInformation
 
 prod2_file = 'tests/resources/gamma_test.simtel.gz'
 camorgan_v2_file = 'tests/resources/test_camorganv2.simtel.gz'
@@ -833,3 +834,37 @@ def test_mono_trigger():
     with EventIOFile("tests/resources/mono_trigger.simtel.zst") as f:
         for trigger in yield_subobjects(f, TriggerInformation):
             trigger.parse()
+
+
+def test_laser_calibration_n_pixels():
+    """Regression test for #264"""
+
+    with EventIOFile("tests/resources/40k_pixels.simtel.zst") as f:
+        for laser_calibration in yield_subobjects(f, LaserCalibration):
+            data = laser_calibration.parse()
+            assert data["calib"].shape == (1, 40000)
+
+
+def test_pixel_list_version_1():
+    """Test for implementation of #265"""
+
+    with EventIOFile("tests/resources/40k_pixels.simtel.zst") as f:
+        expected = [49, 34]
+        for pixel_list, pixels in zip_longest(yield_subobjects(f, PixelList), expected):
+            assert pixel_list.header.version == 1
+            data = pixel_list.parse()
+            assert data["pixels"] == pixels
+            assert data["pixel_list"].shape == (pixels, )
+
+
+def test_image_parameters_version_6():
+    """Test for implementation of #266"""
+
+    with EventIOFile("tests/resources/40k_pixels.simtel.zst") as f:
+        for image_parameters in yield_subobjects(f, ImageParameters):
+            assert image_parameters.header.version == 6
+            data = image_parameters.parse()
+            assert data["hot_amp"].shape == (data["n_hot"], )
+            assert data["hot_amp"].dtype == np.float32
+            assert data["hot_pixel"].shape == (data["n_hot"], )
+            assert data["hot_pixel"].dtype == np.int64

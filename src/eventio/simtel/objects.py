@@ -10,6 +10,7 @@ from ..tools import (
     read_float,
     read_string,
     read_from,
+    read_unsigned_short,
     read_var_string,
     read_varint,
     read_unsigned_varint,
@@ -1142,7 +1143,7 @@ class ImageParameters(EventIOObject):
         )
 
     def parse(self):
-        assert_exact_version(self, supported_version=5)
+        assert_version_in(self, supported_versions={5, 6})
         self.seek(0)
         byte_stream = BytesIO(self.read())
 
@@ -1154,12 +1155,14 @@ class ImageParameters(EventIOObject):
             (flags & 0xff) | (flags & 0x3f000000) >> 16
         )
         tel_image['cut_id'] = (flags & 0xff000) >> 12
-        tel_image['pixels'] = read_short(byte_stream)
-        tel_image['n_sat'] = read_short(byte_stream)
 
-        # from version 6 on
-        # pixels = read_varint(self)  # from version 6 on
-        # n_sat = read_varint(self)
+
+        if self.header.version >= 6:
+            tel_image['pixels'] = read_varint(byte_stream)
+            tel_image['n_sat'] = read_varint(byte_stream)
+        else:
+            tel_image['pixels'] = read_short(byte_stream)
+            tel_image['n_sat'] = read_short(byte_stream)
 
         if tel_image['n_sat'] > 0:
             tel_image['clip_amp'] = read_float(byte_stream)
@@ -1187,12 +1190,20 @@ class ImageParameters(EventIOObject):
             tel_image['kurtosis_err'] = read_float(byte_stream)
 
         if flags & 0x400:
-            # from v6 on this is crazy int
-            n_hot = read_short(byte_stream)
+            if self.header.version >= 6:
+                n_hot = read_varint(byte_stream)
+            else:
+                n_hot = read_short(byte_stream)
+
             tel_image['n_hot'] = n_hot
             tel_image['hot_amp'] = read_array(byte_stream, 'f4', n_hot)
-            # from v6 on this is array of crazy int
-            tel_image['hot_pixel'] = read_array(byte_stream, 'i2', n_hot)
+
+            if self.header.version >= 6:
+                data = read_remaining_with_check(byte_stream, self.header.content_size)
+                tel_image["hot_pixel"], bytes_read = varint_array(data, n_hot)
+                byte_stream = BytesIO(data[bytes_read:])
+            else:
+                tel_image['hot_pixel'] = read_array(byte_stream, 'i2', n_hot)
 
         if flags & 0x800:
             tel_image['tm_slope'] = read_float(byte_stream)
@@ -1610,7 +1621,7 @@ class LaserCalibration(TelescopeObject):
         byte_stream = BytesIO(self.read())
         version = self.header.version
 
-        n_pixels = read_short(byte_stream)
+        n_pixels = read_unsigned_short(byte_stream)
         n_gains = read_short(byte_stream)
         lascal_id = read_int(byte_stream)
         calib = read_array(
@@ -1724,15 +1735,17 @@ class PixelList(EventIOObject):
         # even in the prod3b version of Max N the objects
         # of type 2027 seem to be of version 0 only.
         # not sure if version 1 was ever produced.
-        assert_exact_version(self, supported_version=0)
+        assert_max_version(self, last_supported=1)
         self.seek(0)
         byte_stream = BytesIO(self.read())
 
-        pixels = read_short(byte_stream)
-        # in version 1 pixels is a crazy int
-
-        pixel_list = read_array(byte_stream, 'i2', pixels)
-        # in version 1 pixel_list is an array of crazy int
+        if self.header.version < 1:
+            pixels = read_short(byte_stream)
+            pixel_list = read_array(byte_stream, 'i2', pixels)
+        else:
+            pixels = read_varint(byte_stream)
+            data = read_remaining_with_check(byte_stream, self.header.content_size)
+            pixel_list, _ = varint_array(data, pixels)
 
         return {
             'code': self.code,
