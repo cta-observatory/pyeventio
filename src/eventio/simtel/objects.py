@@ -1753,9 +1753,6 @@ class PixelList(EventIOObject):
         )
 
     def parse(self):
-        # even in the prod3b version of Max N the objects
-        # of type 2027 seem to be of version 0 only.
-        # not sure if version 1 was ever produced.
         assert_max_version(self, last_supported=1)
         self.seek(0)
         byte_stream = BytesIO(self.read())
