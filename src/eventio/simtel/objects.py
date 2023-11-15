@@ -1326,9 +1326,9 @@ class PixelTiming(TelescopeObject):
         if list_type == 2:
             pixel_timing['pixel_list'].shape = (-1, 2)
 
-        # convert to int32 to have always have same, corret dtype
-        # version 1 uses int16, version 2 varint which is parsed as int64
-        # pixel ids are int32 in sim_telarray itself
+        # convert to int32 to have always have same, correct, dtype.
+        # version 1 uses int16, while version 2 uses varint, which is parsed as int64.
+        # pixel ids are int32 in sim_telarray itself.
         pixel_timing['pixel_list'] = pixel_timing['pixel_list'].astype(np.int32)
 
         pixel_timing['threshold'] = read_short(byte_stream)
