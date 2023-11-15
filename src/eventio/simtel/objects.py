@@ -1,4 +1,5 @@
 ''' Implementations of the simtel_array EventIO object types '''
+import os
 import sys
 import numpy as np
 from io import BytesIO
@@ -1285,12 +1286,16 @@ class PixelTiming(TelescopeObject):
     from ..var_int import simtel_pixel_timing_parse_list_type_2 as _parse_list_type_2
 
     def parse(self):
-        assert_exact_version(self, supported_version=1)
+        assert_version_in(self, supported_versions={1, 2})
         self.seek(0)
         byte_stream = BytesIO(self.read())
 
         pixel_timing = {}
-        pixel_timing['n_pixels'] = read_short(byte_stream)
+        if self.header.version <= 1:
+            pixel_timing['n_pixels'] = read_short(byte_stream)
+        else:
+            pixel_timing['n_pixels'] = read_varint(byte_stream)
+
         pixel_timing['n_gains'] = read_short(byte_stream)
         pixel_timing['before_peak'] = read_short(byte_stream)
         pixel_timing['after_peak'] = read_short(byte_stream)
@@ -1303,12 +1308,28 @@ class PixelTiming(TelescopeObject):
         list_type = read_short(byte_stream)
         assert list_type in (1, 2), "list_type has to be 1 or 2"
         pixel_timing['list_type'] = list_type
-        list_size = read_short(byte_stream)
-        pixel_timing['pixel_list'] = read_array(
-            byte_stream, dtype='i2', count=list_size * list_type
-        )
+
+        if self.header.version <= 1:
+            list_size = read_short(byte_stream)
+            pixel_timing['pixel_list'] = read_array(
+                byte_stream, dtype='i2', count=list_size * list_type
+            )
+        else:
+            list_size = read_varint(byte_stream)
+            pixel_timing['pixel_list'], bytes_read = varint_array(
+                byte_stream.getbuffer(),
+                list_size * list_type,
+                offset=byte_stream.tell(),
+            )
+            byte_stream.seek(bytes_read, os.SEEK_CUR)
+
         if list_type == 2:
             pixel_timing['pixel_list'].shape = (-1, 2)
+
+        # convert to int32 to have always have same, correct, dtype.
+        # version 1 uses int16, while version 2 uses varint, which is parsed as int64.
+        # pixel ids are int32 in sim_telarray itself.
+        pixel_timing['pixel_list'] = pixel_timing['pixel_list'].astype(np.int32)
 
         pixel_timing['threshold'] = read_short(byte_stream)
         pixel_timing['glob_only_selected'] = pixel_timing['threshold'] < 0
@@ -1732,9 +1753,6 @@ class PixelList(EventIOObject):
         )
 
     def parse(self):
-        # even in the prod3b version of Max N the objects
-        # of type 2027 seem to be of version 0 only.
-        # not sure if version 1 was ever produced.
         assert_max_version(self, last_supported=1)
         self.seek(0)
         byte_stream = BytesIO(self.read())

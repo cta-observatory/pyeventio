@@ -300,10 +300,9 @@ cdef uint64_t unsigned_varint_array_differential(
     return pos
 
 
-
 def simtel_pixel_timing_parse_list_type_2(
     const uint8_t[:] data,
-    const int16_t[:, :] pixel_list,
+    const int32_t[:, :] pixel_list,
     uint32_t n_gains,
     uint32_t n_pixels,
     uint32_t n_types,
@@ -311,7 +310,7 @@ def simtel_pixel_timing_parse_list_type_2(
     bint glob_only_selected,
     float granularity,
 ):
-    cdef int16_t start, stop
+    cdef int32_t start, stop
     cdef uint32_t list_index
     cdef uint32_t n_lists = pixel_list.shape[0]
     cdef uint32_t i_pix, i_type
@@ -443,7 +442,7 @@ def parse_1208(
 
 cpdef simtel_pixel_timing_parse_list_type_1(
     const uint8_t[:] data,
-    const int16_t[:] pixel_list,
+    const int32_t[:] pixel_list,
     uint32_t n_gains,
     uint32_t n_pixels,
     uint32_t n_types,
@@ -451,7 +450,8 @@ cpdef simtel_pixel_timing_parse_list_type_1(
     bint glob_only_selected,
     float granularity,
 ):
-    cdef uint32_t start, stop, list_index
+    cdef uint32_t start, stop
+    cdef uint32_t list_index
     cdef uint32_t pixel_list_length = pixel_list.shape[0]
     cdef uint32_t i, i_gain, i_type, i_pix
     cdef uint32_t length = 0

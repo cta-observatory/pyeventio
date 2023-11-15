@@ -8,7 +8,7 @@ from eventio.search_utils import (
     yield_n_subobjects,
     yield_subobjects,
 )
-from eventio.simtel.objects import ImageParameters, LaserCalibration, PixelList, TriggerInformation
+from eventio.simtel.objects import ImageParameters, LaserCalibration, PixelList, PixelTiming, TriggerInformation
 
 prod2_file = 'tests/resources/gamma_test.simtel.gz'
 camorgan_v2_file = 'tests/resources/test_camorganv2.simtel.gz'
@@ -849,7 +849,7 @@ def test_pixel_list_version_1():
     """Test for implementation of #265"""
 
     with EventIOFile("tests/resources/40k_pixels.simtel.zst") as f:
-        expected = [49, 34]
+        expected = [62, 23]
         for pixel_list, pixels in zip_longest(yield_subobjects(f, PixelList), expected):
             assert pixel_list.header.version == 1
             data = pixel_list.parse()
@@ -868,3 +868,13 @@ def test_image_parameters_version_6():
             assert data["hot_amp"].dtype == np.float32
             assert data["hot_pixel"].shape == (data["n_hot"], )
             assert data["hot_pixel"].dtype == np.int64
+
+
+def test_pixel_timing_v2():
+    """Test for implementation of #268"""
+
+    with EventIOFile("tests/resources/40k_pixels.simtel.zst") as f:
+        for pixel_timing in yield_subobjects(f, PixelTiming):
+            assert pixel_timing.header.version == 2
+            data = pixel_timing.parse()
+            assert data["n_pixels"] == 40000
