@@ -1,63 +1,44 @@
-from setuptools import setup
+from setuptools import setup, Extension
 import os
-
-# make sure users without cython can install our extensions
-try:
-    from Cython.Distutils.extension import Extension
-    from Cython.Distutils import build_ext as _build_ext
-    USE_CYTHON = True
-except ImportError:
-    from setuptools import Extension
-    from setuptools.command.build_ext import build_ext as _build_ext
-    USE_CYTHON = False
-
-print('using cython', USE_CYTHON)
+from Cython.Build import cythonize
+import numpy as np
 
 
-# make sure numpy is installed before we try to build
-# the extenion
-class build_ext(_build_ext):
-    def finalize_options(self):
-        super().finalize_options()
-        import numpy
-        self.include_dirs.append(numpy.get_include())
-
+kwargs = dict(
+    include_dirs=[np.get_include()],
+    define_macros=[
+        # fixes a warning when compiling
+        ("NPY_NO_DEPRECATED_API", "NPY_1_7_API_VERSION"),
+        # defines the oldest numpy we want to be compatible with
+        ("NPY_TARGET_VERSION", "NPY_1_21_API_VERSION"),
+    ]
+)
 
 # if we have cython, use the cython file if not the c file
-ext = '.pyx' if USE_CYTHON else '.c'
 extensions = [
-    Extension('eventio.header', sources=['src/eventio/header' + ext]),
-    Extension('eventio.var_int', sources=['src/eventio/var_int' + ext]),
+    Extension(
+        'eventio.header',
+        sources=['src/eventio/header.pyx'],
+        **kwargs,
+    ),
+    Extension(
+        'eventio.var_int',
+        sources=['src/eventio/var_int.pyx'],
+        **kwargs,
+    ),
     Extension(
         'eventio.simtel.parsing',
-        sources=['src/eventio/simtel/parsing' + ext]
+        sources=['src/eventio/simtel/parsing.pyx'],
+        **kwargs,
     ),
 ]
-cmdclass = {'build_ext': build_ext}
-
-# give a nice error message if people cloned the
-# repository and do not have cython installed
-if ext == '.c':
-    sources = []
-    for ext in extensions:
-        sources.extend(ext.sources)
-    if not all(os.path.isfile(s) for s in sources):
-        raise ImportError('You need `Cython` to build this project locally')
-
 
 setup(
     use_scm_version={"write_to": os.path.join("src", "eventio", "_version.py")},
-
-    ext_modules=extensions,
-    cmdclass=cmdclass,
-
-    package_data={
-        'eventio': ['*.c'],
-        'eventio.simtel': ['*.c'],
-    },
+    ext_modules=cythonize(extensions),
     python_requires='>=3.8',
     install_requires=[
-        'numpy',
+        'numpy >= 1.21',
         'corsikaio ~= 0.3.3',
         'zstandard > 0.11.1', # memory leak in zstandard 0.11.1
         'setuptools_scm',
