@@ -36,7 +36,7 @@ extensions = [
 setup(
     use_scm_version={"write_to": os.path.join("src", "eventio", "_version.py")},
     ext_modules=cythonize(extensions),
-    python_requires='>=3.8',
+    python_requires='>=3.9',
     install_requires=[
         'numpy >= 1.21',
         'corsikaio ~= 0.3.3',
