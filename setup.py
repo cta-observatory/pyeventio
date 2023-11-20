@@ -14,7 +14,6 @@ kwargs = dict(
     ]
 )
 
-# if we have cython, use the cython file if not the c file
 extensions = [
     Extension(
         'eventio.header',
