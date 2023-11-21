@@ -1,1 +1,2 @@
-prune eventio/_dev_version
+prune src/eventio/_dev_version
+prune tests

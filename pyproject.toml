@@ -1,3 +1,66 @@
 [build-system]
 requires = ["setuptools>=64", "Cython", "numpy>=1.25", 'setuptools_scm[toml]>=8']
 build-backend = "setuptools.build_meta"
+
+[project]
+name = "eventio"
+description = "Python read-only implementation of the EventIO file format"
+
+requires-python = '>=3.9'
+dependencies = [
+    'numpy >= 1.21',
+    'corsikaio ~= 0.3.3',
+    'zstandard > 0.11.1', # memory leak in zstandard 0.11.1
+    'setuptools_scm',
+]
+
+authors = [
+    {name = "Maximilian Linhoff", email = "maximilian.linhoff@tu-dortmund.de"},
+    {name = "Dominik Neise", email = "dominik.neise@cta-observatory.org"},
+    {name = "Orel Gueta", email = "orel.gueta@desy.de"},
+]
+license = {text = "MIT"}
+readme = "README.rst"
+
+classifiers = [
+	"Development Status :: 5 - Production/Stable",
+	"Intended Audience :: Science/Research",
+	"License :: OSI Approved :: MIT License",
+	"Natural Language :: English",
+	"Operating System :: OS Independent",
+	"Programming Language :: Python",
+	"Programming Language :: Python :: 3",
+	"Programming Language :: Python :: 3.9",
+	"Programming Language :: Python :: 3.10",
+	"Programming Language :: Python :: 3.11",
+	"Programming Language :: Python :: 3.12",
+	"Programming Language :: Python :: 3 :: Only",
+	"Topic :: Scientific/Engineering :: Astronomy",
+	"Topic :: Scientific/Engineering :: Physics",
+]
+
+dynamic = ["version"]
+
+[project.urls]
+repository = "https://github.com/cta-observatory/pyeventio"
+issues = "https://github.com/cta-observatory/pyeventio/issues"
+conda-forge = "https://anaconda.org/conda-forge/eventio"
+
+[project.scripts]
+eventio_print_structure = 'eventio.scripts.print_structure:main'
+eventio_print_simtel_history = 'eventio.scripts.print_simtel_history:main'
+eventio_print_simtel_metaparams = 'eventio.scripts.print_simtel_metaparams:main'
+eventio_plot_histograms = 'eventio.scripts.plot_hists:main'
+eventio_print_object_information = 'eventio.scripts.print_object_information:main'
+eventio_cut_file = 'eventio.scripts.cut_eventio_file:main'
+
+[tool.setuptools.packages.find]
+where = ["src"]
+exclude = ["eventio._dev_version"]
+
+[tool.setuptools_scm]
+version_file = "src/eventio/_version.py"
+
+
+[tool.pytest]
+addopts = "-v --durations=10"
