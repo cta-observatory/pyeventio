@@ -6,6 +6,7 @@ import subprocess as sp
 import json
 import tempfile
 from pathlib import Path
+import json
 
 prod2_path = 'tests/resources/gamma_test.simtel.gz'
 prod4b_astri_file = 'tests/resources/gamma_20deg_0deg_run103___cta-prod4-sst-astri_desert-2150m-Paranal-sst-astri.simtel.gz'
@@ -17,7 +18,8 @@ def run_command(*args):
     result = sp.run(args, stdout=sp.PIPE, stderr=sp.PIPE, encoding='utf-8')
 
     if result.returncode != 0:
-        raise IOError(f'Running {args} failed, output: \n {result.stdout}')
+        msg = f'Running {args} failed, stderr:\n{result.stderr}\n\nstdout:\n{result.stdout}'
+        raise IOError(msg)
 
     return result
 
@@ -42,6 +44,17 @@ CAMERA_CONFIG_VARIANT = analog-majority, with nsb_autoscale_airmass
 CAMERA_CONFIG_VERSION = 2021-01-06
 '''
 
+expected_diff = '''
+ OPTICS_CONFIG_NAME = LST
+-OPTICS_CONFIG_VARIANT = LST-1 prototype
++OPTICS_CONFIG_VARIANT = 
+ OPTICS_CONFIG_VERSION = 2020-04-29
+ CAMERA_CONFIG_NAME = LST
+-CAMERA_CONFIG_VARIANT = LST-1 prototype, with nsb_autoscale_airmass
++CAMERA_CONFIG_VARIANT = LST camera, with nsb_autoscale_airmass
+ CAMERA_CONFIG_VERSION = 2020-11-24
+'''
+
 
 def test_print_simtel_metaparams():
     result = run_command(
@@ -54,6 +67,28 @@ def test_print_simtel_metaparams():
         assert f"METAPARAMs for telescope={i}" in result.stdout
 
     assert expected_metaparams in result.stdout
+
+    result = run_command(
+        "eventio_print_simtel_metaparams",
+        "tests/resources/history_meta_75.simtel.zst",
+        "--tel-diff",
+        "1", 
+        "2",
+    )
+    assert expected_diff in result.stdout
+
+    result = run_command(
+        "eventio_print_simtel_metaparams",
+        "tests/resources/history_meta_75.simtel.zst",
+        "--json",
+    )
+    data = json.loads(result.stdout)
+    assert "global" in data
+    assert "telescopes" in data
+    for tel_id in range(1, 20):
+        # keys in json are always str
+        assert str(tel_id) in data["telescopes"]
+        assert "OPTICS_CONFIG_NAME" in data["telescopes"][str(tel_id)]
 
 
 def test_print_object_information():
