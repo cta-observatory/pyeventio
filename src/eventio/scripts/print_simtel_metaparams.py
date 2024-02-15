@@ -9,8 +9,10 @@ from difflib import unified_diff
 parser = ArgumentParser(formatter_class=ArgumentDefaultsHelpFormatter)
 parser.add_argument('inputfile')
 parser.add_argument('--encoding', default='utf8', help='Encoding to use for decoding METAPARAMs')
-parser.add_argument('--tel-diff', nargs=2, type=int)
-parser.add_argument("--json", action="store_true", help="output as json")
+
+group = parser.add_mutually_exclusive_group()
+group.add_argument('--tel-diff', nargs=2, type=int)
+group.add_argument("--json", action="store_true", help="output as json")
 
 
 def print_metaparams():
