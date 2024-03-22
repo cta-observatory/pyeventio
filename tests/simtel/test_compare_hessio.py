@@ -1,5 +1,4 @@
 import pytest
-from pkg_resources import resource_filename
 import numpy as np
 pyhessio = pytest.importorskip("pyhessio")
 
