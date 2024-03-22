@@ -122,6 +122,11 @@ cpdef ObjectHeader parse_header_bytes(const uint8_t[:] header_bytes, bint toplev
     cdef bint only_subobjects
     cdef uint64_t length
 
+    if len(header_bytes) != OBJECT_HEADER_SIZE:
+        # for backwards compatibility, we raise the same error as before.
+        # more appropriate for this free function would be something like
+        # raise ValueError("header_bytes size must be 12")
+        raise EOFError('File seems to be truncated')
 
     type_int = unpack_uint32(header_bytes[0:4])
     type_, version, user, extended = parse_type_field(type_int)

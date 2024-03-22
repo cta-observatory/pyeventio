@@ -62,6 +62,7 @@ class EventIOFile:
         self.read_process = None
         self.zstd = False
         self.next = None
+        self.peek_error = None
 
         if not is_eventio(path):
             raise ValueError('File {} is not an eventio file'.format(path))
@@ -125,7 +126,12 @@ class EventIOFile:
 
     def peek(self):
         if self.next is None:
-            self.next = next(self)
+            try:
+                self.next = next(self)
+            except (StopIteration, EOFError, IOError) as e:
+                self.peek_error = e
+                self.next = None
+
         return self.next
 
     def seek(self, position, whence=0):
@@ -157,7 +163,7 @@ def check_size_or_raise(data, expected_length, zero_ok=True):
         else:
             raise EOFError('File seems to be truncated')
 
-    if length < expected_length:
+    elif length < expected_length:
         raise EOFError('File seems to be truncated')
 
 
@@ -182,12 +188,6 @@ def read_header(byte_stream, offset, toplevel=False):
     '''
 
     header_bytes = byte_stream.read(constants.OBJECT_HEADER_SIZE)
-    check_size_or_raise(
-        header_bytes,
-        constants.OBJECT_HEADER_SIZE,
-        zero_ok=False,
-    )
-
     header = parse_header_bytes(header_bytes, toplevel=toplevel)
 
     if header.extended:
