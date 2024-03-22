@@ -62,7 +62,7 @@ def test_show_event_is_not_empty_and_has_some_members_for_sure(path):
             'profiles'
         }
 
-        assert event.keys() == {
+        required = {
             'type',
             'event_id',
             'mc_shower',
@@ -71,13 +71,11 @@ def test_show_event_is_not_empty_and_has_some_members_for_sure(path):
             'trigger_information',
             'tracking_positions',
             'photoelectron_sums',
-            'photoelectrons',
-            'photons',
-            'emitter',
             'camera_monitorings',
             'laser_calibrations',
             'pixel_monitorings',
         }
+        assert required.issubset(event.keys())
 
         telescope_events = event['telescope_events']
 
@@ -147,7 +145,7 @@ def test_iterate_mc_events():
             assert set(event.keys()).issuperset({
                 'event_id',
                 'mc_shower', 'mc_event',
-                'photons', 'photoelectrons', 'emitter'
+                'photons', 'photoelectrons',
             })
 
 
@@ -216,9 +214,16 @@ def test_new_prod4():
 def test_correct_event_ids_iter_mc_events():
 
     with SimTelFile('tests/resources/lst_with_photons.simtel.zst') as f:
+        n_use = f.mc_run_headers[-1]["n_use"]
+        n_showers = f.mc_run_headers[-1]["n_showers"]
+        i = 0
         for e in f:
-            assert f.current_mc_event_id == f.current_telescope_data_event_id
-            assert f.current_mc_shower_id == f.current_mc_event_id // 100
+            i += 1
+            expected = i // n_use * 100 + i % n_use
+            assert e["event_id"] == expected
+            assert f.current_mc_shower_id == e["event_id"] // 100
+
+        assert i == n_showers * n_use
 
 
 def test_photons():
@@ -232,17 +237,16 @@ def test_photons():
         assert photons.dtype == Photons.long_dtype
 
         # no emitter info in file
-        print(e['emitter'])
-        assert len(e['emitter']) == 0
+        assert 'emitter' not in e
 
 
 def test_missing_photons():
     with SimTelFile('tests/resources/gamma_test.simtel.gz') as f:
         e = next(iter(f))
 
-        assert e['photons'] == {}
-        assert e['photoelectrons'] == {}
-        assert e['emitter'] == {}
+        assert 'photons' not in e
+        assert 'photoelectrons' not in e
+        assert 'emitter' not in e
 
 
 def test_calibration_photoelectrons():
@@ -252,6 +256,7 @@ def test_calibration_photoelectrons():
             assert 0 in e['photoelectrons']
             true_image = e['photoelectrons'][0]['photoelectrons']
             assert np.isclose(np.mean(true_image), expected_pe, rtol=0.05)
+
 
 def test_history_meta():
     with SimTelFile(history_meta_path) as f:

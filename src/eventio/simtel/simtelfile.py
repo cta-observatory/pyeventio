@@ -8,6 +8,7 @@ from copy import copy
 from collections import defaultdict
 import warnings
 import logging
+from typing import Dict, Any
 
 from ..base import EventIOFile
 from ..exceptions import check_type
@@ -139,19 +140,13 @@ class SimTelFile:
         self.pixel_monitorings = defaultdict(dict)
         self.camera_monitorings = defaultdict(dict)
         self.laser_calibrations = defaultdict(dict)
+
+        # wee need to keep the mc_shower separate from the event,
+        # as it is valid for more than one (CORSIKA re-use)
         self.current_mc_shower = None
         self.current_mc_shower_id = None
-        self.current_mc_event = None
-        self.current_mc_event_id = None
-        self.current_array_event_id = None
-        self.current_telescope_data_event_id = None
-        self.current_photoelectron_sum = None
-        self.current_photoelectron_sum_event_id = None
-        self.current_photoelectrons = {}
-        self.current_photons = {}
-        self.current_emitter = {}
-        self.current_array_event = {}
-        self.current_calibration_pe = {}
+        self.current_event_id = None
+        self.current_event = {"type": "data"}
 
         # read the header:
         # assumption: the header is done when
@@ -164,7 +159,7 @@ class SimTelFile:
 
             check = [
                 self.current_mc_shower,
-                self.current_array_event,
+                self.current_event_id,
                 self.laser_calibrations,
                 self.camera_monitorings,
             ]
@@ -238,30 +233,25 @@ class SimTelFile:
         # this should minimize the number of if statements evaluated
 
         if isinstance(o, MCEvent):
-            self.current_mc_event = o.parse()
-            self.current_mc_event_id = o.header.id
+            self.current_event["event_id"] = o.header.id
+            self.current_event["mc_event"] = o.parse()
 
         elif isinstance(o, MCShower):
             self.current_mc_shower = o.parse()
             self.current_mc_shower_id = o.header.id
 
         elif isinstance(o, ArrayEvent):
-            self.current_array_event_id = o.header.id
-            self.current_array_event = parse_array_event(
-                o,
-                self.allowed_telescopes
+            self.current_event_id = o.header.id
+            self.current_event["event_id"] = o.header.id
+            self.current_event.update(
+                parse_array_event(o, self.allowed_telescopes)
             )
 
         elif isinstance(o, iact.TelescopeData):
-            event_id, photons, emitter, photoelectrons = parse_telescope_data(o)
-            self.current_telescope_data_event_id = event_id
-            self.current_photons = photons
-            self.current_emitter = emitter
-            self.current_photoelectrons = photoelectrons
+            self.current_event.update(parse_telescope_data(o))
 
         elif isinstance(o, MCPhotoelectronSum):
-            self.current_photoelectron_sum_event_id = o.header.id
-            self.current_photoelectron_sum = o.parse()
+            self.current_event["photoelectron_sums"] = o.parse()
 
         elif isinstance(o, CameraMonitoring):
             self.camera_monitorings[o.telescope_id].update(o.parse())
@@ -287,12 +277,16 @@ class SimTelFile:
             self.corsika_inputcards.append(o.parse())
 
         elif isinstance(o, CalibrationEvent):
-            self.current_array_event = parse_array_event(
-                next(o),
-                self.allowed_telescopes,
+            array_event = next(o)
+            # make event_id negative for calibration events to not overlap with
+            # later air shower events
+            self.current_event["event_id"] = -array_event.header.id
+            self.current_event_id = self.current_event["event_id"]
+            self.current_event.update(
+                parse_array_event(array_event, self.allowed_telescopes)
             )
-            self.current_array_event['type'] = 'calibration'
-            self.current_array_event['calibration_type'] = o.type
+            self.current_event['type'] = 'calibration'
+            self.current_event['calibration_type'] = o.type
 
         elif isinstance(o, CalibrationPhotoelectrons):
             telescope_data = next(o)
@@ -303,7 +297,7 @@ class SimTelFile:
                 )
                 return
 
-            self.current_calibration_pe = {}
+            self.current_event["photoelectrons"] = {}
             for photoelectrons in telescope_data:
                 if not isinstance(photoelectrons, iact.PhotoElectrons):
                     warnings.warn(
@@ -312,7 +306,7 @@ class SimTelFile:
                     )
 
                 tel_id = photoelectrons.telescope_id
-                self.current_calibration_pe[tel_id] = photoelectrons.parse()
+                self.current_event["photoelectrons"][tel_id] = photoelectrons.parse()
 
         elif isinstance(o, History):
             for sub in o:
@@ -339,20 +333,14 @@ class SimTelFile:
         '''check if all necessary info for an event was found,
         then make an event and invalidate old data
         '''
+        event = self.current_event
+        self.current_event: Dict[str, Any] = {"type": "data"}
 
-        # data by default, might be overriden by calibration
-        event = {'type': 'data'}
+        if self.current_mc_shower is not None and event["type"] == "data":
+            event["mc_shower"] = self.current_mc_shower
 
-        if self.current_array_event:
-            event.update(self.current_array_event)
-            if self.current_array_event_id is not None:
-                event["event_id"] = self.current_array_event_id
-            self.current_array_event = {}
-            self.current_array_event_id = None
-
-            if 'telescope_events' not in event:
-                return event
-
+        # fill monitoring info if we have telescope events
+        if 'telescope_events' in event:
             tel_ids = event["telescope_events"].keys()
             event['camera_monitorings'] = {
                 telescope_id: copy(self.camera_monitorings[telescope_id])
@@ -367,26 +355,6 @@ class SimTelFile:
                 telescope_id: copy(self.pixel_monitorings[telescope_id])
                 for telescope_id in tel_ids
             }
-
-            if event['type'] == 'calibration':
-                # no event_id for calibration events
-                event['event_id'] = -1
-                event["photoelectrons"] = self.current_calibration_pe
-
-                # no further info for calib events
-                return event
-
-        # update with mc data if available
-        if self.current_mc_shower:
-            event.update({
-                'event_id': self.current_mc_event_id,
-                'mc_shower': self.current_mc_shower,
-                'mc_event': self.current_mc_event,
-                'photons': self.current_photons,
-                'emitter': self.current_emitter,
-                'photoelectrons': self.current_photoelectrons,
-                'photoelectron_sums': self.current_photoelectron_sum,
-            })
 
         return event
 
@@ -439,7 +407,10 @@ def parse_array_event(array_event, allowed_telescopes=None):
         # require first element to be a TriggerInformation
         if i == 0:
             check_type(o, TriggerInformation)
-            event_id = o.header.id
+            # extracted calibration events seem to have a valid event id in the array event
+            # but not in the trigger
+            if o.header.id != 0:
+                event_id = o.header.id
             trigger_information = o.parse()
             telescopes = set(trigger_information['telescopes_with_data'])
 
@@ -474,19 +445,16 @@ def parse_telescope_data(telescope_data):
     ''' Parse the TelescopeData block with Cherenkov Photon information'''
     check_type(telescope_data, iact.TelescopeData)
 
-    photons = {}
-    emitter = {}
-    photo_electrons = {}
+    data = defaultdict(dict)
     for o in telescope_data:
         if isinstance(o, iact.PhotoElectrons):
-            photo_electrons[o.telescope_id] = o.parse()
+            data["photoelectrons"][o.telescope_id] = o.parse()
         elif isinstance(o, iact.Photons):
             p, e = o.parse()
-            photons[o.telescope_id] = p
+            data["photons"][o.telescope_id] = p
             if e is not None:
-                emitter[o.telescope_id] = e
-
-    return telescope_data.header.id, photons, emitter, photo_electrons
+                data["emitter"][o.telescope_id] = e
+    return data
 
 
 def parse_telescope_event(telescope_event):
