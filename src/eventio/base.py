@@ -48,7 +48,7 @@ class PipeWrapper:
         return self.pos
 
     def close(self):
-        return self.pipe.close()
+        pass
 
     def tell(self):
         return self.pos
@@ -144,9 +144,16 @@ class EventIOFile:
         self.close()
 
     def close(self):
-        self._filehandle.close()
         if self.read_process is not None:
             self.read_process.terminate()
+            self.read_process.stdout.close()
+            self.read_process.stderr.close()
+            self.read_process.wait(timeout=1)
+
+        self._filehandle.close()
+
+    def __del__(self):
+        self.close()
 
 
 def check_size_or_raise(data, expected_length, zero_ok=True):

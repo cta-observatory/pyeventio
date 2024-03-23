@@ -61,6 +61,15 @@ exclude = ["eventio._dev_version"]
 [tool.setuptools_scm]
 version_file = "src/eventio/_version.py"
 
-
-[tool.pytest]
-addopts = "-v --durations=10"
+[tool.pytest.ini_options]
+minversion = "7"
+testpaths = ["tests"]
+log_cli_level = "INFO"
+xfail_strict = true
+# print summary of failed tests, force errors if settings are misspelled
+addopts = ["-ra", "--strict-config", "--strict-markers", "-v", "--durations=10"]
+filterwarnings = [
+    "error",
+    "ignore:File seems to be truncated:UserWarning",
+    "ignore:Version unknown:UserWarning",  # pycorsikaio
+]

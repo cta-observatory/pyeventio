@@ -58,8 +58,7 @@ def test_types_gzip():
 def test_types_zcat():
     from eventio.base import PipeWrapper
     testfile = 'tests/resources/one_shower.dat.gz'
-    f = eventio.EventIOFile(testfile)
-
-    assert isinstance(f._filehandle, PipeWrapper)
-    types = [o.header.type for o in f]
-    assert types == [1200, 1212, 1201, 1202, 1203, 1204, 1209, 1210]
+    with eventio.EventIOFile(testfile) as f:
+        assert isinstance(f._filehandle, PipeWrapper)
+        types = [o.header.type for o in f]
+        assert types == [1200, 1212, 1201, 1202, 1203, 1204, 1209, 1210]
