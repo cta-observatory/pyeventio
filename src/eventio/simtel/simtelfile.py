@@ -16,6 +16,8 @@ from .objects import (
     ADCSamples,
     ADCSums,
     ArrayEvent,
+    AuxiliaryAnalogTraces,
+    AuxiliaryDigitalTraces,
     CalibrationEvent,
     CameraMonitoring,
     CameraOrganization,
@@ -494,5 +496,9 @@ def parse_telescope_event(telescope_event):
 
         elif isinstance(o, PixelTriggerTimes):
             event['pixel_trigger_times'] = o.parse()
+        elif isinstance(o, (AuxiliaryAnalogTraces, AuxiliaryDigitalTraces)):
+            if "aux_traces" not in event:
+                event["aux_traces"] = {}
+            event["aux_traces"][o.header.id] = o.parse()
 
     return event

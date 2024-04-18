@@ -275,3 +275,17 @@ def test_type_2033():
                     'flags', 'n_pixels', 'n_gains', 'nsb_rate', 'qe_rel', 'gain_rel',
                     'hv_rel', 'current', 'fadc_amp_hg', 'disabled',
                 }
+
+
+def test_type_2029():
+    with SimTelFile("./tests/resources/aux_traces_2029.simtel.zst") as f:
+        e = next(iter(f))
+        assert "aux_traces" in e["telescope_events"][1]
+        assert e["telescope_events"][1]["aux_traces"].keys() == {1}
+
+
+def test_type_2030():
+    with SimTelFile("./tests/resources/aux_traces_2030.simtel.zst") as f:
+        e = next(iter(f))
+        assert "aux_traces" in e["telescope_events"][1]
+        assert e["telescope_events"][1]["aux_traces"].keys() == {1, 2}
