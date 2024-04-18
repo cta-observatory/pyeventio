@@ -3,6 +3,7 @@ import gzip
 import logging
 import subprocess as sp
 import zstandard as zstd
+from typing import Any
 
 from .file_types import is_gzip, is_eventio, is_zstd
 from .header import parse_header_bytes, get_bits_from_word
@@ -338,7 +339,7 @@ class EventIOObject:
     def __str__(self):
         return '{}[{}]'.format(self.__class__.__name__, self.header.type)
 
-    def parse(self):
+    def parse(self) -> Any:
         if self.only_subobjects:
             raise ValueError('This object only contains subobjects')
 

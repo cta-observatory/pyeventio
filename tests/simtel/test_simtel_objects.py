@@ -8,7 +8,7 @@ from eventio.search_utils import (
     yield_n_subobjects,
     yield_subobjects,
 )
-from eventio.simtel.objects import ImageParameters, LaserCalibration, PixelList, PixelTiming, TriggerInformation
+from eventio.simtel.objects import AuxiliaryAnalogTraces, AuxiliaryDigitalTraces, ImageParameters, LaserCalibration, PixelList, PixelTiming, TriggerInformation
 
 prod2_file = 'tests/resources/gamma_test.simtel.gz'
 camorgan_v2_file = 'tests/resources/test_camorganv2.simtel.gz'
@@ -749,14 +749,23 @@ def test_2028():
         assert n_events > 0
 
 
-@pytest.mark.xfail
 def test_2029():
-    assert False
+    with EventIOFile("./tests/resources/aux_traces_2029.simtel.zst") as f:
+        o = next(yield_subobjects(f, AuxiliaryDigitalTraces))
+        assert o.header.type == 2029
+        data = o.parse()
+        assert data["tel_id"] == 1
+        assert data["trace_data"].shape == (588, 48)
 
 
-@pytest.mark.xfail
 def test_2030():
-    assert False
+    with EventIOFile("./tests/resources/aux_traces_2030.simtel.zst") as f:
+        o = next(yield_subobjects(f, AuxiliaryAnalogTraces))
+        assert o.header.type == 2030
+        data = o.parse()
+        assert data["tel_id"] == 1
+        assert data["trace_data"].dtype == np.float32
+        assert data["trace_data"].shape == (1855, 300)
 
 
 @pytest.mark.xfail
