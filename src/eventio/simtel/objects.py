@@ -11,6 +11,7 @@ from ..tools import (
     read_float,
     read_string,
     read_from,
+    read_unsigned_int,
     read_unsigned_short,
     read_var_string,
     read_varint,
@@ -1789,9 +1790,28 @@ class CalibrationEvent(EventIOObject):
 class AuxiliaryDigitalTraces(EventIOObject):
     eventio_type = 2029
 
+    def parse(self):
+        data = {}
+        data["tel_id"] = read_int(self)
+        data["time_scale"] = read_float(self)
+        n_traces = read_unsigned_varint(self)
+        n_samples = read_unsigned_varint(self)
+        array_data = self.read()
+        data["trace_data"], _ = unsigned_varint_arrays_differential(array_data, n_traces, n_samples)
+        return data
+
 
 class AuxiliaryAnalogTraces(EventIOObject):
     eventio_type = 2030
+
+    def parse(self):
+        data = {}
+        data["tel_id"] = read_int(self)
+        data["time_scale"] = read_float(self)
+        n_traces = read_unsigned_varint(self)
+        n_samples = read_unsigned_varint(self)
+        data["trace_data"] = read_array(self, np.float32, n_traces * n_samples).reshape(n_traces, n_samples)
+        return data
 
 
 class FSPhot(EventIOObject):

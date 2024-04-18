@@ -41,6 +41,14 @@ classifiers = [
 
 dynamic = ["version"]
 
+[project.optional-dependencies]
+test = [
+    "pytest",
+]
+all = [
+    "eventio[test]",
+]
+
 [project.urls]
 repository = "https://github.com/cta-observatory/pyeventio"
 issues = "https://github.com/cta-observatory/pyeventio/issues"
