@@ -1,3 +1,4 @@
+import pytest
 from pytest import importorskip
 from eventio.simtel import SimTelFile
 import numpy as np
@@ -19,102 +20,100 @@ pixel_monitoring_path = 'tests/resources/type2033.simtel.zst'
 test_paths = [prod2_path, prod3_path, prod4_path]
 
 
-def test_can_open():
-    for path in test_paths:
-        assert SimTelFile(path)
+@pytest.mark.parametrize("path", test_paths)
+def test_can_open(path):
+    assert SimTelFile(path)
 
 
-def test_at_least_one_event_found():
-    for path in test_paths:
-        one_found = False
-        for event in SimTelFile(path):
-            one_found = True
-            break
-        assert one_found, path
+@pytest.mark.parametrize("path", test_paths)
+def test_at_least_one_event_found(path):
+    one_found = False
+    for event in SimTelFile(path):
+        one_found = True
+        break
+    assert one_found, path
 
 
-def test_show_we_get_a_dict_with_hower_and_event():
-    for path in test_paths:
-        for event in SimTelFile(path):
-            assert 'mc_shower' in event
-            assert 'telescope_events' in event
-            assert 'mc_event' in event
-            break
+@pytest.mark.parametrize("path", test_paths)
+def test_show_we_get_a_dict_with_hower_and_event(path):
+    for event in SimTelFile(path):
+        assert 'mc_shower' in event
+        assert 'telescope_events' in event
+        assert 'mc_event' in event
+        break
 
 
-def test_show_event_is_not_empty_and_has_some_members_for_sure():
-    for path in test_paths:
-        for event in SimTelFile(path):
-            assert event['mc_shower'].keys() == {
-                'shower',
-                'primary_id',
-                'energy',
-                'azimuth',
-                'altitude',
-                'depth_start',
-                'h_first_int',
-                'xmax',
-                'hmax',
-                'emax',
-                'cmax',
-                'n_profiles',
-                'profiles'
+@pytest.mark.parametrize("path", test_paths)
+def test_show_event_is_not_empty_and_has_some_members_for_sure(path):
+    for event in SimTelFile(path):
+        assert event['mc_shower'].keys() == {
+            'shower',
+            'primary_id',
+            'energy',
+            'azimuth',
+            'altitude',
+            'depth_start',
+            'h_first_int',
+            'xmax',
+            'hmax',
+            'emax',
+            'cmax',
+            'n_profiles',
+            'profiles'
+        }
+
+        required = {
+            'type',
+            'event_id',
+            'mc_shower',
+            'mc_event',
+            'telescope_events',
+            'trigger_information',
+            'tracking_positions',
+            'photoelectron_sums',
+            'camera_monitorings',
+            'laser_calibrations',
+            'pixel_monitorings',
+        }
+        assert required.issubset(event.keys())
+
+        telescope_events = event['telescope_events']
+
+        assert telescope_events  # never empty!
+
+        for telescope_event in telescope_events.values():
+            expected_keys = {
+                'header',
+                'pixel_timing',
+                'pixel_lists',
+            }
+            allowed_keys = {
+                'image_parameters',
+                'adc_sums',
+                'adc_samples'
             }
 
-            assert event.keys() == {
-                'type',
-                'event_id',
-                'mc_shower',
-                'mc_event',
-                'telescope_events',
-                'trigger_information',
-                'tracking_positions',
-                'photoelectron_sums',
-                'photoelectrons',
-                'photons',
-                'emitter',
-                'camera_monitorings',
-                'laser_calibrations',
-                'pixel_monitorings',
-            }
+            found_keys = set(telescope_event.keys())
+            assert expected_keys.issubset(found_keys)
 
-            telescope_events = event['telescope_events']
+            extra_keys = found_keys.difference(expected_keys)
+            assert extra_keys.issubset(allowed_keys)
+            assert 'adc_sums' in found_keys or 'adc_samples' in found_keys
 
-            assert telescope_events  # never empty!
-
-            for telescope_event in telescope_events.values():
-                expected_keys = {
-                    'header',
-                    'pixel_timing',
-                    'pixel_lists',
-                }
-                allowed_keys = {
-                    'image_parameters',
-                    'adc_sums',
-                    'adc_samples'
-                }
-
-                found_keys = set(telescope_event.keys())
-                assert expected_keys.issubset(found_keys)
-
-                extra_keys = found_keys.difference(expected_keys)
-                assert extra_keys.issubset(allowed_keys)
-                assert 'adc_sums' in found_keys or 'adc_samples' in found_keys
-
-            break
+        break
 
 
 def test_iterate_complete_file():
     expected_counter_values = {
+        prod4_path: 30,
         prod2_path: 8,
         prod3_path: 5,
-        prod4_path: 30,
     }
     for path, expected in expected_counter_values.items():
         try:
             for counter, event in enumerate(SimTelFile(path)):
                 pass
-        except (EOFError, IndexError):  # truncated files might raise these...
+        except EOFError:  # truncated files might raise these...
             pass
         assert counter == expected
 
@@ -132,21 +131,22 @@ def test_iterate_complete_file_zst():
 
 def test_iterate_mc_events():
     expected = 200
-    with SimTelFile(prod4_path) as f:
-        for counter, event in enumerate(f.iter_mc_events(), start=1):
+    with SimTelFile(prod4_path, skip_non_triggered=False) as f:
+        for counter, event in enumerate(f, start=1):
             assert 'event_id' in event
             assert 'mc_shower' in event
             assert 'mc_event' in event
 
     assert counter == expected
 
-    with SimTelFile('tests/resources/lst_with_photons.simtel.zst') as f:
-        for counter, event in enumerate(f.iter_mc_events(), start=1):
-            assert event.keys() == {
+    path = 'tests/resources/lst_with_photons.simtel.zst'
+    with SimTelFile(path, skip_non_triggered=False) as f:
+        for counter, event in enumerate(f, start=1):
+            assert set(event.keys()).issuperset({
                 'event_id',
                 'mc_shower', 'mc_event',
-                'photons', 'photoelectrons', 'emitter'
-            }
+                'photons', 'photoelectrons',
+            })
 
 
 def test_allowed_tels():
@@ -214,9 +214,16 @@ def test_new_prod4():
 def test_correct_event_ids_iter_mc_events():
 
     with SimTelFile('tests/resources/lst_with_photons.simtel.zst') as f:
+        n_use = f.mc_run_headers[-1]["n_use"]
+        n_showers = f.mc_run_headers[-1]["n_showers"]
+        i = 0
         for e in f:
-            assert f.current_mc_event_id == f.current_telescope_data_event_id
-            assert f.current_mc_shower_id == f.current_mc_event_id // 100
+            i += 1
+            expected = i // n_use * 100 + i % n_use
+            assert e["event_id"] == expected
+            assert f.current_mc_shower_id == e["event_id"] // 100
+
+        assert i == n_showers * n_use
 
 
 def test_photons():
@@ -230,17 +237,16 @@ def test_photons():
         assert photons.dtype == Photons.long_dtype
 
         # no emitter info in file
-        print(e['emitter'])
-        assert len(e['emitter']) == 0
+        assert 'emitter' not in e
 
 
 def test_missing_photons():
     with SimTelFile('tests/resources/gamma_test.simtel.gz') as f:
         e = next(iter(f))
 
-        assert e['photons'] == {}
-        assert e['photoelectrons'] == {}
-        assert e['emitter'] == {}
+        assert 'photons' not in e
+        assert 'photoelectrons' not in e
+        assert 'emitter' not in e
 
 
 def test_calibration_photoelectrons():
@@ -250,6 +256,7 @@ def test_calibration_photoelectrons():
             assert 0 in e['photoelectrons']
             true_image = e['photoelectrons'][0]['photoelectrons']
             assert np.isclose(np.mean(true_image), expected_pe, rtol=0.05)
+
 
 def test_history_meta():
     with SimTelFile(history_meta_path) as f:
@@ -275,3 +282,13 @@ def test_type_2033():
                     'flags', 'n_pixels', 'n_gains', 'nsb_rate', 'qe_rel', 'gain_rel',
                     'hv_rel', 'current', 'fadc_amp_hg', 'disabled',
                 }
+
+
+def test_extracted_pedestals():
+    with SimTelFile("tests/resources/extracted_pedestals.simtel.zst") as f:
+        expected_event_id = 0
+        for e in f:
+            expected_event_id += 1
+            assert e["event_id"] == expected_event_id
+
+        assert expected_event_id == 5
