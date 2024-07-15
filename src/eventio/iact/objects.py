@@ -92,7 +92,7 @@ class TelescopeDefinition(EventIOObject):
             dtype=dtype,
             count=self.n_telescopes * dtype.itemsize,
         )
-        tel_pos = np.core.records.fromarrays(
+        tel_pos = np.rec.fromarrays(
             block.reshape(4, self.n_telescopes),
             names=['x', 'y', 'z', 'r'],
         )
@@ -148,7 +148,7 @@ class ArrayOffsets(EventIOObject):
         # the columns are stored one after another
         offsets = read_array(self, count=n_columns * n_arrays, dtype=np.float32)
         offsets = offsets.reshape((n_columns, n_arrays))
-        offsets = np.core.records.fromarrays(offsets, names=columns)
+        offsets = np.rec.fromarrays(offsets, names=columns)
 
         return time_offset, offsets
 
