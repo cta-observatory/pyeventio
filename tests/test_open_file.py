@@ -1,6 +1,7 @@
-import eventio
 from os import path
 from itertools import zip_longest
+import eventio
+import pytest
 
 
 def test_is_install_folder_a_directory():
@@ -18,6 +19,13 @@ def test_file_is_iterable():
     f = eventio.EventIOFile(testfile)
     for event in f:
         pass
+
+def test_empty(tmp_path):
+    path = tmp_path / "empty.dat"
+    path.write_bytes(b"")
+
+    with pytest.raises(ValueError, match="^File .* is not an eventio file$"):
+        eventio.EventIOFile(path)
 
 
 def test_file_has_objects_at_expected_position():
