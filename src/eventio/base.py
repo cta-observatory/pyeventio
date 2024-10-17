@@ -63,6 +63,7 @@ class EventIOFile:
         self.read_process = None
         self.zstd = False
         self.next = None
+        self._filehandle = None
 
         if not is_eventio(path):
             raise ValueError('File {} is not an eventio file'.format(path))
@@ -151,7 +152,8 @@ class EventIOFile:
             self.read_process.stderr.close()
             self.read_process.wait(timeout=1)
 
-        self._filehandle.close()
+        if self._filehandle is not None:
+            self._filehandle.close()
 
     def __del__(self):
         self.close()
