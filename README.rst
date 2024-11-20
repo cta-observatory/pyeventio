@@ -79,7 +79,7 @@ event:
 
     with eventio.IACTFile('eventio/resources/one_shower.dat') as f:
         for event in f:
-            print(event.header.total_energy)
+            print(event.header["total_energy"])
             print(event.photon_bunches[0]['photons'].sum())
 
 
