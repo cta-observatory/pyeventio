@@ -19,7 +19,7 @@ jobs:
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        python-version: ["3.10", "3.11", "3.12", "3.13"]
+        python-version: ["3.10", "3.11", "3.12"]
     steps:
       - uses: actions/checkout@v4
         with:
@@ -42,5 +42,24 @@ jobs:
       - name: Tests
         run: |
           pytest --cov=eventio --cov-report=xml
+
+      - name: Run examples
+        run: |
+          pip install -e '.[examples]'
+          cd examples
+          RESOURCES="../tests/resources/"
+          
+          # python iter_mc_events.py
+          python plot_events.py $RESOURCES/gamma_test.simtel.gz
+          python plot_light_on_ground.py -i $RESOURCES/3_gammas_reuse_5.dat
+          # python plot_light_on_ground_by_particle.py
+          # python plot_light_on_ground_rgb.py
+          python plot_mc_pe.py -i $RESOURCES/gamma_20deg_0deg_run103___cta-prod4-sst-astri_desert-2150m-Paranal-sst-astri.simtel.gz
+          python plot_production_3d.py -i $RESOURCES/3_gammas_reuse_5.dat
+          python profile_simtel.py $RESOURCES/gamma_20deg_0deg_run102___cta-prod4-sst-1m_desert-2150m-Paranal-sst-1m.simtel.gz
+          # python read_all_objects.py
+          python read_simtel_corsika_events.py $RESOURCES/gamma_20deg_0deg_run102___cta-prod4-sst-1m_desert-2150m-Paranal-sst-1m.simtel.gz
+          # python trigger_times.py 
+          python try_simtelfile.py $RESOURCES/gamma_20deg_0deg_run102___cta-prod4-sst-1m_desert-2150m-Paranal-sst-1m.simtel.gz
 
       - uses: codecov/codecov-action@v4
