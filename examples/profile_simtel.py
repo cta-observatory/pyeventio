@@ -5,7 +5,10 @@ from eventio import SimTelFile
 from argparse import ArgumentParser
 
 parser = ArgumentParser()
-parser.add_argument('inputfile')
+parser.add_argument(
+    "inputfile",
+    help="Example file: tests/resources/gamma_20deg_0deg_run102___cta-prod4-sst-1m_desert-2150m-Paranal-sst-1m.simtel.gz",
+)
 parser.add_argument('-s', '--sort', default='cumtime')
 parser.add_argument('-l', '--limit', default=50, type=int)
 parser.add_argument('-t', '--telescopes')

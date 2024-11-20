@@ -1,19 +1,21 @@
 import matplotlib.pyplot as plt
-from pkg_resources import resource_filename
 from argparse import ArgumentParser
 
 from eventio import IACTFile
 
 parser = ArgumentParser()
-parser.add_argument('-i', '--inputfile', dest='inputfile')
+parser.add_argument(
+    "-i",
+    "--inputfile",
+    dest="inputfile",
+    help="Example file: tests/resources/3_gammas_reuse_5.dat",
+)
 parser.add_argument('-e', '--event', dest='event', type=int, default=0)
 parser.add_argument('-t', '--telescope', dest='telescope', type=int)
 
 
 def main():
     args = parser.parse_args()
-    if not args.inputfile:
-        args.inputfile = resource_filename('eventio', 'resources/one_shower.dat')
 
     with IACTFile(args.inputfile) as f:
 

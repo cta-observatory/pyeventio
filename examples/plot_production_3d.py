@@ -1,20 +1,23 @@
 import matplotlib.pyplot as plt
-from mpl_toolkits.mplot3d import Axes3D
-from pkg_resources import resource_filename
+
 from argparse import ArgumentParser
 
-import eventio
+from eventio import IACTFile
+
 
 parser = ArgumentParser()
-parser.add_argument('-i', '--inputfile', dest='inputfile')
+parser.add_argument(
+    "-i",
+    "--inputfile",
+    required=True,
+    dest="inputfile",
+    help="Example file: tests/resources/3_gammas_reuse_5.dat",
+)
 parser.add_argument('-e', '--event', dest='event', type=int, default=0)
 
 args = parser.parse_args()
 
-
-testfile = resource_filename('eventio', 'resources/3_gammas_reuse_5.dat')
-
-with eventio.IACTFile(args.inputfile or testfile) as f:
+with IACTFile(args.inputfile) as f:
     it = iter(f)
     event = next(it)
     for i in range(args.event):
@@ -23,7 +26,7 @@ with eventio.IACTFile(args.inputfile or testfile) as f:
     fig = plt.figure()
     ax = fig.add_axes([0, 0, 1, 1], projection='3d')
 
-    obslevel = event.header.observation_levels[0]
+    obslevel = event.header["observation_height"][0]
 
     for pos, b in zip(f.telescope_positions, event.photon_bunches.values()):
         cz = 1 - (b['cx']**2 + b['cy']**2)
@@ -39,4 +42,5 @@ with eventio.IACTFile(args.inputfile or testfile) as f:
     ax.set_xlabel('x / m')
     ax.set_ylabel('y / m')
     ax.set_zlabel('z / km')
-    fig.savefig('shower.png', dpi=300)
+
+plt.show()
