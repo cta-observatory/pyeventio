@@ -4,7 +4,10 @@ from eventio.simtel.simtelfile import SimTelFile
 from argparse import ArgumentParser
 
 parser = ArgumentParser()
-parser.add_argument('inputfile')
+parser.add_argument(
+    "inputfile",
+    help="tests/resources/gamma_20deg_0deg_run102___cta-prod4-sst-1m_desert-2150m-Paranal-sst-1m.simtel.gz",
+)
 parser.add_argument('-p', '--print', action='store_true')
 
 args = parser.parse_args()

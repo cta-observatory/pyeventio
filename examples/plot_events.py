@@ -12,7 +12,10 @@ from eventio.simtel import SimTelFile
 
 
 parser = ArgumentParser()
-parser.add_argument('inputfile')
+parser.add_argument(
+    "inputfile", help="Example file: tests/resources/gamma_test.simtel.gz"
+)
+parser.add_argument("--max-events", default=1)
 args = parser.parse_args()
 
 
@@ -48,19 +51,21 @@ def build_cam_geom(simtel_file, telescope_id):
                 pix_rotation = 30 * u.deg
 
     return CameraGeometry(
-        cam_id='CAM-{}'.format(telescope_id),
-        pix_id=np.arange(cam_data['n_pixels']),
-        pix_x=cam_data['pixel_x'] * u.m,
-        pix_y=cam_data['pixel_y'] * u.m,
-        pix_area=cam_data['pixel_area'] * u.m**2,
+        name="CAM-{}".format(telescope_id),
+        pix_id=np.arange(cam_data["n_pixels"]),
+        pix_x=cam_data["pixel_x"] * u.m,
+        pix_y=cam_data["pixel_y"] * u.m,
+        pix_area=cam_data["pixel_area"] * u.m**2,
         pix_type=pix_type,
-        cam_rotation=cam_data['cam_rot'] * u.rad,
+        cam_rotation=cam_data["cam_rot"] * u.rad,
         pix_rotation=pix_rotation,
     )
 
 
 with SimTelFile(args.inputfile) as f:
-    for array_event in f:
+    for i, array_event in enumerate(f):
+        if i == args.max_events:
+            break
         print('Event:', array_event['event_id'])
         for telescope_id, event in array_event['telescope_events'].items():
             print('Telescope:', telescope_id)
