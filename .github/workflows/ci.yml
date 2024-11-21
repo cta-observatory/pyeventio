@@ -81,5 +81,5 @@ jobs:
           python profile_simtel.py $RESOURCES/gamma_20deg_0deg_run102___cta-prod4-sst-1m_desert-2150m-Paranal-sst-1m.simtel.gz
           # python read_all_objects.py
           python read_simtel_corsika_events.py $RESOURCES/gamma_20deg_0deg_run102___cta-prod4-sst-1m_desert-2150m-Paranal-sst-1m.simtel.gz
-          # python trigger_times.py 
+          python trigger_times.py $RESOURCES/gamma_20deg_0deg_run102___cta-prod4-sst-1m_desert-2150m-Paranal-sst-1m.simtel.gz
           python try_simtelfile.py $RESOURCES/gamma_20deg_0deg_run102___cta-prod4-sst-1m_desert-2150m-Paranal-sst-1m.simtel.gz

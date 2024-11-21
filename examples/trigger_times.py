@@ -11,8 +11,9 @@ from argparse import ArgumentParser
 parser = ArgumentParser()
 parser.add_argument(
     "inputfile",
-    help="Example file: tests/resource/gamma_20deg_0deg_run102___cta-prod4-sst-1m_desert-2150m-Paranal-sst-1m.simtel.gz",
+    help="Example file: tests/resources/gamma_20deg_0deg_run102___cta-prod4-sst-1m_desert-2150m-Paranal-sst-1m.simtel.gz",
 )
+parser.add_argument("--max-shower-events", type=int, default=0)
 args = parser.parse_args()
 
 with SimTelFile(args.inputfile) as f:
@@ -54,19 +55,22 @@ with SimTelFile(args.inputfile) as f:
     fig.show()
     fig.tight_layout()
 
-    for event in f:
+    for i, event in enumerate(f):
         for t in event["telescope_events"].values():
             d1.image = t["adc_samples"][0, :, 0]
-
-            print(t["pixel_timing"].keys())
 
             trig = np.full(geom.n_pixels, np.nan)
 
             trig[t["pixel_timing"]["pixel_list"]] = t["pixel_timing"]["time"][
                 t["pixel_timing"]["pixel_list"]
-            ][:, 0]  # note: selecting only forst type
+            ][:, 0]  # note: selecting only first type
             trig = np.ma.array(trig, mask=np.isnan(trig))
 
             d2.image = trig
 
             input("Enter for next telecope event")
+
+        if i == args.max_shower_events - 1:
+            parser.exit(
+                status=0, message="Maximum number of selected shower events reached."
+            )
