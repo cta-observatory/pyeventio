@@ -74,8 +74,8 @@ jobs:
           python iter_mc_events.py $RESOURCES/40k_pixels.simtel.zst
           python plot_events.py $RESOURCES/gamma_test.simtel.gz
           python plot_light_on_ground.py -i $RESOURCES/3_gammas_reuse_5.dat
-          # python plot_light_on_ground_by_particle.py
-          # python plot_light_on_ground_rgb.py
+          python plot_light_on_ground_by_particle.py $RESOURCES/proton_emitter.eventio.zst
+          python plot_light_on_ground_rgb.py $RESOURCES/proton_emitter.eventio.zst
           python plot_mc_pe.py -i $RESOURCES/gamma_20deg_0deg_run103___cta-prod4-sst-astri_desert-2150m-Paranal-sst-astri.simtel.gz
           python plot_production_3d.py -i $RESOURCES/3_gammas_reuse_5.dat
           python profile_simtel.py $RESOURCES/gamma_20deg_0deg_run102___cta-prod4-sst-1m_desert-2150m-Paranal-sst-1m.simtel.gz
