@@ -71,7 +71,7 @@ jobs:
 
           MPLBACKEND=agg
           
-          # python iter_mc_events.py
+          python iter_mc_events.py $RESOURCES/40k_pixels.simtel.zst
           python plot_events.py $RESOURCES/gamma_test.simtel.gz
           python plot_light_on_ground.py -i $RESOURCES/3_gammas_reuse_5.dat
           # python plot_light_on_ground_by_particle.py
