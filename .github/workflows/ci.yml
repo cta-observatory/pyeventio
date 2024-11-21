@@ -19,7 +19,7 @@ jobs:
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        python-version: ["3.10", "3.11", "3.12"]
+        python-version: ["3.10", "3.11", "3.12", "3.13"]
     steps:
       - uses: actions/checkout@v4
         with:
@@ -43,11 +43,33 @@ jobs:
         run: |
           pytest --cov=eventio --cov-report=xml
 
+      - uses: codecov/codecov-action@v4
+
+  examples:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        python-version: ["3.10", "3.11", "3.12"]
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Set up Python ${{ matrix.python-version }}
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python-version }}
+
       - name: Run examples
+        env:
+          PYTHON_VERSION: ${{ matrix.python-version }}
         run: |
+          python --version
           pip install -e '.[examples]'
           cd examples
           RESOURCES="../tests/resources/"
+
+          MPLBACKEND=agg
           
           # python iter_mc_events.py
           python plot_events.py $RESOURCES/gamma_test.simtel.gz
@@ -61,5 +83,3 @@ jobs:
           python read_simtel_corsika_events.py $RESOURCES/gamma_20deg_0deg_run102___cta-prod4-sst-1m_desert-2150m-Paranal-sst-1m.simtel.gz
           # python trigger_times.py 
           python try_simtelfile.py $RESOURCES/gamma_20deg_0deg_run102___cta-prod4-sst-1m_desert-2150m-Paranal-sst-1m.simtel.gz
-
-      - uses: codecov/codecov-action@v4
