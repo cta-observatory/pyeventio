@@ -5,7 +5,9 @@ import matplotlib.pyplot as plt
 import numpy as np
 
 parser = ArgumentParser()
-parser.add_argument('inputfile')
+parser.add_argument(
+    "inputfile", help="Example file: tests/resources/40k_pixels.simtel.zst"
+)
 
 args = parser.parse_args()
 
