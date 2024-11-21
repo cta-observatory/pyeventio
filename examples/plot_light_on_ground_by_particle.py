@@ -69,38 +69,38 @@ def main():
             )
         fig.colorbar(img, ax=ax)
 
-    particle_id = event.particles['particle_id'] // 1000
-    particle_ids = {
-        1: 'γ',
-        2: 'e⁺',
-        3: 'e⁻',
-        5: 'μ⁺',
-        6: 'μ⁻',
-        13: 'n',
-        14: 'p',
-        15: r'$\bar{p}$',
-    }
+    if event.particles is not None:
+        particle_id = event.particles['particle_id'] // 1000
+        particle_ids = {
+            1: 'γ',
+            2: 'e⁺',
+            3: 'e⁻',
+            5: 'μ⁺',
+            6: 'μ⁻',
+            13: 'n',
+            14: 'p',
+            15: r'$\bar{p}$',
+        }
 
-    cmap = ListedColormap([f'C{i}' for i in range(len(particle_ids))])
+        cmap = ListedColormap([f'C{i}' for i in range(len(particle_ids))])
 
-    for i, pid in enumerate(particle_ids.keys()):
-        particle_id[particle_id == pid] = i
+        for i, pid in enumerate(particle_ids.keys()):
+            particle_id[particle_id == pid] = i
 
-    scat = axs[-1].scatter(
-        event.particles['x'] / 100,
-        event.particles['y'] / 100,
-        c=particle_id,
-        zorder=10,
-        cmap=cmap,
-        vmin=-0.5, vmax=len(particle_ids) - 0.5,
-    )
-    axs[-1].set_title('Particles reacing obslevel')
-    axs[-1].set_xlim(-radius, radius)
-    axs[-1].set_ylim(-radius, radius)
-    bar = fig.colorbar(scat, ax=axs[5])
-    bar.set_ticks(np.arange(len(particle_ids)))
-    bar.set_ticklabels(list(particle_ids.values()))
-    bar.update_bruteforce(scat)
+        scat = axs[-1].scatter(
+            event.particles['x'] / 100,
+            event.particles['y'] / 100,
+            c=particle_id,
+            zorder=10,
+            cmap=cmap,
+            vmin=-0.5, vmax=len(particle_ids) - 0.5,
+        )
+        axs[-1].set_title('Particles reaching obslevel')
+        axs[-1].set_xlim(-radius, radius)
+        axs[-1].set_ylim(-radius, radius)
+        bar = fig.colorbar(scat, ax=axs[5])
+        bar.set_ticks(np.arange(len(particle_ids)))
+        bar.set_ticklabels(list(particle_ids.values()))
 
     fig.tight_layout()
     if args.output:
