@@ -44,6 +44,7 @@ dynamic = ["version"]
 test = [
     "pytest",
 ]
+examples = ["astropy >=5.3,<7.0.0a0", "ctapipe", "matplotlib"]
 dev = [
     "setuptools_scm",
 ]
