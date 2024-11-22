@@ -14,6 +14,7 @@ parser.add_argument(
     help="Example file: tests/resources/gamma_20deg_0deg_run102___cta-prod4-sst-1m_desert-2150m-Paranal-sst-1m.simtel.gz",
 )
 parser.add_argument("--max-shower-events", type=int, default=0)
+parser.add_argument("--interactive", action="store_true")
 args = parser.parse_args()
 
 with SimTelFile(args.inputfile) as f:
@@ -68,7 +69,12 @@ with SimTelFile(args.inputfile) as f:
 
             d2.image = trig
 
-            input("Enter for next telecope event")
+            if args.interactive:
+                input("Enter for next telecope event")
+            else:
+                fig.savefig(
+                    f"simtel_trigger_times_event_{event["event_id"]}_tel_{t["header"]["telescope_id"]}.png"
+                )
 
         if i == args.max_shower_events - 1:
             parser.exit(
