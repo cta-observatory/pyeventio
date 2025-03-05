@@ -66,6 +66,7 @@ def test_show_event_is_not_empty_and_has_some_members_for_sure():
                 'event_id',
                 'mc_shower',
                 'mc_event',
+                'observation_level_particles',
                 'telescope_events',
                 'trigger_information',
                 'tracking_positions',
@@ -145,6 +146,7 @@ def test_iterate_mc_events():
             assert event.keys() == {
                 'event_id',
                 'mc_shower', 'mc_event',
+                'observation_level_particles',
                 'photons', 'photoelectrons', 'emitter'
             }
 

@@ -112,6 +112,7 @@ class SimTelFile(EventIOFile):
         self.current_photoelectrons = {}
         self.current_photons = {}
         self.current_emitter = {}
+        self.current_obslev_particles = None
         self.current_array_event = None
         self.current_calibration_event = None
         self.current_calibration_event_id = None
@@ -160,6 +161,9 @@ class SimTelFile(EventIOFile):
         elif isinstance(o, MCShower):
             self.current_mc_shower = o.parse()
             self.current_mc_shower_id = o.header.id
+
+        elif isinstance(o, iact.Photons):
+            self.current_obslev_particles = o.parse()
 
         elif isinstance(o, ArrayEvent):
             self.current_array_event = parse_array_event(
@@ -249,8 +253,8 @@ class SimTelFile(EventIOFile):
             self.atmospheric_profiles.append(o.parse())
         else:
             warnings.warn(
-                'object type encountered, which is no handled'
-                ' at the moment: {}'.format(o),
+                'encountered object of type "{}" which is not handled'
+                ' at the moment'.format(o),
                 UnknownObjectWarning,
             )
 
@@ -270,6 +274,7 @@ class SimTelFile(EventIOFile):
                 'event_id': self.current_mc_event_id,
                 'mc_shower': self.current_mc_shower,
                 'mc_event': self.current_mc_event,
+                'observation_level_particles': self._get_event_obslev_particles(),
             }
             # if next object is TelescopeData, it belongs to this event
             if isinstance(self.peek(), iact.TelescopeData):
@@ -313,6 +318,7 @@ class SimTelFile(EventIOFile):
                 'event_id': event_id,
                 'mc_shower': None,
                 'mc_event': None,
+                'observation_level_particles': None,
                 'telescope_events': self.current_array_event['telescope_events'],
                 'tracking_positions': self.current_array_event['tracking_positions'],
                 'trigger_information': self.current_array_event['trigger_information'],
@@ -325,6 +331,7 @@ class SimTelFile(EventIOFile):
             if self.current_mc_event_id == event_id:
                 event_data['mc_shower'] = self.current_mc_shower
                 event_data['mc_event'] =  self.current_mc_event
+                event_data['observation_level_particles'] = self._get_event_obslev_particles()
 
             if self.current_telescope_data_event_id == event_id:
                 event_data['photons'] = self.current_photons
@@ -383,6 +390,18 @@ class SimTelFile(EventIOFile):
             self.current_calibration_event = None
 
             return event_data
+
+    def _get_event_obslev_particles(self):
+        '''Return an event-specific copy of the observation-level particles
+            (which are in core coordinates) by shifting them in x and y
+        '''
+        if self.current_obslev_particles is not None and self.current_mc_event:
+            particles = copy(self.current_obslev_particles)
+            particles['x'] += self.current_mc_event['xcore']*100
+            particles['y'] += self.current_mc_event['ycore']*100
+            return particles
+        else:
+            return None
 
 
 def parse_array_event(array_event, allowed_telescopes=None):
