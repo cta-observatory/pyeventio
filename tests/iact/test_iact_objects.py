@@ -152,6 +152,30 @@ def test_emitter_bunches():
         # second lightest particle should be a muon
         assert np.isclose(np.unique(emitter['mass'])[1], 0.105, rtol=0.1)
 
+def test_obslev_particle_bunches():
+    from eventio.iact import Photons
+
+    columns = ('x', 'y', 'cx', 'cy', 'time', 'momentum', 'weight', 'particle_id')
+    with eventio.EventIOFile(test_emitter_file) as f:
+        # observation level particles object should be 5th in the file
+        for i in range(6):
+            obj = next(f)
+
+        assert isinstance(obj, Photons)
+        particles = obj.parse()
+
+        assert particles.dtype.names == columns
+        assert len(particles) == 14
+        assert np.all(particles['weight'] == np.float32(1))
+
+        sort_particles = np.sort(particles, order = 'momentum')
+
+        # lowest momentum particle should be a photon
+        assert np.floor(sort_particles[0]['particle_id']/1000) == np.float32(1)
+
+        # highest momentum particle should be a muon
+        assert np.floor(sort_particles[-1]['particle_id']/1000) == np.float32(5)
+
 
 def test_atmospheric_profile():
     from eventio.iact.objects import AtmosphericProfile
