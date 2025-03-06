@@ -33,7 +33,7 @@ def test_at_least_one_event_found():
         assert one_found, path
 
 
-def test_show_we_get_a_dict_with_hower_and_event():
+def test_show_we_get_a_dict_with_shower_and_event():
     for path in test_paths:
         for event in SimTelFile(path):
             assert 'mc_shower' in event
