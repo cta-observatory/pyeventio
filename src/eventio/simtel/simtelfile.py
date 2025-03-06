@@ -274,7 +274,7 @@ class SimTelFile(EventIOFile):
                 'event_id': self.current_mc_event_id,
                 'mc_shower': self.current_mc_shower,
                 'mc_event': self.current_mc_event,
-                'observation_level_particles': self._get_event_obslev_particles(),
+                'observation_level_particles': self.current_obslev_particles,
             }
             # if next object is TelescopeData, it belongs to this event
             if isinstance(self.peek(), iact.TelescopeData):
@@ -331,7 +331,7 @@ class SimTelFile(EventIOFile):
             if self.current_mc_event_id == event_id:
                 event_data['mc_shower'] = self.current_mc_shower
                 event_data['mc_event'] =  self.current_mc_event
-                event_data['observation_level_particles'] = self._get_event_obslev_particles()
+                event_data['observation_level_particles'] = self.current_obslev_particles
 
             if self.current_telescope_data_event_id == event_id:
                 event_data['photons'] = self.current_photons
@@ -390,18 +390,6 @@ class SimTelFile(EventIOFile):
             self.current_calibration_event = None
 
             return event_data
-
-    def _get_event_obslev_particles(self):
-        '''Return an event-specific copy of the observation-level particles
-            (which are in core coordinates) by shifting them in x and y
-        '''
-        if self.current_obslev_particles is not None and self.current_mc_event:
-            particles = copy(self.current_obslev_particles)
-            particles['x'] += self.current_mc_event['xcore']*100
-            particles['y'] += self.current_mc_event['ycore']*100
-            return particles
-        else:
-            return None
 
 
 def parse_array_event(array_event, allowed_telescopes=None):
