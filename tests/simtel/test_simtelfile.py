@@ -245,6 +245,24 @@ def test_missing_photons():
         assert e['emitter'] == {}
 
 
+def test_particles():
+    from eventio.iact.objects import Photons
+
+    with SimTelFile('tests/resources/gamma_with_obslevel_particles.simtel.zst') as f:
+        e = next(iter(f))
+
+        assert len(e['observation_level_particles']) == 64
+        particle = e['observation_level_particles'][0]
+        assert particle.dtype == Photons.particle_dtype
+
+
+def test_missing_particles():
+    with SimTelFile('tests/resources/gamma_test.simtel.gz') as f:
+        e = next(iter(f))
+
+        assert e['observation_level_particles'] == None
+
+
 def test_calibration_photoelectrons():
     with SimTelFile('tests/resources/calib_true_pe.simtel.zst') as f:
         for e, expected_pe in zip(f, (1.7, 20)):
