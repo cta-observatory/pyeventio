@@ -33,7 +33,7 @@ def test_at_least_one_event_found():
         assert one_found, path
 
 
-def test_show_we_get_a_dict_with_hower_and_event():
+def test_show_we_get_a_dict_with_shower_and_event():
     for path in test_paths:
         for event in SimTelFile(path):
             assert 'mc_shower' in event
@@ -66,6 +66,7 @@ def test_show_event_is_not_empty_and_has_some_members_for_sure():
                 'event_id',
                 'mc_shower',
                 'mc_event',
+                'observation_level_particles',
                 'telescope_events',
                 'trigger_information',
                 'tracking_positions',
@@ -145,6 +146,7 @@ def test_iterate_mc_events():
             assert event.keys() == {
                 'event_id',
                 'mc_shower', 'mc_event',
+                'observation_level_particles',
                 'photons', 'photoelectrons', 'emitter'
             }
 
@@ -241,6 +243,24 @@ def test_missing_photons():
         assert e['photons'] == {}
         assert e['photoelectrons'] == {}
         assert e['emitter'] == {}
+
+
+def test_particles():
+    from eventio.iact.objects import Photons
+
+    with SimTelFile('tests/resources/gamma_with_obslevel_particles.simtel.zst') as f:
+        e = next(iter(f))
+
+        assert len(e['observation_level_particles']) == 64
+        particle = e['observation_level_particles'][0]
+        assert particle.dtype == Photons.particle_dtype
+
+
+def test_missing_particles():
+    with SimTelFile('tests/resources/gamma_test.simtel.gz') as f:
+        e = next(iter(f))
+
+        assert e['observation_level_particles'] == None
 
 
 def test_calibration_photoelectrons():
