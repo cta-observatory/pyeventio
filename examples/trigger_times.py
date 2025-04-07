@@ -73,7 +73,7 @@ with SimTelFile(args.inputfile) as f:
                 input("Enter for next telecope event")
             else:
                 fig.savefig(
-                    f"simtel_trigger_times_event_{event["event_id"]}_tel_{t["header"]["telescope_id"]}.png"
+                    f"simtel_trigger_times_event_{event['event_id']}_tel_{t['header']['telescope_id']}.png"
                 )
 
         if i == args.max_shower_events - 1:
