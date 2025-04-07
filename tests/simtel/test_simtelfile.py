@@ -279,6 +279,19 @@ def test_history_meta():
         assert len(f.telescope_meta) == 19
 
 
+def test_history():
+    with SimTelFile(history_meta_path) as f:
+        assert isinstance(f.cli_history, list)
+        assert isinstance(f.config_history, dict)
+        assert len(f.cli_history) == 1
+        # global defaults + one per tel
+        assert len(f.config_history) == 20
+        assert len(f.history) == len(f.cli_history) + sum(len(c) for c in f.config_history.values())
+
+        # the flat history should be identical to the structured history flattened
+        assert f.history == f.cli_history + [h for c in f.config_history.values() for h in c]
+
+
 def test_type_2033():
     with SimTelFile(pixel_monitoring_path) as f:
         e = next(iter(f))
