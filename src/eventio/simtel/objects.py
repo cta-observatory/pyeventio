@@ -640,7 +640,25 @@ class TriggerInformation(EventIOObject):
             comp['speed_of_light'] = read_float(byte_stream)
             event_info['plane_wavefront_compensation'] = comp
 
+        # versions of sim_telarray after the introduction of the random mono
+        # probability and before it was fixed in 2024-02 contained a bug
+        # that shifted the trigger bits by one hex order of magnitude:
+        # Setting bits 0x10, 0x20, 0x40 instead of 0x100, 0x200, 0x400. 
+        # here we fix the bug, as does the fixed hessio library.
+        # This only affects versions up to 3, as that was the highest version
+        # existing before the fix was introduced.
+        if version <= 3:
+            self.fix_teltrg_type_mask(event_info["teltrg_type_mask"])
+
         return event_info
+
+    @staticmethod
+    def fix_teltrg_type_mask(mask):
+        wrong_bits = np.uint32(0x10 | 0x20 | 0x40)
+        # switch on bits in correct position
+        mask |= (mask & wrong_bits) << 4
+        # set wrong bits to 0
+        mask &= ~wrong_bits
 
 
 class TrackingPosition(EventIOObject):
