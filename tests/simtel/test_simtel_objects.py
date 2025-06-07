@@ -18,11 +18,6 @@ calib_path = 'tests/resources/calib_events.simtel.gz'
 history_meta_path = 'tests/resources/history_meta_75.simtel.zst'
 
 
-test_files = [
-    EventIOFile(path) for path in
-    [prod2_file, prod4b_astri_file, prod4b_sst1m_file]
-]
-
 expected_adc_samples_event1_tel_id_38 = np.load(
     'tests/resources/gamma_test.simtel_event1_tel_id_38_adc_samples.npy'
 )
@@ -840,9 +835,15 @@ def test_2034():
 
 def test_mono_trigger():
     """Regression test for #261"""
+    random_mono = 0
     with EventIOFile("tests/resources/mono_trigger.simtel.zst") as f:
         for trigger in yield_subobjects(f, TriggerInformation):
-            trigger.parse()
+            data = trigger.parse()
+
+            assert np.count_nonzero(data["teltrg_type_mask"] & 0b111000) == 0
+            random_mono += np.count_nonzero(data["teltrg_type_mask"] & 0x400)
+
+    assert random_mono > 0
 
 
 def test_laser_calibration_n_pixels():
@@ -887,3 +888,20 @@ def test_pixel_timing_v2():
             assert pixel_timing.header.version == 2
             data = pixel_timing.parse()
             assert data["n_pixels"] == 40000
+
+
+def test_fix_trigger_bits():
+    """Test for the bit-pattern fixing for a simtel bug."""
+    from eventio.simtel.objects import TriggerInformation
+
+    values = np.array(
+        [0x101, 0x22, 0x201, 0x41, 0x42, 0x401, 0x402, 0x71, 0x701],
+        dtype=np.uint32,
+    )
+    expected = np.array(
+        [0x101, 0x202, 0x201, 0x401, 0x402, 0x401, 0x402, 0x701, 0x701],
+        dtype=np.uint32,
+    )
+
+    TriggerInformation.fix_teltrg_type_mask(values)
+    np.testing.assert_array_equal(values, expected)
