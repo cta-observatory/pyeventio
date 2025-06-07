@@ -1,3 +1,4 @@
+import weakref
 import struct
 import gzip
 import logging
@@ -102,6 +103,13 @@ class EventIOFile:
 
         self._next_header_pos = 0
 
+        self._finalize = weakref.finalize(
+            self,
+            EventIOFile._cleanup,
+            self.read_process,
+            self._filehandle,
+        )
+
     def __iter__(self):
         return self
 
@@ -145,19 +153,25 @@ class EventIOFile:
     def __exit__(self, exc_type, exc_value, traceback):
         self.close()
 
+    @staticmethod
+    def _cleanup(read_process, filehandle):
+        try:
+            if read_process is not None:
+                read_process.terminate()
+                read_process.stdout.close()
+                read_process.stderr.close()
+                read_process.wait(timeout=1)
+        except Exception:
+            pass
+
+        try:
+            if filehandle is not None:
+                filehandle.close()
+        except Exception:
+            pass
+
     def close(self):
-        if self.read_process is not None:
-            self.read_process.terminate()
-            self.read_process.stdout.close()
-            self.read_process.stderr.close()
-            self.read_process.wait(timeout=1)
-
-        if self._filehandle is not None:
-            self._filehandle.close()
-
-    def __del__(self):
-        self.close()
-
+        self._finalize()
 
 def check_size_or_raise(data, expected_length, zero_ok=True):
     length = len(data)
