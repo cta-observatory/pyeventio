@@ -32,6 +32,8 @@ __all__ = [
     'RunEnd',
     'Longitudinal',
     'InputCard',
+    'MarkersBegin',
+    'MakersEnd',
 ]
 
 
@@ -412,6 +414,13 @@ class InputCard(EventIOObject):
             input_card += b'\n'
         return input_card
 
+class TelescopeArrayHead(EventIOObject):
+    """This Object is just a marker to indcate the beginning of separate telescope data."""
+    eventio_type = 1213
+
+class TelescopeArrayEnd(EventIOObject):
+    """This Object is just a marker to indcate the end of separate telescope data."""
+    eventio_type = 1214
 
 class AtmosphericProfile(EventIOObject):
     ''' This Object contains the CORSIKA/atmext atmospheric profile '''

@@ -18,6 +18,8 @@ from .objects import (
     RunEnd,
     Longitudinal,
     InputCard,
+    TelescopeArrayHead,
+    TelescopeArrayEnd,
     AtmosphericProfile,
 )
 
@@ -43,6 +45,8 @@ __all__ = [
     'RunEnd',
     'Longitudinal',
     'InputCard',
+    'TelescopeArrayHead',
+    'TelescopeArrayEnd',
     'AtmosphericProfile',
 ]
 
@@ -80,6 +84,18 @@ class IACTFile(EventIOFile):
       EventEnd
 
     RunEnd
+
+    For Split-Always mode, the structure is slightly different:
+    For each Event:
+      EventHeader
+      ArrayOffsets
+      Longitudinal (optional)
+      For each reuse:
+        TelescopeArrayHead
+        For each Telescopes:
+          Photons
+        TelescopeArrayEnd
+      EventEnd
     '''
 
     def __init__(self, path, zcat=True):
@@ -140,7 +156,7 @@ class IACTFile(EventIOFile):
 
             obj = next(self)
 
-            while not isinstance(obj, TelescopeData):
+            while not isinstance(obj, (TelescopeData, TelescopeArrayHead)):
                 if isinstance(obj, Longitudinal):
                     longitudinal = obj.parse()
 
@@ -152,22 +168,34 @@ class IACTFile(EventIOFile):
 
                 obj = next(self)
 
+            split_always = isinstance(obj, TelescopeArrayHead)
+            if split_always:
+                obj = next(self)
+
             for reuse in range(n_reuses):
-
-                check_type(obj, TelescopeData)
-                telescope_data_obj = obj
-
                 photon_bunches = {}
                 emitter_bunches = {}
                 n_photons = {}
                 n_bunches = {}
-                for data in telescope_data_obj:
-                    if isinstance(data, Photons):
-                        photons, emitter = data.parse()
-                        photon_bunches[data.telescope] = photons
-                        emitter_bunches[data.telescope] = emitter
-                        n_photons[data.telescope] = data.n_photons
-                        n_bunches[data.telescope] = data.n_bunches
+                if split_always:
+                    while not isinstance(obj, TelescopeArrayEnd):
+                        check_type(obj, Photons)
+                        photons, emitter = obj.parse()
+                        photon_bunches[obj.telescope] = photons
+                        emitter_bunches[obj.telescope] = emitter
+                        n_photons[obj.telescope] = obj.n_photons
+                        n_bunches[obj.telescope] = obj.n_bunches
+                        obj = next(self)
+                else:
+                    check_type(obj, TelescopeData)
+                    telescope_data_obj = obj
+                    for data in telescope_data_obj:
+                        if isinstance(data, Photons):
+                            photons, emitter = data.parse()
+                            photon_bunches[data.telescope] = photons
+                            emitter_bunches[data.telescope] = emitter
+                            n_photons[data.telescope] = data.n_photons
+                            n_bunches[data.telescope] = data.n_bunches
 
                 if len(array_offsets.dtype) == 3:
                     weight = array_offsets[reuse]['weight']
