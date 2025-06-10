@@ -18,8 +18,8 @@ from .objects import (
     RunEnd,
     Longitudinal,
     InputCard,
-    MarkersBegin,
-    MarkersEnd,
+    TelescopeArrayHead,
+    TelescopeArrayEnd,
     AtmosphericProfile,
 )
 
@@ -45,8 +45,8 @@ __all__ = [
     'RunEnd',
     'Longitudinal',
     'InputCard',
-    'MarkerBgein',
-    'MarkerEnd',
+    'TelescopeArrayHead',
+    'TelescopeArrayEnd',
     'AtmosphericProfile',
 ]
 
@@ -91,10 +91,10 @@ class IACTFile(EventIOFile):
       ArrayOffsets
       Longitudinal (optional)
       For each reuse:
-        MarkersBegin
+        TelescopeArrayHead
         For each Telescopes:
           Photons
-        MakersEnd
+        TelescopeArrayEnd
       EventEnd
     '''
 
@@ -156,7 +156,7 @@ class IACTFile(EventIOFile):
 
             obj = next(self)
 
-            while not isinstance(obj, (TelescopeData, MarkersBegin)):
+            while not isinstance(obj, (TelescopeData, TelescopeArrayHead)):
                 if isinstance(obj, Longitudinal):
                     longitudinal = obj.parse()
 
@@ -168,7 +168,7 @@ class IACTFile(EventIOFile):
 
                 obj = next(self)
 
-            split_always = isinstance(obj, MarkersBegin)
+            split_always = isinstance(obj, TelescopeArrayHead)
             if split_always:
                 obj = next(self)
 
@@ -178,7 +178,7 @@ class IACTFile(EventIOFile):
                 n_photons = {}
                 n_bunches = {}
                 if split_always:
-                    while not isinstance(obj, MarkersEnd):
+                    while not isinstance(obj, TelescopeArrayEnd):
                         check_type(obj, Photons)
                         photons, emitter = obj.parse()
                         photon_bunches[obj.telescope] = photons
