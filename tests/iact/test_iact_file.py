@@ -7,7 +7,7 @@ testfile = 'tests/resources/one_shower.dat'
 testfile_reuse = 'tests/resources/3_gammas_reuse_5.dat'
 testfile_two_telescopes = 'tests/resources/two_telescopes.dat'
 testfile_zstd = 'tests/resources/run102_gamma_za20deg_azm0deg-paranal-sst.corsika.zst'
-testfile_split_always = 'tests/resources/5_gamma_2_telescopes_resuse_2_split_always.zst'
+testfile_split_always = 'tests/resources/5_gamma_2_telescopes_reuse_2_split_always.zst'
 
 
 def test_file_open():
