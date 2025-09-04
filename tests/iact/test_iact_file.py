@@ -7,7 +7,7 @@ testfile = 'tests/resources/one_shower.dat'
 testfile_reuse = 'tests/resources/3_gammas_reuse_5.dat'
 testfile_two_telescopes = 'tests/resources/two_telescopes.dat'
 testfile_zstd = 'tests/resources/run102_gamma_za20deg_azm0deg-paranal-sst.corsika.zst'
-testfile_split_always = 'tests/resources/5_gamma_2_telescopes_split_always.zst'
+testfile_split_always = 'tests/resources/5_gamma_2_telescopes_reuse_2_split_always.zst'
 
 
 def test_file_open():
@@ -140,8 +140,12 @@ def test_event_with_reuse():
 
 def test_event_split_always():
     with eventio.IACTFile(testfile_split_always) as f:
-        event = next(iter(f))
-        assert event.header['zenith'] == approx(20.0/ 180 * 3.14159)
-        assert event.header['azimuth'] == approx(0.0)
-        assert event.header['total_energy'] == approx(50)
-        assert len(event.photon_bunches) == 2
+        iterator = iter(f)
+        event1 = next(iterator)
+        assert event1.header['zenith'] == approx(20.0/ 180 * 3.14159)
+        assert event1.header['total_energy'] == approx(80)
+        assert len(event1.photon_bunches) == 2
+        assert event1.header["n_reuse"] == 2
+        event2 = next(iterator)
+        assert event2.impact_x != event1.impact_x
+        assert event2.impact_y != event1.impact_y

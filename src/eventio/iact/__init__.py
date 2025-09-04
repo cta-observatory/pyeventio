@@ -169,8 +169,6 @@ class IACTFile(EventIOFile):
                 obj = next(self)
 
             split_always = isinstance(obj, TelescopeArrayHead)
-            if split_always:
-                obj = next(self)
 
             for reuse in range(n_reuses):
                 photon_bunches = {}
@@ -178,6 +176,7 @@ class IACTFile(EventIOFile):
                 n_photons = {}
                 n_bunches = {}
                 if split_always:
+                    obj = next(self)
                     while not isinstance(obj, TelescopeArrayEnd):
                         check_type(obj, Photons)
                         photons, emitter = obj.parse()
