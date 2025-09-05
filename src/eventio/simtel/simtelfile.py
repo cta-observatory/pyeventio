@@ -91,25 +91,79 @@ class NoTrackingPositions(Exception):
 
 class SimTelFile:
     '''
-    This assumes the following top-level structure once events are seen:
+    A class to read files produced by sim_telarray.
 
-    Either:
-    MCShower[2020]
-    MCEvent[2021]
-      # stuff belonging to this MCEvent
-      optional TelescopeData[1204]
-      optional PixelMonitoring[2033] for each telescope
-      optional (CameraMonitoring[2022], LaserCalibration[2023]) for each telescope
-      optional MCPhotoelectronSum[2026]
-      optional ArrayEvent[2010]
+    This class is an iterator over simulated air shower events.
 
-    optional MCEvent for same shower (reuse)
+    It assumes the following top-level structure, elements with ? are optional.
 
-    Or:
-    CalibrationEvent[2028]
+    First, a header that appears once in the beginning of the file:
+    - History[70]
+    - HistoryMeta[75]?
+    - one for each telescope:
+        - HistoryMeta[75]?
+    - RunHeader[2000]
+    - MCRunHeader[2001]?
+    - InputCard[1212]?
+    - AtmosphericProfile[1216]?
+    - one block of these types for each telescope:
+        - CameraSettings[2002]
+        - CameraOrganization[2003]
+        - PixelSettings[2004]
+        - DisabledPixels[2005]
+        - CameraSoftwareSettings[2006]
+        - DriveSettings[2008]
+        - PointingCorrection[2007]
 
-    with possibly more CameraMonitoring / LaserCalibration in between
-    calibration events
+    This concludes the "header" information, what follows are events.
+
+    - Optionally, a number of calibration events, in that case,
+      also the calibration info comes now:
+        - once, one block of these types for each telescope:
+            - CameraMonitoring[2022]
+            - LaserCalibration[2023]
+        - then the number of simulated calibration events:
+            -  CalibrationEvent[2028]
+                - ArrayEvent[2010] # see below for content of array event
+
+    Now follows the main payload of simulated events, for each simulated air shower:
+
+    - MCShower[2020]
+    - Photons[1205], particles at observation level
+    - for each re-use of this shower:
+      - MCEvent[2021]
+      - TelescopeData[1204]?
+      - before the first actually triggered event,
+        only in case no calibration events were simulated,
+        once, one block of these types for each telescope:
+            - CameraMonitoring[2022]
+            - LaserCalibration[2023]
+      - MCPhotoelectronSum[2026]?
+      - ArrayEvent[2010]?
+
+    At the end of the file comes the Histograms object
+    with summary statistics about the simulated events:
+    - Histograms[100]
+
+    Each ArrayEvent[2010] is assumed to have the following structure:
+    - ArrayEvent[2010]
+      - TriggerInformation[2009]
+      - for each triggered telescope:
+        - TelescopeEvent[type], the type encodes the telescope id
+          - TelescopeEventHeader[2201]
+          - ADCSamples[2013]?
+          - ADCSums[2012]?
+          - ImageParameters[2014]?
+          - PixelTiming[2016]?
+          - multiple possible:
+            - PixelList[2027]?
+          - PixelTriggerTimes[2032]?
+          - multiple possible:
+            - AuxiliaryDigitalTraces[2029]?
+            - AuxiliaryAnalogTraces[2030]?
+      - for each telescope:
+        - TrackingPosition[type], the type encodes the telescope id
+      - StereoReconstruction[2015]?
     '''
     def __init__(
         self,
