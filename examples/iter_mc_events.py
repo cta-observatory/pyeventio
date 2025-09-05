@@ -16,8 +16,10 @@ start_time = time.time()
 energies = []
 corex = []
 corey = []
-with SimTelFile(args.inputfile) as f:
-    for i, event in enumerate(f.iter_mc_events()):
+
+# to get all simulated mc events, we set skip_non_triggered to False
+with SimTelFile(args.inputfile, skip_non_triggered=False) as f:
+    for i, event in enumerate(f):
         energies.append(event['mc_shower']['energy'])
         corex.append(event['mc_event']['xcore'])
         corey.append(event['mc_event']['ycore'])
@@ -31,19 +33,24 @@ bins = np.logspace(
     51
 )
 
-plt.figure()
-plt.hist(energies, bins=bins)
-plt.xscale('log')
-plt.xlabel(r'$E \,/\, \mathrm{TeV}$')
-plt.tight_layout()
+fig, (ax1, ax2) = plt.subplots(1, 2, layout="constrained")
+
+ax1.hist(energies, bins=bins)
+ax1.set(
+    xscale='log',
+    yscale='log',
+    xlabel=r'$E \,/\, \mathrm{TeV}$',
+)
 
 
-fig, ax = plt.subplots()
-ax.set_aspect('equal')
-ax.hist2d(
+ax2.hist2d(
     corex, corey,
     bins=100
 )
+ax2.set(
+    aspect=1,
+    xlabel=r'$x \,/\, \mathrm{m}$',
+    ylabel=r'$y \,/\, \mathrm{m}$',
+)
 
-fig.tight_layout()
 plt.show()
