@@ -1891,7 +1891,7 @@ class CalibrationPhotoelectrons(EventIOObject):
     eventio_type = 2034
 
     def __str__(self):
-        return f'{self.__class__.__name__}(type={self.header.id})'
+        return f'{self.__class__.__name__}[{self.header.type}](type={self.header.id})'
 
 
 
