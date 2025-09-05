@@ -54,6 +54,11 @@ cpdef dict parse_mc_event(
     const uint8_t[:] data,
     uint32_t version
 ):
+    if version > 2:
+        raise NotImplementedError(
+            'Unsupported version of MCEvent.'
+            f' Only versions up to 2 supported, got: {version}.'
+        )
 
     cdef uint64_t pos = 0
     cdef float xcore, ycore, aweight

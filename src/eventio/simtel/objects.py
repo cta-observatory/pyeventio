@@ -1480,10 +1480,8 @@ class MCEvent(EventIOObject):
         )
 
     def parse(self):
-        ''' '''
-        assert_version_in(self, (1, 2))
+        ''''''
         self.seek(0)
-
         d = MCEvent.parse_mc_event(self.read(), self.header.version)
         d['event_id'] = self.header.id
         return d
