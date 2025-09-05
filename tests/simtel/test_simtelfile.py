@@ -61,7 +61,7 @@ def test_show_event_is_not_empty_and_has_some_members_for_sure():
                 'profiles'
             }
 
-            assert event.keys() == {
+            assert set(event.keys()).issuperset({
                 'type',
                 'event_id',
                 'mc_shower',
@@ -77,7 +77,7 @@ def test_show_event_is_not_empty_and_has_some_members_for_sure():
                 'camera_monitorings',
                 'laser_calibrations',
                 'pixel_monitorings',
-            }
+            })
 
             telescope_events = event['telescope_events']
 
@@ -309,3 +309,12 @@ def test_type_2030():
         e = next(iter(f))
         assert "aux_traces" in e["telescope_events"][1]
         assert e["telescope_events"][1]["aux_traces"].keys() == {1, 2}
+
+
+def test_stereo_reconstruction():
+    with SimTelFile("tests/resources/gamma_prod6_tel_event_header_v4.simtel.zst") as f:
+        e = next(iter(f))
+
+        assert "stereo_reconstruction" in e
+        assert e["stereo_reconstruction"] is not None
+        assert e["stereo_reconstruction"]["n_img"] > 0
