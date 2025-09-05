@@ -40,6 +40,7 @@ from .objects import (
     PixelMonitoring,
     PointingCorrection,
     RunHeader,
+    StereoReconstruction,
     TelescopeEvent,
     TelescopeEventHeader,
     TrackingPosition,
@@ -328,6 +329,9 @@ class SimTelFile(EventIOFile):
                 'photoelectron_sums': None,
             }
 
+            if (reco := self.current_array_event.get("stereo_reconstruction")) is not None:
+                event_data["stereo_reconstruction"] = reco
+
             if self.current_mc_event_id == event_id:
                 event_data['mc_shower'] = self.current_mc_shower
                 event_data['mc_event'] =  self.current_mc_event
@@ -421,12 +425,21 @@ def parse_array_event(array_event, allowed_telescopes=None):
     # so we overwrite it later with the event id in the trigger information
     event_id = array_event.header.id
 
+    event = {
+        "event_id": event_id,
+        "trigger_information": None,
+        "telescope_events": telescope_events,
+        "tracking_positions": tracking_positions,
+    }
+
     for i, o in enumerate(array_event):
         # require first element to be a TriggerInformation
         if i == 0:
             check_type(o, TriggerInformation)
-            event_id = o.header.id
+            event["event_id"] = o.header.id
+
             trigger_information = o.parse()
+            event["trigger_information"] = trigger_information
             telescopes = set(trigger_information['telescopes_with_data'])
 
             if allowed_telescopes and len(telescopes & allowed_telescopes) == 0:
@@ -439,6 +452,8 @@ def parse_array_event(array_event, allowed_telescopes=None):
         elif isinstance(o, TrackingPosition):
             if allowed_telescopes is None or o.telescope_id in allowed_telescopes:
                 tracking_positions[o.telescope_id] = o.parse()
+        elif isinstance(o, StereoReconstruction):
+            event["stereo_reconstruction"] = o.parse()
 
     missing_tracking = set(telescope_events.keys()) - set(tracking_positions.keys())
     if missing_tracking:
@@ -448,12 +463,7 @@ def parse_array_event(array_event, allowed_telescopes=None):
             )
         )
 
-    return {
-        'event_id': event_id,
-        'trigger_information': trigger_information,
-        'telescope_events': telescope_events,
-        'tracking_positions': tracking_positions,
-    }
+    return event
 
 
 def parse_telescope_data(telescope_data):
