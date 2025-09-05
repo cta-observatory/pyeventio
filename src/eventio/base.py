@@ -116,8 +116,7 @@ class EventIOFile:
 
     def __next__(self):
         if self.next is not None:
-            o = self.next
-            self.next = None
+            o, self.next = self.next, None
             return o
 
         self.seek(self._next_header_pos)
