@@ -123,8 +123,9 @@ class SimTelFile:
             - CameraMonitoring[2022]
             - LaserCalibration[2023]
         - then the number of simulated calibration events:
-            -  CalibrationEvent[2028]
-                - ArrayEvent[2010] # see below for content of array event
+            - CalibrationPhotoelectrons[2034]?
+            - CalibrationEvent[2028]
+              - ArrayEvent[2010] # see below for content of array event
 
     Now follows the main payload of simulated events, for each simulated air shower:
 
