@@ -292,7 +292,7 @@ This is how our test file looks like in the low level view:
 
 .. |PyPI| image:: https://badge.fury.io/py/eventio.svg
     :target: https://pypi.org/project/eventio/
-.. |Build| image:: https://github.com/cta-observatory/pyeventio/workflows/CI/badge.svg
+.. |Build| image:: https://github.com/cta-observatory/pyeventio/actions/workflows/ci.yml/badge.svg
    :target: https://github.com/cta-observatory/pyeventio/actions?query=workflow%3ACI
 .. |LoC| image:: https://tokei.rs/b1/github/cta-observatory/pyeventio
     :target: https://github.com/cta-observatory/pyeventio
