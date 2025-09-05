@@ -129,7 +129,7 @@ class SimTelFile:
     Now follows the main payload of simulated events, for each simulated air shower:
 
     - MCShower[2020]
-    - Photons[1205], particles at observation level
+    - Photons[1205]?, particles at observation level
     - for each re-use of this shower:
       - MCEvent[2021]
       - TelescopeData[1204]?
