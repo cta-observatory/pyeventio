@@ -1,3 +1,4 @@
+from io import BufferedIOBase
 import weakref
 import struct
 import gzip
@@ -64,8 +65,8 @@ class EventIOFile:
         self.read_process = None
         self.zstd = False
         self.next = None
-        self._filehandle = None
         self.peek_error = None
+        self._filehandle: BufferedIOBase | None = None
 
         if not is_eventio(path):
             raise ValueError('File {} is not an eventio file'.format(path))
@@ -95,7 +96,7 @@ class EventIOFile:
 
         elif is_zstd(path):
             log.info('Found zstd compressed file')
-            self._filehandle = zstd.ZstdDecompressor().stream_reader(open(path, 'rb'))
+            self._filehandle = zstd.ZstdDecompressor().stream_reader(open(path, 'rb'), read_size=1024**2)
             self.zstd = True
 
         else:
@@ -119,10 +120,13 @@ class EventIOFile:
             o, self.next = self.next, None
             return o
 
-        self.seek(self._next_header_pos)
-        read_sync_marker(self)
+        return self._read_next_object()
+
+    def _read_next_object(self):
+        self._filehandle.seek(self._next_header_pos)
+        read_sync_marker(self._filehandle)
         header = read_header(
-            self,
+            self._filehandle,
             toplevel=True,
             offset=self._next_header_pos,
         )
@@ -136,7 +140,7 @@ class EventIOFile:
     def peek(self):
         if self.next is None:
             try:
-                self.next = next(self)
+                self.next = self._read_next_object()
             except (StopIteration, EOFError, IOError) as e:
                 self.peek_error = e
                 self.next = None
