@@ -218,34 +218,34 @@ class SimTelFile:
                 found_all_telescopes = found == self.n_telescopes
 
     def __iter__(self):
-        '''
-        Iterate over all events in the file.
-        '''
+        '''Iterate over all events in the file.'''
         return self
 
     def __next__(self):
+        '''Get next event in the file.'''
         event = self._read_next_event()
 
         while self._check_skip(event):
             event = self._read_next_event()
 
         return event
+
     def _read_next_event(self):
         if self._finished:
             raise StopIteration
 
         try:
-            while True:
+            event = None
+            while event is None:
                 event = self._parse_next_object()
-                if event is not None:
-                    return event
+            return event
         except (EOFError, StopIteration) as e:
             if isinstance(e, EOFError):
                 warnings.warn(str(e))
 
             self._finished = True
 
-            # in case we have event data in a truncated event, try returning what is there
+            # in case we have event data in a truncated file, try returning what is there
             if self.current_event is not None:
                 event = self.current_event
                 self.current_event = None
