@@ -284,9 +284,6 @@ class SimTelFile:
         elif isinstance(o, MCShower):
             self.current_mc_shower = o.parse()
 
-        elif isinstance(o, iact.Photons):
-            self.current_obslev_particles = o.parse()
-
         elif isinstance(o, ArrayEvent):
             # assume that array event without shower available are unpacked calibration events
             if self.current_mc_shower is None:
@@ -304,6 +301,9 @@ class SimTelFile:
 
         elif isinstance(o, MCPhotoelectronSum):
             self.current_event["photoelectron_sums"] = o.parse()
+
+        elif isinstance(o, iact.Photons):
+            self.current_obslev_particles = o.parse()
 
         elif isinstance(o, CameraMonitoring):
             self.camera_monitorings[o.telescope_id].update(o.parse())
