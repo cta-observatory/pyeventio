@@ -1,4 +1,5 @@
 from io import BufferedIOBase
+import warnings
 import weakref
 import struct
 import gzip
@@ -65,7 +66,6 @@ class EventIOFile:
         self.read_process = None
         self.zstd = False
         self.next = None
-        self.peek_error = None
         self._filehandle: BufferedIOBase | None = None
 
         if not is_eventio(path):
@@ -142,7 +142,7 @@ class EventIOFile:
             try:
                 self.next = self._read_next_object()
             except (StopIteration, EOFError, IOError) as e:
-                self.peek_error = e
+                warnings.warn(f"Error during peak: {e}")
                 self.next = None
 
         return self.next
