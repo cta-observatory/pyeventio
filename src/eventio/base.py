@@ -66,6 +66,7 @@ class EventIOFile:
         self.read_process = None
         self.zstd = False
         self.next = None
+        self.peek_error = None
         self._filehandle: BufferedIOBase | None = None
 
         if not is_eventio(path):
@@ -138,7 +139,7 @@ class EventIOFile:
         )
 
     def peek(self):
-        if self.next is None:
+        if self.next is None and self.peek_error is None:
             try:
                 self.next = self._read_next_object()
             except StopIteration:
@@ -146,6 +147,7 @@ class EventIOFile:
             except (EOFError, IOError) as e:
                 warnings.warn(f"Error in _read_next_object during peek: {e}")
                 self.next = None
+                self.peek_error = e
 
         return self.next
 

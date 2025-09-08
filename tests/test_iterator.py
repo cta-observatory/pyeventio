@@ -45,8 +45,9 @@ def test_peek():
 
     f = EventIOFile(truncated)
 
-    while f.peek() is not None:
-        o = next(f)
+    with pytest.warns(UserWarning, match="truncated"):
+        while f.peek() is not None:
+            o = next(f)
 
     # test we can peak multiple times for a truncated file
     assert f.peek() is None
