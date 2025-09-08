@@ -195,7 +195,6 @@ class SimTelFile:
         # wee need to keep the mc_shower separate from the event,
         # as it is valid for more than one (CORSIKA re-use)
         self.current_mc_shower = None
-        self.current_mc_shower_id = None
         self.current_obslev_particles = None
         self.current_event = None
         self._current_calib_pe = None
@@ -283,7 +282,6 @@ class SimTelFile:
 
         elif isinstance(o, MCShower):
             self.current_mc_shower = o.parse()
-            self.current_mc_shower_id = o.header.id
 
         elif isinstance(o, iact.Photons):
             self.current_obslev_particles = o.parse()
