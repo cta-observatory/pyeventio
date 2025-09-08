@@ -1,5 +1,4 @@
 import pytest
-from pytest import importorskip
 from eventio.simtel import SimTelFile
 import numpy as np
 
@@ -104,40 +103,62 @@ def test_show_event_is_not_empty_and_has_some_members_for_sure(path):
     (prod2_path, 9, True),
     (prod3_path, 6, False),
     (prod4_path, 31, False),
+    (prod4_astri_path, 3, False),
     (prod4_zst_path, 31, False),
+    ('tests/resources/prod4_pixelsettings_v3.gz', 10, False),
+    ('tests/resources/lst_with_photons.simtel.zst', 1, False),
+    (frankenstein_path, 0, False),
 ])
 def test_iterate_complete_file(path, n_expected, truncated):
     n_read = 0
-    try:
-        with SimTelFile(path) as f:
+    with SimTelFile(path) as f:
+        try:
             for e in f:
                 n_read += 1
-    except EOFError:  # truncated files might raise these...
-        if not truncated:
-            raise
+                assert e["mc_shower"]["shower"] == e["event_id"] // 100
+                assert e["mc_shower"]["shower"] == e["mc_event"]["shower_num"]
+        except EOFError:  # truncated files might raise these...
+            if not truncated:
+                raise
 
     assert n_read == n_expected
 
 
-@pytest.mark.parametrize(("path", "n_expected", "truncated"), [
-    (prod2_path, 1214, True),
-    (prod3_path, 14514, False),
-    (prod4_path, None, False),
-    (prod4_zst_path, None, False),
+@pytest.mark.parametrize(("path", "n_expected"), [
+    (prod2_path, 1214),
+    (prod3_path, 14514),
+    (prod4_path, None),
+    (prod4_astri_path, None),
+    (prod4_zst_path, None),
+    ('tests/resources/prod4_pixelsettings_v3.gz', None),
+    ('tests/resources/lst_with_photons.simtel.zst', None),
+    (frankenstein_path, 126),
 ])
-def test_iterate_complete_file_all_events(path, n_expected, truncated):
-    n_read = 0
-    try:
-        with SimTelFile(path, skip_non_triggered=False) as f:
-            if n_expected is None:
-                header = f.mc_run_headers[-1]
-                n_expected = header["n_showers"] * header["n_use"]
+def test_iterate_complete_file_all_events(path, n_expected):
 
+    with SimTelFile(path, skip_non_triggered=False) as f:
+        n_showers = f.mc_run_headers[-1]["n_showers"]
+        n_use = f.mc_run_headers[-1]["n_use"]
+
+        # for non-truncated files, we take the expected number of events from the run header
+        if n_expected is None:
+            truncated = True
+            n_expected = n_showers * n_use
+        else:
+            truncated = False
+
+        n_read = 0
+        try:
             for e in f:
+                shower = (n_read // n_use) + 1
+                expected = 100 * shower + n_read % n_use
+                assert e["mc_shower"]["shower"] == shower, f"Wrong shower for {n_read=}, {n_use=}"
+                assert e["event_id"] == expected, f"Wrong event_id for {n_read=}, {n_use=}"
+
                 n_read += 1
-    except EOFError:  # truncated files might raise these...
-        if not truncated:
-            raise
+        except EOFError:  # truncated files might raise these...
+            if not truncated:
+                raise
 
     assert n_read == n_expected
 
@@ -214,29 +235,6 @@ def test_skip_calibration_events():
 def test_frankenstein():
     with SimTelFile(frankenstein_path) as f:
         assert len(f.telescope_descriptions) == f.n_telescopes
-
-
-def test_new_prod4():
-    with SimTelFile('tests/resources/prod4_pixelsettings_v3.gz') as f:
-        i = 0
-        for e in f:
-            i += 1
-        assert i == 10
-
-
-def test_correct_event_ids_iter_mc_events():
-
-    with SimTelFile('tests/resources/lst_with_photons.simtel.zst') as f:
-        n_use = f.mc_run_headers[-1]["n_use"]
-        n_showers = f.mc_run_headers[-1]["n_showers"]
-        i = 0
-        for e in f:
-            i += 1
-            expected = i // n_use * 100 + i % n_use
-            assert e["event_id"] == expected
-            assert f.current_mc_shower_id == e["event_id"] // 100
-
-        assert i == n_showers * n_use
 
 
 def test_photons():
