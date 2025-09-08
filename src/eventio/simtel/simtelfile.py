@@ -269,8 +269,9 @@ class SimTelFile:
         # by the number of occurences in a simtel file
         # this should minimize the number of if statements evaluated
         if isinstance(o, MCEvent):
-            # a new event started
+            # a new event started, return previous
             event = self.current_event
+            # setup new event
             self.current_event = {
                 "type": "data",
                 "event_id": o.header.id,
