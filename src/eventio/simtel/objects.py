@@ -1,4 +1,4 @@
-''' Implementations of the simtel_array EventIO object types '''
+'''Implementations of the simtel_array EventIO object types.'''
 import os
 import sys
 import numpy as np

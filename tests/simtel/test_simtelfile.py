@@ -111,7 +111,29 @@ def test_iterate_complete_file(path, n_expected, truncated):
     try:
         with SimTelFile(path) as f:
             for e in f:
-                print(e["event_id"])
+                n_read += 1
+    except EOFError:  # truncated files might raise these...
+        if not truncated:
+            raise
+
+    assert n_read == n_expected
+
+
+@pytest.mark.parametrize(("path", "n_expected", "truncated"), [
+    (prod2_path, 1214, True),
+    (prod3_path, 14514, False),
+    (prod4_path, None, False),
+    (prod4_zst_path, None, False),
+])
+def test_iterate_complete_file_all_events(path, n_expected, truncated):
+    n_read = 0
+    try:
+        with SimTelFile(path, skip_non_triggered=False) as f:
+            if n_expected is None:
+                header = f.mc_run_headers[-1]
+                n_expected = header["n_showers"] * header["n_use"]
+
+            for e in f:
                 n_read += 1
     except EOFError:  # truncated files might raise these...
         if not truncated:
