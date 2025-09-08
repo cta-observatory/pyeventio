@@ -141,8 +141,10 @@ class EventIOFile:
         if self.next is None:
             try:
                 self.next = self._read_next_object()
-            except (StopIteration, EOFError, IOError) as e:
-                warnings.warn(f"Error during peak: {e}")
+            except StopIteration:
+                self.next = None
+            except (EOFError, IOError) as e:
+                warnings.warn(f"Error in _read_next_object during peek: {e}")
                 self.next = None
 
         return self.next
