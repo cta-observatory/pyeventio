@@ -192,7 +192,7 @@ class SimTelFile:
         self.camera_monitorings = defaultdict(dict)
         self.laser_calibrations = defaultdict(dict)
 
-        # wee need to keep the mc_shower separate from the event,
+        # we need to keep the mc_shower separate from the event,
         # as it is valid for more than one (CORSIKA re-use)
         self.current_mc_shower = None
         self.current_obslev_particles = None
