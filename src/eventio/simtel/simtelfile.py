@@ -1,12 +1,13 @@
 '''
-Implementation of an EventIOFile that
-loops through SimTel Array events.
+File for reading the event output of sim_telarray.
 '''
+from functools import cache
 import re
 from copy import copy
 from collections import defaultdict
 import warnings
 import logging
+from typing import Dict, Any
 
 from ..base import EventIOFile
 from ..exceptions import check_type
@@ -71,6 +72,7 @@ camel_re1 = re.compile('(.)([A-Z][a-z]+)')
 camel_re2 = re.compile('([a-z0-9])([A-Z])')
 
 
+@cache
 def camel_to_snake(name):
     s1 = camel_re1.sub(r'\1_\2', name)
     return camel_re2.sub(r'\1_\2', s1).lower()
@@ -80,17 +82,103 @@ class NoTrackingPositions(Exception):
     pass
 
 
-class SimTelFile(EventIOFile):
-    def __init__(self, path, allowed_telescopes=None, skip_calibration=False, zcat=True):
-        super().__init__(path, zcat=zcat)
+class SimTelFile:
+    '''
+    A class to read files produced by sim_telarray.
 
+    This class is an iterator over simulated air shower events.
+
+    It assumes the following top-level structure, elements with ? are optional.
+
+    First, a header that appears once in the beginning of the file:
+    - History[70]
+    - HistoryMeta[75]?
+    - one for each telescope:
+        - HistoryMeta[75]?
+    - RunHeader[2000]
+    - MCRunHeader[2001]?
+    - InputCard[1212]?
+    - AtmosphericProfile[1216]?
+    - one block of these types for each telescope:
+        - CameraSettings[2002]
+        - CameraOrganization[2003]
+        - PixelSettings[2004]
+        - DisabledPixels[2005]
+        - CameraSoftwareSettings[2006]
+        - DriveSettings[2008]
+        - PointingCorrection[2007]
+
+    This concludes the "header" information, what follows are events.
+
+    - Optionally, a number of calibration events, in that case,
+      also the calibration info comes now:
+        - once, one block of these types for each telescope:
+            - CameraMonitoring[2022]
+            - LaserCalibration[2023]
+        - then the number of simulated calibration events:
+            - CalibrationPhotoelectrons[2034]?
+            - CalibrationEvent[2028]
+              - ArrayEvent[2010] # see below for content of array event
+
+    Now follows the main payload of simulated events, for each simulated air shower:
+
+    - MCShower[2020]
+    - Photons[1205]?, particles at observation level
+    - for each re-use of this shower:
+      - MCEvent[2021]
+      - TelescopeData[1204]?
+      - before the first actually triggered event,
+        only in case no calibration events were simulated,
+        once, one block of these types for each telescope:
+            - CameraMonitoring[2022]
+            - LaserCalibration[2023]
+      - MCPhotoelectronSum[2026]?
+      - ArrayEvent[2010]?
+
+    At the end of the file comes the Histograms object
+    with summary statistics about the simulated events:
+    - Histograms[100]
+
+    Each ArrayEvent[2010] is assumed to have the following structure:
+    - ArrayEvent[2010]
+      - TriggerInformation[2009]
+      - for each triggered telescope:
+        - TelescopeEvent[type], the type encodes the telescope id
+          - TelescopeEventHeader[2201]
+          - ADCSamples[2013]?
+          - ADCSums[2012]?
+          - ImageParameters[2014]?
+          - PixelTiming[2016]?
+          - multiple possible:
+            - PixelList[2027]?
+          - PixelTriggerTimes[2032]?
+          - multiple possible:
+            - AuxiliaryDigitalTraces[2029]?
+            - AuxiliaryAnalogTraces[2030]?
+      - for each telescope:
+        - TrackingPosition[type], the type encodes the telescope id
+      - StereoReconstruction[2015]?
+    '''
+    def __init__(
+        self,
+        path,
+        skip_non_triggered=True,
+        skip_calibration=False,
+        allowed_telescopes=None,
+        zcat=True,
+    ):
+        self._file = EventIOFile(path, zcat=zcat)
         self.path = path
+
+        self.skip_calibration = skip_calibration
+        self.skip_non_triggered = skip_non_triggered
+
         self.allowed_telescopes = None
         if allowed_telescopes:
             self.allowed_telescopes = set(allowed_telescopes)
 
+        # object storage
         self.histograms = None
-
         self.history = []
         self.mc_run_headers = []
         self.corsika_inputcards = []
@@ -103,39 +191,22 @@ class SimTelFile(EventIOFile):
         self.pixel_monitorings = defaultdict(dict)
         self.camera_monitorings = defaultdict(dict)
         self.laser_calibrations = defaultdict(dict)
+
+        # we need to keep the mc_shower separate from the event,
+        # as it is valid for more than one (CORSIKA re-use)
         self.current_mc_shower = None
-        self.current_mc_shower_id = None
-        self.current_mc_event = None
-        self.current_mc_event_id = None
-        self.current_telescope_data_event_id = None
-        self.current_photoelectron_sum = None
-        self.current_photoelectron_sum_event_id = None
-        self.current_photoelectrons = {}
-        self.current_photons = {}
-        self.current_emitter = {}
         self.current_obslev_particles = None
-        self.current_array_event = None
-        self.current_calibration_event = None
-        self.current_calibration_event_id = None
-        self.current_calibration_pe = {}
-        self.skip_calibration = skip_calibration
+        self.current_event = None
+        self._current_calib_pe = None
+        self._finished = False
 
         # read the header:
         # assumption: the header is done when
         # any of the objects in check is not None anymore
         # and we found the telescope_descriptions of all telescopes
-        check = []
         found_all_telescopes = False
-        while not (any(o for o in check) and found_all_telescopes):
-            self.next_low_level()
-
-            check = [
-                self.current_mc_shower,
-                self.current_array_event,
-                self.current_calibration_event,
-                self.laser_calibrations,
-                self.camera_monitorings,
-            ]
+        while not found_all_telescopes:
+            self._parse_next_object()
 
             # check if we found all the descriptions of all telescopes
             if self.n_telescopes is not None:
@@ -146,42 +217,93 @@ class SimTelFile(EventIOFile):
                 found_all_telescopes = found == self.n_telescopes
 
     def __iter__(self):
-        return self.iter_array_events()
+        '''Iterate over all events in the file.'''
+        return self
 
-    def next_low_level(self):
-        o = next(self)
+    def __next__(self):
+        '''Get next event in the file.'''
+        event = self._read_next_event()
+
+        while self._check_skip(event):
+            event = self._read_next_event()
+
+        return event
+
+    def _read_next_event(self):
+        if self._finished:
+            raise StopIteration
+
+        try:
+            event = None
+            while event is None:
+                event = self._parse_next_object()
+            return event
+        except (EOFError, StopIteration) as e:
+            if isinstance(e, EOFError):
+                warnings.warn(str(e))
+
+            self._finished = True
+
+            # in case we have event data in a truncated file, try returning what is there
+            if self.current_event is not None:
+                event = self.current_event
+                self.current_event = None
+                return event
+            else:
+                raise StopIteration
+
+    def _check_skip(self, event):
+        if event['type'] == 'data':
+            return self.skip_non_triggered and not event.get('telescope_events')
+
+        if event['type'] == 'calibration':
+            return self.skip_calibration
+
+        raise ValueError(f'Unexpected event type {event["type"]}')
+
+    def _parse_next_object(self):
+        o = next(self._file)
+        event = None
 
         # order of if statements is roughly sorted
         # by the number of occurences in a simtel file
         # this should minimize the number of if statements evaluated
-
         if isinstance(o, MCEvent):
-            self.current_mc_event = o.parse()
-            self.current_mc_event_id = o.header.id
+            # a new event started, return previous
+            event = self.current_event
+            # setup new event
+            self.current_event = {
+                "type": "data",
+                "event_id": o.header.id,
+                "mc_shower": self.current_mc_shower,
+                "mc_event": o.parse(),
+            }
+            if self.current_obslev_particles is not None:
+                self.current_event["observation_level_particles"] = self.current_obslev_particles
 
         elif isinstance(o, MCShower):
             self.current_mc_shower = o.parse()
-            self.current_mc_shower_id = o.header.id
+
+        elif isinstance(o, ArrayEvent):
+            # assume that array event without shower available are unpacked calibration events
+            if self.current_mc_shower is None:
+                event = self.current_event
+                self.current_event = {"type": "calibration"}
+
+            self.current_event["event_id"] = o.header.id
+            self.current_event.update(
+                parse_array_event(o, self.allowed_telescopes)
+            )
+            self._add_monitoring(self.current_event)
+
+        elif isinstance(o, iact.TelescopeData):
+            self.current_event.update(parse_telescope_data(o))
+
+        elif isinstance(o, MCPhotoelectronSum):
+            self.current_event["photoelectron_sums"] = o.parse()
 
         elif isinstance(o, iact.Photons):
             self.current_obslev_particles = o.parse()
-
-        elif isinstance(o, ArrayEvent):
-            self.current_array_event = parse_array_event(
-                o,
-                self.allowed_telescopes
-            )
-
-        elif isinstance(o, iact.TelescopeData):
-            event_id, photons, emitter, photoelectrons = parse_telescope_data(o)
-            self.current_telescope_data_event_id = event_id
-            self.current_photons = photons
-            self.current_emitter = emitter
-            self.current_photoelectrons = photoelectrons
-
-        elif isinstance(o, MCPhotoelectronSum):
-            self.current_photoelectron_sum_event_id = o.header.id
-            self.current_photoelectron_sum = o.parse()
 
         elif isinstance(o, CameraMonitoring):
             self.camera_monitorings[o.telescope_id].update(o.parse())
@@ -207,16 +329,23 @@ class SimTelFile(EventIOFile):
             self.corsika_inputcards.append(o.parse())
 
         elif isinstance(o, CalibrationEvent):
-            if not self.skip_calibration:
-                array_event = next(o)
-                self.current_calibration_event = parse_array_event(
-                    array_event,
-                    self.allowed_telescopes,
-                )
-                # assign negative event_ids to calibration events to avoid
-                # duplicated event_ids
-                self.current_calibration_event_id = -array_event.header.id
-                self.current_calibration_event['calibration_type'] = o.type
+            array_event = next(o)
+            # make event_id negative for calibration events to not overlap with
+            # later air shower events
+            event = self.current_event
+            self.current_event = {
+                "type": "calibration",
+                "event_id": -array_event.header.id,
+                "calibration_type": o.type,
+            }
+            self.current_event.update(
+                parse_array_event(array_event, self.allowed_telescopes)
+            )
+            self._add_monitoring(self.current_event)
+            if self._current_calib_pe is not None:
+                self.current_event["photoelectrons"] = self._current_calib_pe
+                self._current_calib_pe = None
+
         elif isinstance(o, CalibrationPhotoelectrons):
             telescope_data = next(o)
             if not isinstance(telescope_data, iact.TelescopeData):
@@ -226,7 +355,7 @@ class SimTelFile(EventIOFile):
                 )
                 return
 
-            self.current_calibration_pe = {}
+            self._current_calib_pe = {}
             for photoelectrons in telescope_data:
                 if not isinstance(photoelectrons, iact.PhotoElectrons):
                     warnings.warn(
@@ -235,8 +364,7 @@ class SimTelFile(EventIOFile):
                     )
 
                 tel_id = photoelectrons.telescope_id
-                self.current_calibration_pe[tel_id] = photoelectrons.parse()
-
+                self._current_calib_pe[tel_id] = photoelectrons.parse()
 
         elif isinstance(o, History):
             for sub in o:
@@ -250,6 +378,12 @@ class SimTelFile(EventIOFile):
 
         elif isinstance(o, Histograms):
             self.histograms = o.parse()
+
+            # file is over, assign last event
+            event = self.current_event
+            self.current_event = None
+            self._finished = True
+
         elif isinstance(o, iact.AtmosphericProfile):
             self.atmospheric_profiles.append(o.parse())
         else:
@@ -259,141 +393,43 @@ class SimTelFile(EventIOFile):
                 UnknownObjectWarning,
             )
 
-    def iter_mc_events(self):
-        while True:
-            try:
-                next_event = self.try_build_mc_event()
-            except StopIteration:
-                break
-            if next_event is not None:
-                yield next_event
+        return event
 
-    def try_build_mc_event(self):
-        if self.current_mc_event:
-
-            event_data = {
-                'event_id': self.current_mc_event_id,
-                'mc_shower': self.current_mc_shower,
-                'mc_event': self.current_mc_event,
-                'observation_level_particles': self.current_obslev_particles,
-            }
-            # if next object is TelescopeData, it belongs to this event
-            if isinstance(self.peek(), iact.TelescopeData):
-                self.next_low_level()
-                event_data['photons'] = self.current_photons
-                event_data['emitter'] = self.current_emitter
-                event_data['photoelectrons'] = self.current_photoelectrons
-
-            self.current_mc_event = None
-            return event_data
-        self.next_low_level()
-
-    def iter_array_events(self):
-        while True:
-
-            next_event = self.try_build_event()
-            if next_event is not None:
-                yield next_event
-
-            try:
-                self.next_low_level()
-            except StopIteration:
-                break
-
-    def try_build_event(self):
+    def _add_monitoring(self, event):
         '''check if all necessary info for an event was found,
         then make an event and invalidate old data
         '''
-        if self.current_array_event:
-            if (
-                self.allowed_telescopes
-                and not self.current_array_event['telescope_events']
-            ):
-                self.current_array_event = None
-                return None
-
-            event_id = self.current_array_event['event_id']
-
-            event_data = {
-                'type': 'data',
-                'event_id': event_id,
-                'mc_shower': None,
-                'mc_event': None,
-                'observation_level_particles': None,
-                'telescope_events': self.current_array_event['telescope_events'],
-                'tracking_positions': self.current_array_event['tracking_positions'],
-                'trigger_information': self.current_array_event['trigger_information'],
-                'photons': {},
-                'emitter': {},
-                'photoelectrons': {},
-                'photoelectron_sums': None,
-            }
-
-            if (reco := self.current_array_event.get("stereo_reconstruction")) is not None:
-                event_data["stereo_reconstruction"] = reco
-
-            if self.current_mc_event_id == event_id:
-                event_data['mc_shower'] = self.current_mc_shower
-                event_data['mc_event'] =  self.current_mc_event
-                event_data['observation_level_particles'] = self.current_obslev_particles
-
-            if self.current_telescope_data_event_id == event_id:
-                event_data['photons'] = self.current_photons
-                event_data['emitter'] = self.current_emitter
-                event_data['photoelectrons'] = self.current_photoelectrons
-
-            if self.current_photoelectron_sum_event_id == event_id:
-                event_data['photoelectron_sums'] = self.current_photoelectron_sum
-
-            event_data['camera_monitorings'] = {
+        # fill monitoring info if we have telescope events
+        if 'telescope_events' in event:
+            tel_ids = event["telescope_events"].keys()
+            event['camera_monitorings'] = {
                 telescope_id: copy(self.camera_monitorings[telescope_id])
-                for telescope_id in self.current_array_event['telescope_events'].keys()
+                for telescope_id in tel_ids
             }
-            event_data['laser_calibrations'] = {
+            event['laser_calibrations'] = {
                 telescope_id: copy(self.laser_calibrations[telescope_id])
-                for telescope_id in self.current_array_event['telescope_events'].keys()
+                for telescope_id in tel_ids
             }
 
-            event_data['pixel_monitorings'] = {
+            event['pixel_monitorings'] = {
                 telescope_id: copy(self.pixel_monitorings[telescope_id])
-                for telescope_id in self.current_array_event['telescope_events'].keys()
+                for telescope_id in tel_ids
             }
 
-            self.current_array_event = None
+    def __enter__(self):
+        return self
 
-            return event_data
+    def __exit__(self, exc_type, exc_value, traceback):
+        self.close()
 
-        elif self.current_calibration_event:
-            event = self.current_calibration_event
-            if (
-                self.allowed_telescopes
-                and not self.current_array_event['telescope_events']
-            ):
-                self.current_calibration_event = None
-                return None
+    def close(self):
+        self._file.close()
 
-            event_data = {
-                'type': 'calibration',
-                'event_id': self.current_calibration_event_id,
-                'telescope_events': event['telescope_events'],
-                'tracking_positions': event['tracking_positions'],
-                'trigger_information': event['trigger_information'],
-                'calibration_type': event['calibration_type'],
-                'photoelectrons': self.current_calibration_pe,
-            }
+    def tell(self):
+        return self._file.tell()
 
-            event_data['camera_monitorings'] = {
-                telescope_id: copy(self.camera_monitorings[telescope_id])
-                for telescope_id in event['telescope_events'].keys()
-            }
-            event_data['laser_calibrations'] = {
-                telescope_id: copy(self.laser_calibrations[telescope_id])
-                for telescope_id in event['telescope_events'].keys()
-            }
-
-            self.current_calibration_event = None
-
-            return event_data
+    def seek(self, *args, **kwargs):
+        return self._file.seek(*args, **kwargs)
 
 
 def parse_array_event(array_event, allowed_telescopes=None):
@@ -436,8 +472,10 @@ def parse_array_event(array_event, allowed_telescopes=None):
         # require first element to be a TriggerInformation
         if i == 0:
             check_type(o, TriggerInformation)
-            event["event_id"] = o.header.id
-
+            # extracted calibration events seem to have a valid event id in the array event
+            # but not in the trigger
+            if o.header.id != 0:
+                event["event_id"] = o.header.id
             trigger_information = o.parse()
             event["trigger_information"] = trigger_information
             telescopes = set(trigger_information['telescopes_with_data'])
@@ -470,19 +508,16 @@ def parse_telescope_data(telescope_data):
     ''' Parse the TelescopeData block with Cherenkov Photon information'''
     check_type(telescope_data, iact.TelescopeData)
 
-    photons = {}
-    emitter = {}
-    photo_electrons = {}
+    data = defaultdict(dict)
     for o in telescope_data:
         if isinstance(o, iact.PhotoElectrons):
-            photo_electrons[o.telescope_id] = o.parse()
+            data["photoelectrons"][o.telescope_id] = o.parse()
         elif isinstance(o, iact.Photons):
             p, e = o.parse()
-            photons[o.telescope_id] = p
+            data["photons"][o.telescope_id] = p
             if e is not None:
-                emitter[o.telescope_id] = e
-
-    return telescope_data.header.id, photons, emitter, photo_electrons
+                data["emitter"][o.telescope_id] = e
+    return data
 
 
 def parse_telescope_event(telescope_event):
