@@ -1,5 +1,6 @@
 ''' Methods to read in and parse the IACT EventIO object types '''
 import struct
+from typing import Optional
 import numpy as np
 from io import BytesIO
 from corsikaio.subblocks import (
@@ -215,9 +216,17 @@ class Photons(EventIOObject):
             self.n_bunches,
         )
 
-    def parse(self, chunksize=None):
+    def parse(self, chunksize: Optional[int]=None):
         '''
         Read the data in this EventIOObject
+
+        Parameters
+        ----------
+        chunksize : Optional[int]
+            If this option is given, a generator over chunks of at most
+            chunksize photons is returned.
+            This can be useful for extremely large showers to avoid loading
+            all photons into memory at the same time.
 
         Returns a numpy structured array with a record for each photon
         and the following columns:
@@ -245,9 +254,11 @@ class Photons(EventIOObject):
     def parse_chunked(self, chunksize):
         n_chunks = int(np.ceil(self.n_bunches / chunksize))
         last_chunksize = self.n_bunches % chunksize
+        if last_chunksize == 0:
+            last_chunksize = chunksize
 
         # read the first full size chunks
-        for i in range(n_chunks - 1):
+        for _ in range(n_chunks - 1):
             data = self.read_data(chunksize=chunksize)
             yield self.parse_emitter(data)
 
@@ -264,7 +275,7 @@ class Photons(EventIOObject):
         if self.n_bunches == 0:
             return np.array([], dtype=dtype)
 
-        count = chunksize or self.n_bunches
+        count = self.n_bunches if chunksize is None else chunksize
 
         bunches = np.frombuffer(
             self.read(count * dtype.itemsize),

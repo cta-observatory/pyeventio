@@ -134,17 +134,51 @@ def test_bunches_chunked():
 
     with eventio.EventIOFile(testfile) as f:
         # first telescope data  object should be the 6th object in the file
-        for i in range(6):
+        for _ in range(6):
             obj = next(f)
 
         assert isinstance(obj, TelescopeData)
 
         photons = next(obj)
-        for i, (bunches, emitter) in enumerate(photons.parse(chunksize=100)):
-            if i < 3:
+        expected_chunks = 4
+        n_chunks = 0
+        n_bunches = 0
+
+        for (bunches, _) in photons.parse(chunksize=100):
+            n_chunks += 1
+            n_bunches += len(bunches)
+
+            if n_chunks < expected_chunks:
                 assert len(bunches) == 100
 
-        assert i == 3
+        assert n_bunches == 382
+        assert n_chunks == expected_chunks
+
+
+def test_bunches_chunked_integer_multiple():
+    from eventio.iact import TelescopeData
+
+
+    with eventio.EventIOFile(testfile) as f:
+        # first telescope data  object should be the 6th object in the file
+        for _ in range(6):
+            obj = next(f)
+
+        assert isinstance(obj, TelescopeData)
+
+        photons = next(obj)
+        expected_chunks = 2
+        n_chunks = 0
+        n_bunches = 0
+
+        for (bunches, _) in photons.parse(chunksize=191):
+            n_chunks += 1
+            n_bunches += len(bunches)
+
+            assert len(bunches) == 191
+
+        assert n_bunches == 382
+        assert n_chunks == expected_chunks
 
 
 def test_emitter_bunches():
