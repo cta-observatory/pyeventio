@@ -1,5 +1,6 @@
 ''' Methods to read in and parse the IACT EventIO object types '''
 import struct
+from typing import Optional
 import numpy as np
 from io import BytesIO
 from corsikaio.subblocks import (
@@ -215,38 +216,72 @@ class Photons(EventIOObject):
             self.n_bunches,
         )
 
-    def parse(self):
+    def parse(self, chunksize: Optional[int]=None):
         '''
         Read the data in this EventIOObject
 
-        Returns a numpy structured array with a record for each photon
-        and the following columns:
-            x:         x coordinate in cm
-            y:         y coordinate in cm
-            cx:        cosine of incident angle in x direction
-            cy:        cosine of incident angle in y direction
-            time:      time since first interaction in ns
-            zem:       Emission height in cm above sea level
-            wavelength:    wavelength in nm
-            scattered: indicates if the photon was scattered in the atmosphere
+        Parameters
+        ----------
+        chunksize : Optional[int]
+            If this option is given, a generator over chunks of at most
+            chunksize photon bunches is returned.
+            This can be useful for extremely large showers to avoid loading
+            all bunches into memory at the same time.
+            Chose depending on your available memory and task.
+
+        Returns
+        -------
+        photon_bunches : np.ndarray
+            a numpy structured array with a record for each photon
+            and the following columns:
+                x:          x coordinate in cm
+                y:          y coordinate in cm
+                cx:         cosine of incident angle in x direction
+                cy:         cosine of incident angle in y direction
+                time:       time since first interaction in ns
+                zem:        Emission height in cm above sea level
+                photons:    Number of photons in the bunch
+                wavelength: wavelength in nm
+        emitter : None or np.ndarray
+            If the iact extension was compiled with STORE_EMITTER, this
+            information is returned as a second array, with the following columns:
+                x:             x coordinate in cm
+                y:             y coordinate in cm
+                mass:          mass of the emitting particle
+                charge:        charge of the emitting particle
+                time:          time since first interaction in ns
+                emissino_time: Emission time
+                energy:        Energy of the emitting particle
+                wavelength:    wavelength (always 9999)
         '''
-        data = self.parse_data()
-        # normal photon bunch
-        if not (self.array_id == 999 and self.telescope_id == 999):
-            emitter_mask = data['wavelength'] == np.float32(9999)
-            if np.any(emitter_mask):
-                photons = data[~emitter_mask]
-                emitter = data[emitter_mask].view(self.emitter_dtype)
-            else:
-                photons = data
-                emitter = None
+        self.seek(12)
 
-            return photons, emitter
+        if (self.array_id == 999 and self.telescope_id == 999):
+            data = self.read_data()
+            return data.view(self.particle_dtype)
 
-        # particles at obslevel
-        return data.view(self.particle_dtype)
+        if chunksize is None:
+            data = self.read_data()
+            return self.parse_emitter(data)
+        else:
+            return self.parse_chunked(chunksize)
 
-    def parse_data(self):
+    def parse_chunked(self, chunksize):
+        n_chunks = int(np.ceil(self.n_bunches / chunksize))
+        last_chunksize = self.n_bunches % chunksize
+        if last_chunksize == 0:
+            last_chunksize = chunksize
+
+        # read the first full size chunks
+        for _ in range(n_chunks - 1):
+            data = self.read_data(chunksize=chunksize)
+            yield self.parse_emitter(data)
+
+        # read the remaining, smaller chunk
+        data = self.read_data(chunksize=last_chunksize)
+        yield self.parse_emitter(data)
+
+    def read_data(self, chunksize=None):
         if self.compact:
             dtype = self.compact_dtype
         else:
@@ -255,32 +290,50 @@ class Photons(EventIOObject):
         if self.n_bunches == 0:
             return np.array([], dtype=dtype)
 
-        self.seek(12)
+        count = self.n_bunches if chunksize is None else chunksize
+
         bunches = np.frombuffer(
-            self.read(self.n_bunches * dtype.itemsize),
+            self.read(count * dtype.itemsize),
             dtype=dtype,
-            count=self.n_bunches
+            count=count
         )
 
         if self.compact:
-            bunches = bunches.astype(self.long_dtype)
-            bunches['x'] *= 0.1  # now in cm
-            bunches['y'] *= 0.1  # now in cm
-
-            # if compact, cosines are scaled by a factor of 30000
-            bunches['cx'] /= 30000
-            bunches['cy'] /= 30000
-            # bernloehr clips in his implementation of the reader.
-            # we do so here as well. As cx and cy are cosines of angles,
-            # values with abs > 1 are not allowed.
-            bunches['cx'] = bunches['cx'].clip(min=-1., max=1.)
-            bunches['cy'] = bunches['cy'].clip(min=-1., max=1.)
-
-            bunches['time'] *= 0.1  # in nanoseconds since first interaction.
-            bunches['zem'] = np.power(10., bunches['zem'] * 0.001)
-            bunches['photons'] *= 0.01
+            bunches = self.parse_compact(bunches)
 
         return bunches
+
+    def parse_emitter(self, data):
+        emitter_mask = data['wavelength'] == np.float32(9999)
+        if np.any(emitter_mask):
+            photons = data[~emitter_mask]
+            emitter = data[emitter_mask].view(self.emitter_dtype)
+        else:
+            photons = data
+            emitter = None
+
+        return photons, emitter
+
+    @classmethod
+    def parse_compact(cls, data):
+        data = data.astype(cls.long_dtype)
+        data['x'] *= 0.1  # now in cm
+        data['y'] *= 0.1  # now in cm
+
+        # if compact, cosines are scaled by a factor of 30000
+        data['cx'] /= 30000
+        data['cy'] /= 30000
+        # bernloehr clips in his implementation of the reader.
+        # we do so here as well. As cx and cy are cosines of angles,
+        # values with abs > 1 are not allowed.
+        data['cx'] = data['cx'].clip(min=-1., max=1.)
+        data['cy'] = data['cy'].clip(min=-1., max=1.)
+
+        data['time'] *= 0.1  # in nanoseconds since first interaction.
+        data['zem'] = np.power(10., data['zem'] * 0.001)
+        data['photons'] *= 0.01
+
+        return data
 
 
 class CameraLayout(EventIOObject):
