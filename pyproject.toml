@@ -84,3 +84,14 @@ filterwarnings = [
     "ignore:File seems to be truncated:UserWarning",
     "ignore:Version unknown:UserWarning",  # pycorsikaio
 ]
+
+
+[tool.cibuildwheel]
+# only build cpython
+build = "cp*"
+# exclude 32 bit and musl architectures to reduce build time
+skip = "*-win32 *-manylinux_i686 *musllinux*"
+
+# default is now newer 2_28, which drops CentOS 7. Keep using 2014 for now
+# to keep compatibility with LST onsite cluster
+manylinux-x86_64-image = "manylinux2014"
