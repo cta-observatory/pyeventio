@@ -224,20 +224,35 @@ class Photons(EventIOObject):
         ----------
         chunksize : Optional[int]
             If this option is given, a generator over chunks of at most
-            chunksize photons is returned.
+            chunksize photon bunches is returned.
             This can be useful for extremely large showers to avoid loading
-            all photons into memory at the same time.
+            all bunches into memory at the same time.
+            Chose depending on your available memory and task.
 
-        Returns a numpy structured array with a record for each photon
-        and the following columns:
-            x:         x coordinate in cm
-            y:         y coordinate in cm
-            cx:        cosine of incident angle in x direction
-            cy:        cosine of incident angle in y direction
-            time:      time since first interaction in ns
-            zem:       Emission height in cm above sea level
-            wavelength:    wavelength in nm
-            scattered: indicates if the photon was scattered in the atmosphere
+        Returns
+        -------
+        photon_bunches : np.ndarray
+            a numpy structured array with a record for each photon
+            and the following columns:
+                x:          x coordinate in cm
+                y:          y coordinate in cm
+                cx:         cosine of incident angle in x direction
+                cy:         cosine of incident angle in y direction
+                time:       time since first interaction in ns
+                zem:        Emission height in cm above sea level
+                photons:    Number of photons in the bunch
+                wavelength: wavelength in nm
+        emitter : None or np.ndarray
+            If the iact extension was compiled with STORE_EMITTER, this
+            information is returned as a second array, with the following columns:
+                x:             x coordinate in cm
+                y:             y coordinate in cm
+                mass:          mass of the emitting particle
+                charge:        charge of the emitting particle
+                time:          time since first interaction in ns
+                emissino_time: Emission time
+                energy:        Energy of the emitting particle
+                wavelength:    wavelength (always 9999)
         '''
         self.seek(12)
 
