@@ -332,13 +332,24 @@ class PhotoElectrons(EventIOObject):
 class EventEnd(EventIOObject):
     eventio_type = 1209
 
-    def parse(self):
+    def parse(self, corsika_version=7.8):
+        """
+        Parse the event end object.
+
+        Parameters
+        ----------
+        corsika_version: float
+            The corsika version. Default is the newest version at time of release.
+            This should still work for older corsika versions, but might lead
+            to fields in the output that are always 0 as these fields were added
+            only in later versions.
+        """
         self.seek(0)
         n = read_int(self)
         if n != 273:
             raise WrongSize('Expected 3 floats, but found {}'.format(n))
 
-        return parse_event_end(self.read())
+        return parse_event_end(self.read(), version=corsika_version)
 
     def __str__(self):
         return super().__str__() + '(event_id={})'.format(self.header.id)
