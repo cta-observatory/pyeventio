@@ -170,6 +170,10 @@ class IACTFile(EventIOFile):
 
             split_always = isinstance(obj, TelescopeArrayHead)
 
+            # we read all reuses first and buffer the per-reuse
+            # data, so we can include the global event-end object 
+            # with each re-use event
+            reuses = []
             for reuse in range(n_reuses):
                 photon_bunches = {}
                 emitter_bunches = {}
@@ -201,25 +205,32 @@ class IACTFile(EventIOFile):
                 else:
                     weight = 1.0
 
-                yield Event(
-                    header=header,
+                reuse_data = dict(
                     photon_bunches=photon_bunches,
-                    time_offset=time_offset,
-                    impact_x=-array_offsets[reuse]['x'],
-                    impact_y=-array_offsets[reuse]['y'],
+                    emitter=emitter_bunches,
                     reuse_weight=weight,
-                    event_number=header['event_number'],
                     reuse=reuse + 1,
                     n_photons=n_photons,
                     n_bunches=n_bunches,
-                    longitudinal=longitudinal,
-                    particles=particles,
-                    emitter=emitter_bunches,
+                    impact_x=-array_offsets[reuse]['x'],
+                    impact_y=-array_offsets[reuse]['y'],
                 )
-
+                reuses.append(reuse_data)
                 obj = next(self)
 
             check_type(obj, EventEnd)
+            event_end = obj.parse(header["version"])
+
+            for reuse in reuses:
+                yield Event(
+                    event_number=header["event_number"],
+                    header=header,
+                    time_offset=time_offset,
+                    longitudinal=longitudinal,
+                    particles=particles,
+                    end=event_end,
+                    **reuse,
+                )
 
             obj = next(self)
 
@@ -236,6 +247,7 @@ EventTuple = namedtuple(
         'n_photons', 'n_bunches',
         'longitudinal', 'particles',
         'emitter',
+        'end'
     ]
 )
 
@@ -254,10 +266,10 @@ class Event(EventTuple):
           reuse index for this shower
 
       header:
-        a dictionary containing the corsika event header
+          the event header block as numpy structured array
 
-      end_block:
-        numpy array of floats with the event end block data
+      end:
+          the event end block as numpy structured array
 
       photon_bunches:
         a dictionary mapping telescope_ids to numpy

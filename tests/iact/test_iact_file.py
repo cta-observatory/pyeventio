@@ -131,6 +131,14 @@ def test_event_header():
         assert event.header['total_energy'] == approx(9.3249321)
 
 
+def test_event_end():
+    with eventio.IACTFile(testfile) as f:
+        event = next(iter(f))
+
+        assert hasattr(event, 'end')
+        assert event.end['event_number'] == 1
+
+
 def test_event_with_reuse():
     with eventio.IACTFile(testfile_reuse) as f:
         for i, e in enumerate(f):
