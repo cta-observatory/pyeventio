@@ -18,13 +18,12 @@ authors = [
     {name = "Dominik Neise", email = "dominik.neise@cta-observatory.org"},
     {name = "Orel Gueta", email = "orel.gueta@desy.de"},
 ]
-license = {text = "MIT"}
+license = "MIT"
 readme = "README.rst"
 
 classifiers = [
 	"Development Status :: 5 - Production/Stable",
 	"Intended Audience :: Science/Research",
-	"License :: OSI Approved :: MIT License",
 	"Natural Language :: English",
 	"Operating System :: OS Independent",
 	"Programming Language :: Python",
