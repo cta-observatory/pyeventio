@@ -9,7 +9,7 @@ description = "Python read-only implementation of the EventIO file format"
 requires-python = '>=3.10'
 dependencies = [
     'numpy >= 1.21',
-    'corsikaio >= 0.3.3,<0.6.0',
+    'corsikaio >= 0.3.3,<0.7.0',
     'zstandard > 0.11.1', # memory leak in zstandard 0.11.1
 ]
 
