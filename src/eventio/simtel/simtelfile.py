@@ -27,6 +27,7 @@ from .objects import (
     DisabledPixels,
     DriveSettings,
     History,
+    HistoryCommandLine,
     HistoryMeta,
     ImageParameters,
     LaserCalibration,
@@ -180,6 +181,8 @@ class SimTelFile:
         # object storage
         self.histograms = None
         self.history = []
+        self.cli_history = []
+        self.config_history = {}
         self.mc_run_headers = []
         self.corsika_inputcards = []
         self.atmospheric_profiles = []
@@ -367,8 +370,25 @@ class SimTelFile:
                 self._current_calib_pe[tel_id] = photoelectrons.parse()
 
         elif isinstance(o, History):
+            # 0 are global defaults, then one per telescope
+            tel = 0
+            self.config_history[0] = []
+
             for sub in o:
-                self.history.append(sub.parse())
+                timestamp, line = sub.parse()
+
+                # backwards compatibility, keep flat list
+                self.history.append((timestamp, line))
+
+                if isinstance(sub, HistoryCommandLine):
+                    self.cli_history.append((timestamp, line))
+                else:
+                    # magic line that indicates the start of a new telescope configuration
+                    # see io_history.c
+                    if line.startswith(b"# Telescope-specific configuration follows"):
+                        tel += 1
+                        self.config_history[tel] = []
+                    self.config_history[tel].append((timestamp, line))
 
         elif isinstance(o, HistoryMeta):
             if o.header.id == -1:
