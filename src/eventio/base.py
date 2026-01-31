@@ -5,6 +5,7 @@ import struct
 import gzip
 import logging
 import subprocess as sp
+import fsspec
 import zstandard as zstd
 from typing import Any
 
@@ -90,19 +91,19 @@ class EventIOFile:
                 except Exception as e:
                     log.info(str(e))
                     log.warning('Falling back to gzip module')
-                    self._filehandle = gzip.open(path)
+                    self._filehandle = gzip.open(fsspec.open(path, mode='rb').open())
             else:
                 log.info('Using gzip module')
-                self._filehandle = gzip.open(path)
+                self._filehandle = gzip.open(fsspec.open(path, mode='rb').open())
 
         elif is_zstd(path):
             log.info('Found zstd compressed file')
-            self._filehandle = zstd.ZstdDecompressor().stream_reader(open(path, 'rb'), read_size=1024**2)
+            self._filehandle = zstd.ZstdDecompressor().stream_reader(fsspec.open(path, 'rb').open(), read_size=1024**2)
             self.zstd = True
 
         else:
             log.info('Found uncompressed file')
-            self._filehandle = open(path, mode='rb')
+            self._filehandle = fsspec.open(path, mode='rb').open()
 
         self._next_header_pos = 0
 
