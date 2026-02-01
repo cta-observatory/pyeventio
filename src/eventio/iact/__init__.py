@@ -98,8 +98,8 @@ class IACTFile(EventIOFile):
       EventEnd
     '''
 
-    def __init__(self, path, zcat=True):
-        super().__init__(path, zcat=zcat)
+    def __init__(self, path, zcat=True, use_fsspec=False):
+        super().__init__(path, zcat=zcat, use_fsspec=use_fsspec)
 
         header_object = next(self)
         check_type(header_object, RunHeader)
