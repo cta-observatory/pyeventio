@@ -62,6 +62,17 @@ def test_types_gzip():
 
     assert types == [1200, 1212, 1201, 1202, 1203, 1204, 1209, 1210]
 
+def test_types_gzip_fsspec():
+    from pathlib import Path
+    test_file = Path('tests/resources/one_shower.dat.gz').resolve()
+    with eventio.EventIOFile(test_file, zcat=False, use_fsspec=True) as f:
+        types = [o.header.type for o in f]
+    assert types == [1200, 1212, 1201, 1202, 1203, 1204, 1209, 1210]
+
+    with eventio.EventIOFile(test_file.as_uri(),zcat=False, use_fsspec=True) as f:
+        types = [o.header.type for o in f]
+        assert types == [1200, 1212, 1201, 1202, 1203, 1204, 1209, 1210]
+
 
 def test_types_zcat():
     from eventio.base import PipeWrapper

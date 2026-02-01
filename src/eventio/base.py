@@ -5,6 +5,7 @@ import struct
 import gzip
 import logging
 import subprocess as sp
+import fsspec
 import zstandard as zstd
 from typing import Any
 
@@ -60,7 +61,7 @@ class PipeWrapper:
 
 class EventIOFile:
 
-    def __init__(self, path, zcat=True):
+    def __init__(self, path, zcat=True, use_fsspec=False):
         log.info('Opening new file {}'.format(path))
         self.path = path
         self.read_process = None
@@ -90,19 +91,28 @@ class EventIOFile:
                 except Exception as e:
                     log.info(str(e))
                     log.warning('Falling back to gzip module')
-                    self._filehandle = gzip.open(path)
+                    self._filehandle = gzip.open(fsspec.open(path, mode='rb').open())
             else:
                 log.info('Using gzip module')
-                self._filehandle = gzip.open(path)
+                if use_fsspec:
+                    self._filehandle = fsspec.open(path, mode='rb', compression='gzip').open()
+                else:
+                    self._filehandle = gzip.open(path, mode='rb')
 
         elif is_zstd(path):
             log.info('Found zstd compressed file')
-            self._filehandle = zstd.ZstdDecompressor().stream_reader(open(path, 'rb'), read_size=1024**2)
+            if use_fsspec:
+                self._filehandle = fsspec.open(path, mode='rb', compression='zstd').open()
+            else:
+                self._filehandle = zstd.ZstdDecompressor().stream_reader(open(path, 'rb'), read_size=1024**2)
             self.zstd = True
 
         else:
             log.info('Found uncompressed file')
-            self._filehandle = open(path, mode='rb')
+            if use_fsspec:
+                self._filehandle = fsspec.open(path, mode='rb').open()
+            else:
+                self._filehandle = open(path, 'rb')
 
         self._next_header_pos = 0
 
