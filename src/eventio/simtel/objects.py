@@ -361,19 +361,19 @@ class CameraOrganization(TelescopeObject):
         card, length = varint_array(
             data, n_pixels * n_gains, offset=pos
         )
-        card.shape = (n_pixels, n_gains)
+        card = card.reshape(n_pixels, n_gains)
         pos += length
 
         chip, length = varint_array(
             data, n_pixels * n_gains, offset=pos
         )
-        chip.shape = (n_pixels, n_gains)
+        chip = chip.reshape(n_pixels, n_gains)
         pos += length
 
         channel, length = varint_array(
             data, n_pixels * n_gains, offset=pos
         )
-        channel.shape = (n_pixels, n_gains)
+        channel = channel.reshape(n_pixels, n_gains)
         pos += length
 
         sectors, bytes_read = CameraOrganization.read_sector_information_v2(
@@ -1343,7 +1343,7 @@ class PixelTiming(TelescopeObject):
             byte_stream.seek(bytes_read, os.SEEK_CUR)
 
         if list_type == 2:
-            pixel_timing['pixel_list'].shape = (-1, 2)
+            pixel_timing['pixel_list'] = pixel_timing['pixel_list'].reshape(-1, 2)
 
         # convert to int32 to have always have same, correct, dtype.
         # version 1 uses int16, while version 2 uses varint, which is parsed as int64.
