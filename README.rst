@@ -4,7 +4,7 @@ pyeventio |PyPI| |Build| |LoC|
 
 A Python (read-only) implementation of the EventIO data format invented
 by Konrad Bernloehr as used for example by the IACT extension for
-CORSIKA: https://www.ikp.kit.edu/corsika
+CORSIKA: https://www.iap.kit.edu/corsika
 
 Documentation of the file format: https://www.mpi-hd.mpg.de/hfm/~bernlohr/sim_telarray/Documentation/eventio_en.pdf
 
