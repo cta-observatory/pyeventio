@@ -166,8 +166,9 @@ class SimTelFile:
         skip_calibration=False,
         allowed_telescopes=None,
         zcat=True,
+        use_fsspec=False,
     ):
-        self._file = EventIOFile(path, zcat=zcat)
+        self._file = EventIOFile(path, zcat=zcat, use_fsspec=use_fsspec)
         self.path = path
 
         self.skip_calibration = skip_calibration
