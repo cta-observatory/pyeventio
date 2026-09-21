@@ -8,6 +8,7 @@ on:
 
 jobs:
   build_wheels:
+    if: github.event_name != 'pull_request' || contains(github.event.pull_request.labels.*.name, 'build-wheels')
     name: Build wheels on ${{ matrix.os }}
     runs-on: ${{ matrix.os }}
     strategy:
@@ -15,12 +16,12 @@ jobs:
         os: [ubuntu-24.04, ubuntu-24.04-arm, windows-latest, macos-26-intel, macos-26]
 
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@v7
         with:
           fetch-depth: 0
           fetch-tags: true
 
-      - uses: actions/setup-python@v6
+      - uses: actions/setup-python@v7
         with:
           python-version: "3.12"
 
@@ -30,7 +31,7 @@ jobs:
       - name: Build wheels
         run: python -m cibuildwheel --output-dir dist/
 
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v7
         with:
           path: ./dist/*.whl
           name: dist-wheels-${{ matrix.os }}-${{ strategy.job-index }}
@@ -38,13 +39,13 @@ jobs:
   build_sdist:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@v7
         with:
           fetch-depth: 0
           fetch-tags: true
 
       - name: Set up Python
-        uses: actions/setup-python@v6
+        uses: actions/setup-python@v7
         with:
           python-version: "3.12"
 
@@ -54,7 +55,7 @@ jobs:
           pip install -U build
           python -m build --sdist
 
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v7
         with:
           path: ./dist/*.tar.gz
           name: dist-sdist
@@ -70,13 +71,12 @@ jobs:
       - build_sdist
     steps:
       - name: Download artifacts
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@v7
         with:
           # unpacks all dist artifacts into dist/
           pattern: dist-*
           path: dist
           merge-multiple: true
-
 
       - name: Check files
         run: ls -l dist
