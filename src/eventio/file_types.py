@@ -1,8 +1,5 @@
 import gzip
-try:
-    import zstandard as zstd
-except ModuleNotFoundError:
-    zstd = None
+import zstandard as zstd
 
 from .constants import (
     SYNC_MARKER_SIZE,
@@ -44,8 +41,6 @@ def is_eventio(path):
         with gzip.open(path, 'rb') as f:
             marker_bytes = f.read(SYNC_MARKER_SIZE)
     elif is_zstd(path):
-        if zstd is None:
-            raise IOError('You need the `zstandard` module to read zstd files')
         with open(path, 'rb') as f:
             cctx = zstd.ZstdDecompressor()
             with cctx.stream_reader(f) as stream:

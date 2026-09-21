@@ -7,7 +7,6 @@ from copy import copy
 from collections import defaultdict
 import warnings
 import logging
-from typing import Dict, Any
 
 from ..base import EventIOFile
 from ..exceptions import check_type

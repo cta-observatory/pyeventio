@@ -1,6 +1,5 @@
 '''Implementations of the simtel_array EventIO object types.'''
 import os
-import sys
 import numpy as np
 from io import BytesIO
 import struct
@@ -45,14 +44,6 @@ def read_remaining_with_check(byte_stream, length):
 
 _s_int32 = struct.Struct('<i')
 _s_float32 = struct.Struct('<f')
-
-
-if sys.version_info < (3, 10):
-    def bit_count(num):
-        return bin(num).count("1")
-else:
-    def bit_count(num):
-        return num.bit_count()
 
 
 class TelescopeObject(EventIOObject):
@@ -625,7 +616,7 @@ class TriggerInformation(EventIOObject):
             for tel_id, mask in it:
                 # check the lowest 4 bits, individual times are only stored
                 # if more than one trigger fired
-                if bit_count(int(mask) & 0b1111) > 1:
+                if (int(mask) & 0b1111).bit_count() > 1:
                     event_info['teltrg_time_by_type'][tel_id] = {}
                     for trigger in range(H_MAX_TRIG_TYPES):
                         if bool_bit_from_pos(mask, trigger):

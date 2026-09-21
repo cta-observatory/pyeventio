@@ -6,9 +6,9 @@ build-backend = "setuptools.build_meta"
 name = "eventio"
 description = "Python read-only implementation of the EventIO file format"
 
-requires-python = '>=3.11'
+requires-python = '>=3.12'
 dependencies = [
-    'numpy >= 1.21',
+    'numpy >= 1.26',
     'corsikaio >= 0.3.3,<0.7.0',
     'zstandard > 0.11.1', # memory leak in zstandard 0.11.1
 ]
@@ -28,10 +28,10 @@ classifiers = [
 	"Operating System :: OS Independent",
 	"Programming Language :: Python",
 	"Programming Language :: Python :: 3",
-	"Programming Language :: Python :: 3.11",
 	"Programming Language :: Python :: 3.12",
 	"Programming Language :: Python :: 3.13",
 	"Programming Language :: Python :: 3.14",
+	"Programming Language :: Python :: 3.15",
 	"Programming Language :: Python :: 3 :: Only",
 	"Topic :: Scientific/Engineering :: Astronomy",
 	"Topic :: Scientific/Engineering :: Physics",
@@ -43,7 +43,7 @@ dynamic = ["version"]
 test = [
     "pytest",
 ]
-examples = ["astropy >=5.3,<8.0.0a0", "ctapipe~=0.24.0", "matplotlib"]
+examples = ["astropy >=5.3,<9.0.0", "ctapipe~=0.32.0", "matplotlib"]
 dev = [
     "setuptools_scm",
 ]
